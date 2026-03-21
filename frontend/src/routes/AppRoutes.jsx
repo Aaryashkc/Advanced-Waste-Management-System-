@@ -1,0 +1,205 @@
+import React from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+
+import Dashboard from "../pages/Dashboard";
+import DashboardLayout from "../components/layout/DashboardLayout";
+import HomePage from "../pages/HomePage";
+import { Footer } from "../components/Headers/Footer";
+import CustomerLoginPage from "../components/auth/CustomerLogin";
+import { Header } from "../components/Headers/Header";
+import CustomerSignUpPage from "../components/auth/CustomerSignup";
+import OTPVerificationPage from "../components/auth/OTPVerificationPage";
+import ProtectedRoute from "../components/auth/ProtectedRoute";
+import Unauthorized from "../pages/Unauthorized";
+import AboutUs from "../pages/AboutUs";
+import OurTeam from "../pages/OurTeam";
+import ContactUs from "../pages/ContactUs";
+import Profile from "../pages/Profile";
+import CustomerLandingPage from "../components/users/CustomerLanding";
+import CustomerDashboard from "../components/users/CustomerDashboard";
+import SchedulePage from "../components/users/SchedulePage";
+import UploadWastePage from "../components/users/UploadWastePage";
+import SearchPage from "../components/sub-components/Searching";
+import DriverDashboard from "../components/Driver/DriverDashboard";
+import AcceptTaskPage from "../components/Driver/AcceptTaskPage";
+import TaskRoutePage from "../components/Driver/TaskRoutePage";
+import TaskFlow from "../components/Driver/TaskFlow";
+import TestAnimationPage from "../pages/TestAnimationPage";
+import Vehicles from "../pages/Vehicles";
+import Drivers from "../pages/Drivers";
+import Organizations from "../pages/Organizations";
+import Admins from "../pages/Admins";
+import Zones from "../pages/Zones";
+import Notifications from "../pages/Notifications";
+import PickupStatusToast from "../components/users/PickupStatusToast";
+import DriverStatusToast from "../components/Driver/DriverStatusToast";
+import useAuthStore from "../stores/useAuthStore";
+
+const AppRoutes = () => {
+  const location = useLocation();
+  const { isAuthenticated, user } = useAuthStore();
+  const isAdminRoute = location.pathname.startsWith("/admin-dashboard");
+
+  return (
+    <>
+      {!isAdminRoute && <Header />}
+
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/test-animation" element={<TestAnimationPage />} />
+        <Route path="/login" element={<CustomerLoginPage />} />
+        <Route path="/signup" element={<CustomerSignUpPage />} />
+        <Route path="/otp-verification" element={<OTPVerificationPage />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
+
+        {/* Info Pages (accessible to logged-in customer_admin) */}
+        <Route
+          path="/about-us"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <AboutUs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/our-team"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <OurTeam />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contact-us"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <ContactUs />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Profile (all authenticated users) */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={['super_admin', 'admin', 'customer_admin', 'driver']}>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Customer Admin Routes */}
+        <Route
+          path="/customer-landing"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <CustomerLandingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <CustomerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/schedule"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <SchedulePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/upload-waste"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <UploadWastePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/searching"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <SearchPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Driver Routes */}
+        <Route
+          path="/driver-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['driver']}>
+              <DriverDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accept-task"
+          element={
+            <ProtectedRoute allowedRoles={['driver']}>
+              <AcceptTaskPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/task-route/:pickupId"
+          element={
+            <ProtectedRoute allowedRoles={['driver']}>
+              <TaskRoutePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/task-flow/:pickupId"
+          element={
+            <ProtectedRoute allowedRoles={['driver']}>
+              <TaskFlow />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Admin Routes (super_admin and admin) */}
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="organizations" element={<Organizations />} />
+          <Route path="vehicles" element={<Vehicles />} />
+          <Route path="drivers" element={<Drivers />} />
+          <Route path="admins" element={<Admins />} />
+          <Route path="zones" element={<Zones />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route
+            path="reports"
+            element={<div className="text-center py-20 text-gray-500">Analytics & Reports Module (Coming Soon)</div>}
+          />
+        </Route>
+
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      {!isAdminRoute && <Footer />}
+
+      {/* Persistent status toast for customers */}
+      {isAuthenticated && user?.role === "customer_admin" && <PickupStatusToast />}
+      
+      {/* Persistent status toast for drivers */}
+      {isAuthenticated && user?.role === "driver" && <DriverStatusToast />}
+    </>
+  );
+};
+
+export default AppRoutes;
