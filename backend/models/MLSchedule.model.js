@@ -28,6 +28,7 @@ const districtEntrySchema = new mongoose.Schema({
   holidayName: { type: String },
   assignedTrucks: [assignedTruckSchema],
   skipReason: { type: String, default: null },
+  orgName: { type: String },
 }, { _id: false });
 
 const mlScheduleSchema = new mongoose.Schema({

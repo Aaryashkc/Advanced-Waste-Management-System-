@@ -70,19 +70,19 @@ const Topbar = ({ name = "Admin User", role = "System Administrator" }) => {
   };
 
   return (
-    <header className="h-16 bg-white/90 backdrop-blur border-b border-[var(--primary)]/12 fixed top-0 right-0 left-0 z-40">
+    <header className="h-16 bg-white/90 backdrop-blur border-b border-primary/12 fixed top-0 right-0 left-0 z-40">
       <div className="h-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 min-w-0">
           {/* Mobile brand icon */}
-          <div className="md:hidden w-10 h-10 rounded-2xl bg-[#f5f1e8] border border-[var(--primary)]/12 flex items-center justify-center">
+          <div className="md:hidden w-10 h-10 rounded-2xl bg-[#f5f1e8] border border-primary/12 flex items-center justify-center">
             <span className="text-xl">♻️</span>
           </div>
 
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-bold text-[var(--primary)] tracking-tight truncate">
+            <h1 className="text-base sm:text-lg font-bold text-primary tracking-tight truncate">
               Admin Console
             </h1>
-            <p className="hidden sm:block text-xs text-[var(--primary)]/60 truncate">
+            <p className="hidden sm:block text-xs text-primary/60 truncate">
               Monitor vehicles, routes, and collections
             </p>
           </div>
@@ -93,37 +93,37 @@ const Topbar = ({ name = "Admin User", role = "System Administrator" }) => {
             {/* Notification Bell */}
             <button 
               onClick={() => navigate("/admin-dashboard/notifications")}
-              className="relative p-2 rounded-full hover:bg-[var(--primary)]/5 transition-colors focus:outline-none" 
+              className="relative p-2 rounded-full hover:bg-primary/5 transition-colors focus:outline-none" 
               aria-label="Notifications"
             >
-              <svg className="w-6 h-6 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
+                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
 
-            <div className="text-right hidden sm:block leading-tight border-l pl-3 border-[var(--primary)]/10">
-              <p className="text-sm font-semibold text-[var(--primary)]">
+            <div className="text-right hidden sm:block leading-tight border-l pl-3 border-primary/10">
+              <p className="text-sm font-semibold text-primary">
                 {displayName}
               </p>
-              <p className="text-xs text-[var(--primary)]/60">{displayRole}</p>
+              <p className="text-xs text-primary/60">{displayRole}</p>
             </div>
 
-            <div className="h-10 w-10 rounded-2xl bg-[#f5f1e8] border border-[var(--primary)]/12 flex items-center justify-center font-bold text-[var(--primary)]">
+            <div className="h-10 w-10 rounded-2xl bg-[#f5f1e8] border border-primary/12 flex items-center justify-center font-bold text-primary">
               {initials}
             </div>
           </div>
 
-          <div className="hidden sm:block h-8 w-px bg-[var(--primary)]/10" />
+          <div className="hidden sm:block h-8 w-px bg-primary/10" />
 
           <Button
             variant="outline"
             onClick={handleLogout}
-            className="!px-3 !py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25"
+            className="px-3! py-2! text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
           >
             Logout
           </Button>

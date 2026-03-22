@@ -51,16 +51,29 @@ def get_season(month):
 
 # ── District types ───────────────────────────────────────────────────────────
 DISTRICT_TYPES = {
+    # Kathmandu (8 areas)
     "Kathmandu-Core": "commercial",
-    "Lalitpur": "commercial",
-    "Bhaktapur": "commercial",
-    "Kirtipur": "residential",
-    "Madhyapur Thimi": "residential",
+    "Baneshwor": "commercial",
+    "Koteshwor": "commercial",
+    "Balaju": "residential",
+    "Maharajgunj": "residential",
     "Budhanilkantha": "suburban",
     "Tokha": "suburban",
     "Chandragiri": "rural",
+    # Lalitpur (7 areas)
+    "Lalitpur": "commercial",
+    "Satdobato": "commercial",
+    "Kirtipur": "residential",
+    "Imadol": "residential",
+    "Lubhu": "suburban",
     "Godawari": "rural",
     "Dakshinkali": "rural",
+    # Bhaktapur (5 areas)
+    "Bhaktapur": "commercial",
+    "Madhyapur Thimi": "residential",
+    "Suryabinayak": "suburban",
+    "Changunarayan": "rural",
+    "Nagarkot": "rural",
 }
 
 DISTRICTS = list(DISTRICT_TYPES.keys())

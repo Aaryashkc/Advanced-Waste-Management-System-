@@ -37,12 +37,14 @@ export const getAllOrganizations = async (req, res) => {
     const organizations = await Organization.find()
       .populate("admins", "name email");
 
-    // Get real fleet data from Truck collection (source of truth)
+    // Get real fleet + driver data from source-of-truth collections
     const orgsWithFleet = await Promise.all(
       organizations.map(async (org) => {
         const trucks = await Truck.find({ orgId: org._id }).select("truckType capacity licensePlate");
+        const driverCount = await User.countDocuments({ orgId: org._id, role: "driver" });
         const orgObj = org.toObject();
         orgObj.fleet = trucks;
+        orgObj.driverCount = driverCount;
         return orgObj;
       })
     );

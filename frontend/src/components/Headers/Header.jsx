@@ -34,9 +34,9 @@ export function Header() {
   // ── Logged-out header ──
   if (!isAuthenticated) {
     return (
-      <header className="bg-[#354f52] w-full">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 sm:h-[72px] items-center justify-between">
+      <header className="bg-primary w-full">
+        <div className="mx-auto max-w-360 px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 sm:h-18 items-center justify-between">
             <Link
               to="/"
               className="text-white font-extrabold text-2xl sm:text-3xl md:text-4xl tracking-tight"
@@ -55,7 +55,7 @@ export function Header() {
 
               <Link
                 to="/login"
-                className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 sm:px-5 md:px-7 py-2 sm:py-2.5 text-sm sm:text-base md:text-lg font-semibold text-[#354f52] hover:bg-white/90 transition active:scale-[0.98]"
+                className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 sm:px-5 md:px-7 py-2 sm:py-2.5 text-sm sm:text-base md:text-lg font-semibold text-primary hover:bg-white/90 transition active:scale-[0.98]"
               >
                 Log In
                 <ArrowRight
@@ -79,9 +79,9 @@ export function Header() {
 
   // ── Logged-in header ──
   return (
-    <header className="bg-[#354f52] w-full relative z-50">
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-        <div className="grid h-16 sm:h-[72px] grid-cols-[auto_1fr_auto] items-center gap-4">
+    <header className="bg-primary w-full relative z-50">
+      <div className="mx-auto max-w-360 px-4 sm:px-6 lg:px-8">
+        <div className="grid h-16 sm:h-18 grid-cols-[auto_1fr_auto] items-center gap-4">
           {/* Brand */}
           <Link
             to="/"
@@ -144,7 +144,7 @@ export function Header() {
                     onClick={() => setProfileOpen(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
                   >
-                    <User size={16} className="text-[#354f52]" />
+                    <User size={16} className="text-primary" />
                     My Profile
                   </Link>
                   <div className="border-t border-gray-100 my-1" />

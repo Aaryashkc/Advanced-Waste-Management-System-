@@ -1,6 +1,6 @@
 """
 Synthetic waste data generator for Kathmandu Valley districts.
-Generates ~7,300 records (10 districts x 365 days x 2 years) with
+Generates ~14,600 records (20 areas x 365 days x 2 years) with
 realistic patterns for Nepal context.
 """
 
@@ -19,34 +19,35 @@ np.random.seed(42)
 # ── District definitions ─────────────────────────────────────────────────────
 # Nepal-context: Kathmandu Valley municipalities and areas
 DISTRICTS = {
+    # ── Kathmandu (8 areas) ──────────────────────────────────────────────────
     "Kathmandu-Core": {
         "type": "commercial",
-        "base_waste_kg": 4500,   # High — dense commercial hub (New Road, Thamel, Asan)
-        "weekend_effect": -0.15, # Less commercial activity on weekends
-        "monsoon_effect": -0.25, # Reduced business during monsoon
+        "base_waste_kg": 4500,   # Dense commercial hub (New Road, Thamel, Asan)
+        "weekend_effect": -0.15,
+        "monsoon_effect": -0.25,
     },
-    "Lalitpur": {
+    "Baneshwor": {
         "type": "commercial",
-        "base_waste_kg": 3800,   # Patan — mix of commercial + heritage
-        "weekend_effect": -0.10,
+        "base_waste_kg": 3600,   # Major commercial zone, offices, banks
+        "weekend_effect": -0.12,
         "monsoon_effect": -0.20,
     },
-    "Bhaktapur": {
+    "Koteshwor": {
         "type": "commercial",
-        "base_waste_kg": 3200,   # Tourism + pottery + commercial
-        "weekend_effect": 0.10,  # More tourists on weekends
-        "monsoon_effect": -0.30, # Tourism drops in monsoon
+        "base_waste_kg": 3400,   # Transport hub, markets
+        "weekend_effect": -0.10,
+        "monsoon_effect": -0.18,
     },
-    "Kirtipur": {
+    "Balaju": {
         "type": "residential",
-        "base_waste_kg": 1800,   # University area + residential
-        "weekend_effect": 0.20,  # More at home on weekends
-        "monsoon_effect": -0.10,
-    },
-    "Madhyapur Thimi": {
-        "type": "residential",
-        "base_waste_kg": 2000,   # Growing residential area
+        "base_waste_kg": 2200,   # Industrial park + residential
         "weekend_effect": 0.15,
+        "monsoon_effect": -0.12,
+    },
+    "Maharajgunj": {
+        "type": "residential",
+        "base_waste_kg": 2000,   # Embassies, hospitals, residential
+        "weekend_effect": 0.10,
         "monsoon_effect": -0.10,
     },
     "Budhanilkantha": {
@@ -67,10 +68,41 @@ DISTRICTS = {
         "weekend_effect": 0.05,
         "monsoon_effect": -0.20,
     },
+    # ── Lalitpur (7 areas) ───────────────────────────────────────────────────
+    "Lalitpur": {
+        "type": "commercial",
+        "base_waste_kg": 3800,   # Patan — mix of commercial + heritage
+        "weekend_effect": -0.10,
+        "monsoon_effect": -0.20,
+    },
+    "Satdobato": {
+        "type": "commercial",
+        "base_waste_kg": 3000,   # Ring road junction, markets
+        "weekend_effect": -0.08,
+        "monsoon_effect": -0.18,
+    },
+    "Kirtipur": {
+        "type": "residential",
+        "base_waste_kg": 1800,   # University area + residential
+        "weekend_effect": 0.20,
+        "monsoon_effect": -0.10,
+    },
+    "Imadol": {
+        "type": "residential",
+        "base_waste_kg": 1600,   # Growing residential suburb
+        "weekend_effect": 0.18,
+        "monsoon_effect": -0.12,
+    },
+    "Lubhu": {
+        "type": "suburban",
+        "base_waste_kg": 900,    # Small town, weaving industry
+        "weekend_effect": 0.08,
+        "monsoon_effect": -0.15,
+    },
     "Godawari": {
         "type": "rural",
         "base_waste_kg": 500,    # Rural, botanical garden area
-        "weekend_effect": 0.15,  # Picnic spot on weekends
+        "weekend_effect": 0.15,
         "monsoon_effect": -0.15,
     },
     "Dakshinkali": {
@@ -78,6 +110,37 @@ DISTRICTS = {
         "base_waste_kg": 400,    # Remote, temple area
         "weekend_effect": 0.25,  # Saturday temple visits = waste spike
         "monsoon_effect": -0.20,
+    },
+    # ── Bhaktapur (5 areas) ──────────────────────────────────────────────────
+    "Bhaktapur": {
+        "type": "commercial",
+        "base_waste_kg": 3200,   # Tourism + pottery + commercial
+        "weekend_effect": 0.10,
+        "monsoon_effect": -0.30,
+    },
+    "Madhyapur Thimi": {
+        "type": "residential",
+        "base_waste_kg": 2000,   # Growing residential area
+        "weekend_effect": 0.15,
+        "monsoon_effect": -0.10,
+    },
+    "Suryabinayak": {
+        "type": "suburban",
+        "base_waste_kg": 1100,   # Temple area + suburban growth
+        "weekend_effect": 0.12,
+        "monsoon_effect": -0.15,
+    },
+    "Changunarayan": {
+        "type": "rural",
+        "base_waste_kg": 550,    # UNESCO heritage, rural surroundings
+        "weekend_effect": 0.20,
+        "monsoon_effect": -0.18,
+    },
+    "Nagarkot": {
+        "type": "rural",
+        "base_waste_kg": 350,    # Hill station, tourism-dependent
+        "weekend_effect": 0.30,  # Weekend tourists
+        "monsoon_effect": -0.35, # Very few visitors in monsoon
     },
 }
 

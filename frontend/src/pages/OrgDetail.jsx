@@ -50,7 +50,13 @@ const OrgDetail = () => {
     );
   }
 
-  const { org, admins = [], trucks = [], drivers = [], districts = [], stats = {} } = currentOrg;
+  // Backend sends flat structure: { _id, name, location, admins, trucks, drivers, districts, stats }
+  const admins = currentOrg.admins || [];
+  const trucks = currentOrg.trucks || [];
+  const drivers = currentOrg.drivers || [];
+  const districts = currentOrg.districts || [];
+  const stats = currentOrg.stats || {};
+  const org = { name: currentOrg.name, location: currentOrg.location, _id: currentOrg._id, createdAt: currentOrg.createdAt };
 
   const trucksWithDrivers = trucks.filter(t => t.assignedDriver);
   const trucksWithoutDrivers = trucks.filter(t => !t.assignedDriver);
@@ -204,7 +210,7 @@ const OrgDetail = () => {
                   </thead>
                   <tbody className="divide-y divide-[var(--primary)]/5">
                     {trucks.map(truck => (
-                      <tr key={truck._id} className="hover:bg-[var(--primary)]/[0.02] transition">
+                      <tr key={truck.id} className="hover:bg-[var(--primary)]/[0.02] transition">
                         <td className="px-5 py-4">
                           <span className="font-bold text-[var(--primary)]">{truck.licensePlate}</span>
                         </td>
@@ -216,9 +222,9 @@ const OrgDetail = () => {
                           {truck.assignedDriver ? (
                             <div className="flex items-center gap-2">
                               <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-700">
-                                {truck.assignedDriver.userId?.name?.charAt(0)?.toUpperCase() || "D"}
+                                {truck.assignedDriver.name?.charAt(0)?.toUpperCase() || "D"}
                               </div>
-                              <span className="text-sm font-medium text-[var(--primary)]">{truck.assignedDriver.userId?.name || "Driver"}</span>
+                              <span className="text-sm font-medium text-[var(--primary)]">{truck.assignedDriver.name || "Driver"}</span>
                             </div>
                           ) : (
                             <span className="px-2.5 py-1 rounded-lg bg-red-50 text-xs font-bold text-red-500">No Driver</span>
@@ -246,24 +252,24 @@ const OrgDetail = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {drivers.map(driver => (
-                <div key={driver._id} className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 hover:shadow-md transition">
+                <div key={driver.id} className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 hover:shadow-md transition">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-lg font-bold text-purple-700 shrink-0">
-                      {driver.userId?.name?.charAt(0)?.toUpperCase() || "D"}
+                      {driver.name?.charAt(0)?.toUpperCase() || "D"}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-base font-bold text-[var(--primary)] truncate">{driver.userId?.name || "Unknown"}</h3>
-                      <p className="text-xs text-[var(--primary)]/40 truncate">{driver.userId?.email}</p>
+                      <h3 className="text-base font-bold text-[var(--primary)] truncate">{driver.name || "Unknown"}</h3>
+                      <p className="text-xs text-[var(--primary)]/40 truncate">{driver.email}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-[var(--primary)]/50">Phone</span>
-                      <span className="font-medium text-[var(--primary)]">{driver.userId?.phone || "N/A"}</span>
+                      <span className="font-medium text-[var(--primary)]">{driver.phone || "N/A"}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-[var(--primary)]/50">License</span>
-                      <span className="font-medium text-[var(--primary)]">{driver.licenseNumber || "N/A"}</span>
+                      <span className="text-[var(--primary)]/50">Status</span>
+                      <span className={`font-medium ${driver.isAvailable ? "text-green-600" : "text-amber-600"}`}>{driver.isAvailable ? "Available" : "Unavailable"}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-[var(--primary)]/50">Assigned Truck</span>

@@ -18,6 +18,7 @@ import {
   getPendingDeletionCount
 } from "../controllers/orgAdmin.controller.js";
 import { getAllDrivers } from "../controllers/driver.controller.js";
+import { getDriverDetail } from "../controllers/superAdmin.controller.js";
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.post("/estimate-volume", estimateWasteVolume);
 // Driver management (org-scoped)
 router.get("/drivers", getAllDrivers);
 router.post("/drivers/create", createDriverByAdmin);
+router.get("/drivers/:driverId/detail", getDriverDetail);
 
 // Truck listing (org-scoped)
 router.get("/trucks", getOrgTrucks);

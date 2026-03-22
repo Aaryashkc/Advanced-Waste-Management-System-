@@ -32,22 +32,44 @@ const heading = (text) =>
 
 // ─── Mapping configuration ──────────────────────────────────────────────────
 const ORG_KEYWORD_MAP = {
-  kathmandu: ["Kathmandu-Core", "Budhanilkantha", "Tokha", "Chandragiri"],
-  lalitpur:  ["Lalitpur", "Kirtipur", "Godawari", "Dakshinkali"],
-  bhaktapur: ["Bhaktapur", "Madhyapur Thimi"],
+  kathmandu: [
+    "Kathmandu-Core", "Budhanilkantha", "Tokha", "Chandragiri",
+    "Baneshwor", "Koteshwor", "Balaju", "Maharajgunj",
+  ],
+  lalitpur:  [
+    "Lalitpur", "Kirtipur", "Godawari", "Dakshinkali",
+    "Satdobato", "Imadol", "Lubhu",
+  ],
+  bhaktapur: [
+    "Bhaktapur", "Madhyapur Thimi", "Suryabinayak", "Changunarayan",
+    "Nagarkot",
+  ],
 };
 
 const DISTRICTS = [
-  { name: "Kathmandu-Core",  type: "commercial",  coordinates: { latitude: 27.7172, longitude: 85.3240 } },
-  { name: "Lalitpur",        type: "commercial",  coordinates: { latitude: 27.6588, longitude: 85.3247 } },
-  { name: "Bhaktapur",       type: "commercial",  coordinates: { latitude: 27.6710, longitude: 85.4298 } },
-  { name: "Kirtipur",        type: "residential", coordinates: { latitude: 27.6783, longitude: 85.2789 } },
-  { name: "Madhyapur Thimi", type: "residential", coordinates: { latitude: 27.6817, longitude: 85.3875 } },
-  { name: "Budhanilkantha",  type: "suburban",    coordinates: { latitude: 27.7637, longitude: 85.3612 } },
-  { name: "Tokha",           type: "suburban",    coordinates: { latitude: 27.7500, longitude: 85.3400 } },
-  { name: "Chandragiri",     type: "rural",       coordinates: { latitude: 27.6500, longitude: 85.2200 } },
-  { name: "Godawari",        type: "rural",       coordinates: { latitude: 27.5900, longitude: 85.3700 } },
-  { name: "Dakshinkali",     type: "rural",       coordinates: { latitude: 27.5800, longitude: 85.2600 } },
+  // Kathmandu (8 areas)
+  { name: "Kathmandu-Core",  type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.7172, longitude: 85.3240 } },
+  { name: "Baneshwor",       type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.6915, longitude: 85.3420 } },
+  { name: "Koteshwor",       type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.6775, longitude: 85.3490 } },
+  { name: "Balaju",          type: "residential", province: "Bagmati", coordinates: { latitude: 27.7280, longitude: 85.3050 } },
+  { name: "Maharajgunj",     type: "residential", province: "Bagmati", coordinates: { latitude: 27.7350, longitude: 85.3350 } },
+  { name: "Budhanilkantha",  type: "suburban",    province: "Bagmati", coordinates: { latitude: 27.7637, longitude: 85.3612 } },
+  { name: "Tokha",           type: "suburban",    province: "Bagmati", coordinates: { latitude: 27.7500, longitude: 85.3400 } },
+  { name: "Chandragiri",     type: "rural",       province: "Bagmati", coordinates: { latitude: 27.6500, longitude: 85.2200 } },
+  // Lalitpur (7 areas)
+  { name: "Lalitpur",        type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.6588, longitude: 85.3247 } },
+  { name: "Satdobato",       type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.6620, longitude: 85.3300 } },
+  { name: "Kirtipur",        type: "residential", province: "Bagmati", coordinates: { latitude: 27.6783, longitude: 85.2789 } },
+  { name: "Imadol",          type: "residential", province: "Bagmati", coordinates: { latitude: 27.6550, longitude: 85.3450 } },
+  { name: "Lubhu",           type: "suburban",    province: "Bagmati", coordinates: { latitude: 27.6400, longitude: 85.3500 } },
+  { name: "Godawari",        type: "rural",       province: "Bagmati", coordinates: { latitude: 27.5900, longitude: 85.3700 } },
+  { name: "Dakshinkali",     type: "rural",       province: "Bagmati", coordinates: { latitude: 27.5800, longitude: 85.2600 } },
+  // Bhaktapur (5 areas)
+  { name: "Bhaktapur",       type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.6710, longitude: 85.4298 } },
+  { name: "Madhyapur Thimi", type: "residential", province: "Bagmati", coordinates: { latitude: 27.6817, longitude: 85.3875 } },
+  { name: "Suryabinayak",    type: "suburban",    province: "Bagmati", coordinates: { latitude: 27.6600, longitude: 85.4450 } },
+  { name: "Changunarayan",   type: "rural",       province: "Bagmati", coordinates: { latitude: 27.7100, longitude: 85.4300 } },
+  { name: "Nagarkot",        type: "rural",       province: "Bagmati", coordinates: { latitude: 27.7150, longitude: 85.5200 } },
 ];
 
 // ─── Main ────────────────────────────────────────────────────────────────────

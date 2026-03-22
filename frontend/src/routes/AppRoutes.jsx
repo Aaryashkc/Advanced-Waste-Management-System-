@@ -38,6 +38,7 @@ import Districts from "../pages/Districts";
 import Notifications from "../pages/Notifications";
 import Reports from "../pages/Reports";
 import PickupStats from "../pages/PickupStats";
+import History from "../pages/History";
 import PickupStatusToast from "../components/users/PickupStatusToast";
 import DriverStatusToast from "../components/Driver/DriverStatusToast";
 import useAuthStore from "../stores/useAuthStore";
@@ -197,9 +198,11 @@ const AppRoutes = () => {
           <Route path="drivers/:driverId" element={<DriverDetail />} />
           <Route path="admins" element={<Admins />} />
           <Route path="districts" element={<Districts />} />
+          <Route path="areas" element={<Districts />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="ml-schedule" element={<MLScheduleDashboard />} />
           <Route path="ml-schedule/history" element={<MLScheduleHistory />} />
+          <Route path="history" element={<History />} />
           <Route path="pickup-stats" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <PickupStats />

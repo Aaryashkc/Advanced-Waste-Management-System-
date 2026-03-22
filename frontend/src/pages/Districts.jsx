@@ -98,12 +98,12 @@ const Districts = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--primary)]">District Management</h1>
-          <p className="text-sm text-[var(--primary)]/60 mt-1">{isSuperAdmin ? "Manage districts across all organizations" : "View your organization's districts"}</p>
+          <h1 className="text-2xl font-bold text-[var(--primary)]">Collection Areas</h1>
+          <p className="text-sm text-[var(--primary)]/60 mt-1">{isSuperAdmin ? "Manage collection areas across all organizations" : "View your organization's collection areas"}</p>
         </div>
         {isSuperAdmin && (
           <button onClick={() => { setShowAddModal(true); setFormError(""); }} className="px-5 py-2.5 bg-[var(--accent)] text-[var(--primary)] font-semibold rounded-xl shadow-sm hover:shadow-md hover:brightness-110 transition-all flex items-center gap-2">
-            <span className="text-lg">+</span> Add District
+            <span className="text-lg">+</span> Add Area
           </button>
         )}
       </div>
@@ -150,7 +150,7 @@ const Districts = () => {
               </thead>
               <tbody>
                 {districts.length === 0 ? (
-                  <tr><td colSpan={isSuperAdmin ? 7 : 5} className="px-6 py-12 text-center text-[var(--primary)]/40">No districts found.</td></tr>
+                  <tr><td colSpan={isSuperAdmin ? 7 : 5} className="px-6 py-12 text-center text-[var(--primary)]/40">No collection areas found.</td></tr>
                 ) : districts.map(d => {
                   const badge = TYPE_BADGES[d.type] || { cls: "bg-gray-100 text-gray-700", icon: "📍" };
                   return (
@@ -162,7 +162,7 @@ const Districts = () => {
                           {badge.icon} {d.type}
                         </span>
                       </td>
-                      {isSuperAdmin && <td className="px-5 py-3.5 text-[var(--primary)]/70">{d.orgName || d.organization?.name || "—"}</td>}
+                      {isSuperAdmin && <td className="px-5 py-3.5 text-[var(--primary)]/70">{d.orgId?.name || "—"}</td>}
                       <td className="px-5 py-3.5 text-[var(--primary)]/70 text-sm">
                         {d.coordinates?.latitude && d.coordinates?.longitude
                           ? `${d.coordinates.latitude.toFixed(4)}, ${d.coordinates.longitude.toFixed(4)}`
@@ -196,10 +196,10 @@ const Districts = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
             <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
-            <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Add New District</h2>
+            <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Add New Area</h2>
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">District Name *</label>
+                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Area Name *</label>
                 <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Kathmandu Central" className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
               </div>
               <div>
@@ -238,7 +238,7 @@ const Districts = () => {
                 </div>
               )}
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
-              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--accent)] text-[var(--primary)] font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">{submitting ? "Adding..." : "Add District"}</button>
+              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--accent)] text-[var(--primary)] font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">{submitting ? "Adding..." : "Add Area"}</button>
             </form>
           </div>
         </div>
@@ -249,10 +249,10 @@ const Districts = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
             <button onClick={() => setEditDistrict(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
-            <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Edit District — {editDistrict.name}</h2>
+            <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Edit Area — {editDistrict.name}</h2>
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">District Name</label>
+                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Area Name</label>
                 <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
               </div>
               <div>
@@ -308,11 +308,11 @@ const Districts = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
             <button onClick={() => setDeleteTarget(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
-            <h2 className="text-xl font-bold text-red-600 mb-2">Delete District</h2>
-            <p className="text-sm text-[var(--primary)]/60 mb-4">District: <strong>{deleteTarget.name}</strong> ({deleteTarget.type})</p>
+            <h2 className="text-xl font-bold text-red-600 mb-2">Delete Area</h2>
+            <p className="text-sm text-[var(--primary)]/60 mb-4">Area: <strong>{deleteTarget.name}</strong> ({deleteTarget.type})</p>
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-red-50 border border-red-200">
-                <p className="text-sm text-red-700">This will permanently delete this district and remove it from all schedules.</p>
+                <p className="text-sm text-red-700">This will permanently delete this area and remove it from all schedules.</p>
               </div>
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
               <button onClick={handleDelete} disabled={submitting} className="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition disabled:opacity-50">{submitting ? "Deleting..." : "Confirm Delete"}</button>

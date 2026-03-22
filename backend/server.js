@@ -18,6 +18,7 @@ import internalMessageRoutes from "./routes/internalMessage.route.js";
 import mlScheduleRoutes from "./routes/mlSchedule.route.js";
 import districtRoutes from "./routes/district.route.js";
 import notificationRoutes from "./routes/notification.route.js";
+import historyRoutes from "./routes/history.route.js";
 import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
 import { autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
 import { initSocket } from "./socket/socketServer.js";
@@ -62,6 +63,7 @@ app.use("/api/internal-messages", internalMessageRoutes);
 app.use("/api/ml-schedule", mlScheduleRoutes);
 app.use("/api/districts", districtRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/history", historyRoutes);
 
 // Health check
 app.get("/", (req, res) => {

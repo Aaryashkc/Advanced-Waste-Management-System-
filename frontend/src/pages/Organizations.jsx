@@ -145,7 +145,7 @@ const Organizations = () => {
                 </div>
 
                 {/* Resource Stats */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="p-3 rounded-xl bg-[var(--primary)]/[0.03] text-center">
                     <p className="text-xl font-bold text-[var(--primary)]">{org.admins?.length || 0}</p>
                     <p className="text-[11px] text-[var(--primary)]/50 font-medium uppercase tracking-wide">Admins</p>
@@ -153,6 +153,10 @@ const Organizations = () => {
                   <div className="p-3 rounded-xl bg-[var(--primary)]/[0.03] text-center">
                     <p className="text-xl font-bold text-[var(--primary)]">{org.fleet?.length || 0}</p>
                     <p className="text-[11px] text-[var(--primary)]/50 font-medium uppercase tracking-wide">Trucks</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[var(--primary)]/[0.03] text-center">
+                    <p className="text-xl font-bold text-purple-600">{org.driverCount || 0}</p>
+                    <p className="text-[11px] text-[var(--primary)]/50 font-medium uppercase tracking-wide">Drivers</p>
                   </div>
                 </div>
 

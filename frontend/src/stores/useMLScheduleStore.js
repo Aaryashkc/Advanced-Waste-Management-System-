@@ -9,6 +9,7 @@ const useMLScheduleStore = create((set, get) => ({
     mlHealth: null,
     mlAnalytics: null,
     driverAssignments: [],
+    driverScheduleData: null,
     loading: false,
     error: null,
 
@@ -145,13 +146,17 @@ const useMLScheduleStore = create((set, get) => ({
         }
     },
 
-    // Fetch driver's ML assignments for today
+    // Fetch driver's ML assignments for today and tomorrow
     fetchDriverAssignments: async () => {
         set({ loading: true, error: null });
         try {
             const response = await api.get("/ml-schedule/driver-assignments");
+            const data = response.data.data;
+            // Keep driverAssignments as flat array (today's) for backward compat with DriverDashboard
+            const todayAssignments = data?.today?.assignments || [];
             set({
-                driverAssignments: response.data.data || [],
+                driverAssignments: todayAssignments,
+                driverScheduleData: data,
                 loading: false,
             });
         } catch (error) {

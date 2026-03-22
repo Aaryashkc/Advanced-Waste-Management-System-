@@ -177,10 +177,10 @@ export default function DriverDashboard() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500" />
               </span>
-              <p className="font-bold text-blue-800 text-lg">AI Schedule Active</p>
-              <span className="text-xs text-blue-600 font-medium uppercase tracking-wide bg-blue-100 px-2 py-0.5 rounded-full">Today</span>
+              <p className="font-bold text-blue-800 text-lg">Today's Schedule</p>
+              <span className="text-xs text-blue-600 font-medium uppercase tracking-wide bg-blue-100 px-2 py-0.5 rounded-full">Active</span>
             </div>
-            <p className="text-sm text-blue-700 mb-4">You have been assigned to the following districts for waste collection today. Complete all assigned routes.</p>
+            <p className="text-sm text-blue-700 mb-4">You have been assigned to the following areas for waste collection today.</p>
 
             <div className="space-y-2.5">
               {driverAssignments.map((assignment, i) => (
@@ -344,7 +344,7 @@ export default function DriverDashboard() {
                   to="/driver-ml-assignments"
                   className="w-full relative bg-blue-600 text-white py-4 px-6 rounded-2xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-md flex items-center justify-center gap-2"
                 >
-                  <span>ML Schedule</span>
+                  <span>Scheduling (Daily)</span>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>

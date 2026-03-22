@@ -32,13 +32,17 @@ const DriverDetail = () => {
   const { driverId } = useParams();
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_URL}/super-admin/drivers/${driverId}/detail`, {
+        const baseUrl = user?.role === "super_admin"
+          ? `${API_URL}/super-admin/drivers/${driverId}/detail`
+          : `${API_URL}/org-admin/drivers/${driverId}/detail`;
+        const res = await fetch(baseUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await res.json();
@@ -49,7 +53,7 @@ const DriverDetail = () => {
         setLoading(false);
       }
     })();
-  }, [driverId, token]);
+  }, [driverId, token, user?.role]);
 
   if (loading) {
     return (
