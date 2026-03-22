@@ -5,33 +5,90 @@ import DeletionRequests from "./DeletionRequests";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
+const SEVERITY_STYLES = {
+  critical: "border-l-red-500 bg-red-50/50",
+  warning: "border-l-amber-500 bg-amber-50/50",
+  info: "border-l-blue-500 bg-blue-50/50",
+};
+
+const TYPE_ICONS = {
+  driverless_truck: "🚛",
+  no_driver: "👤",
+  no_truck: "🚫",
+  schedule_failed: "🚨",
+  redispatch_needed: "🔄",
+  general: "🔔",
+};
+
 const Notifications = () => {
   const { token, user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState("clients");
+  const [activeTab, setActiveTab] = useState("alerts");
   const [messages, setMessages] = useState([]);
+  const [systemAlerts, setSystemAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [counts, setCounts] = useState({
+    alerts: 0,
     clients: 0,
     org_admin: 0,
     driver: 0,
     deletions: 0
   });
 
+  const fetchSystemAlerts = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/notifications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSystemAlerts(res.data.data || []);
+      return res.data.unreadCount || 0;
+    } catch (err) {
+      console.error("Failed to fetch system alerts", err);
+      return 0;
+    }
+  };
+
+  const markAlertRead = async (id) => {
+    try {
+      await axios.put(`${API_URL}/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSystemAlerts(prev => prev.map(a =>
+        a._id === id ? { ...a, isRead: true } : a
+      ));
+      setCounts(prev => ({ ...prev, alerts: Math.max(0, prev.alerts - 1) }));
+    } catch (err) {
+      console.error("Failed to mark alert as read", err);
+    }
+  };
+
+  const markAllAlertsRead = async () => {
+    try {
+      await axios.put(`${API_URL}/notifications/read-all`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSystemAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
+      setCounts(prev => ({ ...prev, alerts: 0 }));
+    } catch (err) {
+      console.error("Failed to mark all alerts as read", err);
+    }
+  };
+
   const fetchCounts = async () => {
     try {
-      const endpoints = [
+      const [alertsCount, clientsRes, orgAdminRes, driverRes, deletionsRes] = await Promise.all([
+        fetchSystemAlerts(),
         axios.get(`${API_URL}/contact/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_URL}/internal-messages/org_admin/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_URL}/internal-messages/driver/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(user?.role === "super_admin" 
+        axios.get(user?.role === "super_admin"
           ? `${API_URL}/super-admin/deletion-requests/pending-count`
-          : `${API_URL}/org-admin/deletion-requests/pending-count`, 
+          : `${API_URL}/org-admin/deletion-requests/pending-count`,
           { headers: { Authorization: `Bearer ${token}` } }
         ),
-      ];
-      const [clientsRes, orgAdminRes, driverRes, deletionsRes] = await Promise.all(endpoints);
+      ]);
       setCounts({
+        alerts: alertsCount,
         clients: clientsRes.data.count || 0,
         org_admin: orgAdminRes.data.count || 0,
         driver: driverRes.data.count || 0,
@@ -93,6 +150,7 @@ const Notifications = () => {
   };
 
   const tabs = [
+    { id: "alerts", label: "System Alerts", icon: "🚨" },
     { id: "clients", label: "Client Messages", icon: "👤" },
     { id: "org_admin", label: "Org / Admin", icon: "🏢" },
     { id: "driver", label: "Driver Reports", icon: "🚛" },
@@ -138,7 +196,87 @@ const Notifications = () => {
 
       {/* Content Area */}
       <div className="pt-2">
-        {activeTab === "deletions" ? (
+        {activeTab === "alerts" ? (
+          <div className="space-y-4">
+            {systemAlerts.length > 0 && (
+              <div className="flex justify-end">
+                <button
+                  onClick={markAllAlertsRead}
+                  className="text-xs font-semibold text-[var(--primary)] hover:text-[var(--accent)] px-3 py-1.5 rounded-lg border border-[var(--primary)]/10 hover:bg-[var(--primary)]/5 transition"
+                >
+                  Mark All Read
+                </button>
+              </div>
+            )}
+            {systemAlerts.length === 0 ? (
+              <div className="p-12 bg-white rounded-2xl border border-[var(--primary)]/10 text-center text-[var(--primary)]/40">
+                No system alerts. Everything is running smoothly!
+              </div>
+            ) : (
+              systemAlerts.map(alert => (
+                <div
+                  key={alert._id}
+                  className={`bg-white rounded-2xl border p-5 shadow-sm transition-all text-left border-l-4 ${
+                    !alert.isRead
+                      ? SEVERITY_STYLES[alert.severity] || SEVERITY_STYLES.info
+                      : "border-gray-100 border-l-gray-300 opacity-70"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{TYPE_ICONS[alert.type] || "🔔"}</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-[var(--primary)] text-base">{alert.title}</h3>
+                          {!alert.isRead && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500 text-white">New</span>
+                          )}
+                        </div>
+                        <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                          { critical: "bg-red-100 text-red-700", warning: "bg-amber-100 text-amber-700", info: "bg-blue-100 text-blue-700" }[alert.severity] || "bg-gray-100 text-gray-700"
+                        }`}>{alert.severity}</span>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-[var(--primary)]/40 bg-[var(--primary)]/5 px-2 py-1 rounded-lg">
+                      {new Date(alert.createdAt).toLocaleDateString()} {new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-[var(--primary)]/80 leading-relaxed mb-3 ml-11">
+                    {alert.message}
+                  </p>
+
+                  {/* Show truck details if available */}
+                  {alert.relatedData?.trucks && alert.relatedData.trucks.length > 0 && (
+                    <div className="ml-11 mb-3">
+                      <p className="text-xs font-semibold text-[var(--primary)]/50 uppercase mb-1.5">Affected Trucks</p>
+                      <div className="flex flex-wrap gap-2">
+                        {alert.relatedData.trucks.map((t, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 text-xs">
+                            <span className="font-semibold text-[var(--primary)]">{t.licensePlate}</span>
+                            <span className="text-[var(--primary)]/50">({t.capacity}kg)</span>
+                            {t.orgName && <span className="text-[var(--primary)]/40">- {t.orgName}</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!alert.isRead && (
+                    <div className="ml-11 flex justify-start">
+                      <button
+                        onClick={() => markAlertRead(alert._id)}
+                        className="text-xs font-semibold text-[var(--primary)] hover:text-white border border-[var(--primary)] hover:bg-[var(--primary)] px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Mark as Read
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        ) : activeTab === "deletions" ? (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-[var(--primary)]/10">
             <DeletionRequests onUpdate={fetchCounts} />
           </div>

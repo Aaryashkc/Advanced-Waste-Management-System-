@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import useDriverStore from "../stores/useDriverStore";
 import useAuthStore from "../stores/useAuthStore";
 
 const Drivers = () => {
   const { drivers, isLoading, error, fetchDrivers, addDriver, updateDriver, deleteDriver, requestDeletion } = useDriverStore();
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -137,6 +139,7 @@ const Drivers = () => {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        {isSuperAdmin && <button onClick={() => navigate(`/admin-dashboard/drivers/${d.id}`)} className="px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">View</button>}
                         {isSuperAdmin && <button onClick={() => openEdit(d)} className="px-2.5 py-1 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition">Edit</button>}
                         <button onClick={() => { setDeleteTarget(d); setDeleteReason(""); setFormError(""); }} className="px-2.5 py-1 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
                           {isSuperAdmin ? "Delete" : "Request Delete"}

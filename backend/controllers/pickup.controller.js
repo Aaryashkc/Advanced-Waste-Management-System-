@@ -12,6 +12,8 @@ function pickupPayload(doc) {
         customerId: doc.customerId,
         wasteUploadId: doc.wasteUploadId,
         location: doc.location,
+        province: doc.province,
+        district: doc.district,
         category: doc.category,
         level: doc.level,
         status: doc.status,
@@ -31,7 +33,7 @@ function pickupPayload(doc) {
  */
 export const createPickup = async (req, res) => {
     try {
-        const { latitude, longitude, address, category, level, wasteUploadId } = req.body;
+        const { latitude, longitude, address, category, level, wasteUploadId, province, district } = req.body;
 
         if (!latitude || !longitude) {
             return res.status(400).json({ message: "latitude and longitude are required" });
@@ -55,6 +57,8 @@ export const createPickup = async (req, res) => {
             orgId: customer.orgId,
             wasteUploadId: wasteUploadId || null,
             location: { latitude, longitude, address: address || null },
+            province: province || null,
+            district: district || null,
             category: category || "non-recyclable",
             level: level || "easy",
             matchedDriverIds: matchedUserIds,
@@ -147,17 +151,21 @@ export const getPendingPickups = async (req, res) => {
     try {
         const driverUser = req.user;
 
-        // Find the driver's profile to get truck details if needed for fallback
-        const driverProfile = await Driver.findOne({ userId: driverUser._id }).populate(
-            "assignedTruckId",
-            "truckType"
-        );
+        // Find the driver's profile to check they have a truck assigned
+        const driverProfile = await Driver.findOne({ userId: driverUser._id });
 
         if (!driverProfile?.assignedTruckId) {
             return res.status(200).json({ pickups: [] }); // No truck = no pickups
         }
 
-        const truckType = driverProfile.assignedTruckId.truckType;
+        // Check if driver has an active pickup - block new ones until complete
+        const activePickup = await PickupRequest.findOne({
+            driverId: driverUser._id,
+            status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] }
+        });
+        if (activePickup) {
+            return res.status(200).json({ pickups: [], activePickup: pickupPayload(activePickup) });
+        }
 
         // Fetch all logically available pending requests for the driver's org (or null org)
         const pendingPickups = await PickupRequest.find({
@@ -166,20 +174,12 @@ export const getPendingPickups = async (req, res) => {
             $or: [{ orgId: driverUser.orgId }, { orgId: null }]
         }).sort({ createdAt: -1 });
 
-        // Filter: only show if driver is explicitly in matchedDriverIds, 
-        // OR (if matchedDriverIds is empty meaning fallback broadcast broadcast) 
-        // at least check the category compatibility to avoid BIO truck taking non-recyclable.
+        // Filter: only show if driver is explicitly in matchedDriverIds,
+        // OR if matchedDriverIds is empty (fallback broadcast)
         const eligiblePickups = pendingPickups.filter(p => {
-            // 1. If explicit matches exist, driver must be in the list
             if (p.matchedDriverIds && p.matchedDriverIds.length > 0) {
                 return p.matchedDriverIds.some(id => id.toString() === driverUser._id.toString());
             }
-
-            // 2. Fallback: Check category compatibility
-            const wasteCategory = p.category || "non-recyclable";
-            if (wasteCategory === "recyclable" && truckType === "NON_BIO") return false;
-            if (wasteCategory === "non-recyclable" && truckType === "BIO") return false;
-            
             return true;
         });
 
@@ -205,16 +205,25 @@ export const acceptPickup = async (req, res) => {
         // Get driver profile for truck info
         const driverProfile = await Driver.findOne({ userId: driverUser._id }).populate(
             "assignedTruckId",
-            "licensePlate truckType"
+            "licensePlate"
         );
         if (!driverProfile) {
             return res.status(404).json({ message: "Driver profile not found" });
         }
 
+        // Block if driver already has an active pickup
+        const activePickup = await PickupRequest.findOne({
+            driverId: driverUser._id,
+            status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] }
+        });
+        if (activePickup) {
+            return res.status(400).json({ message: "You already have an active pickup. Complete it before accepting a new one." });
+        }
+
         const driverInfo = {
             name: driverUser.name,
             phone: driverUser.phone || null,
-            vehicleId: driverProfile.assignedTruckId?.truckType || null,
+            vehicleId: driverProfile.assignedTruckId?._id?.toString() || null,
             licensePlate: driverProfile.assignedTruckId?.licensePlate || null,
         };
 

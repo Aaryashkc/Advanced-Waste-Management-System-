@@ -47,6 +47,19 @@ const useAdminStore = create((set, get) => ({
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to update admin' };
     }
+  },
+
+  deleteAdmin: async (adminId) => {
+    try {
+      const token = useAuthStore.getState().token;
+      await axios.delete(`${API_URL}/super-admin/admins/${adminId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      get().fetchAdmins();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to delete admin' };
+    }
   }
 }));
 

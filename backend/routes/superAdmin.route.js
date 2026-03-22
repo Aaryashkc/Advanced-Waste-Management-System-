@@ -4,6 +4,7 @@ import { roleMiddleware } from "../middlewares/role.middleware.js";
 import {
   createOrganization,
   getAllOrganizations,
+  getOrganizationById,
   updateOrganization,
   addAdminToOrg,
   getSuperAdminAnalytics,
@@ -15,10 +16,13 @@ import {
   createDriverBySuperAdmin,
   updateDriver,
   deleteDriver,
+  deleteAdmin,
   assignDriverToTruck,
   getDeletionRequests,
   reviewDeletionRequest,
-  getPendingDeletionCount
+  getPendingDeletionCount,
+  getDriverDetail,
+  getPickupStats
 } from "../controllers/superAdmin.controller.js";
 import { getAllDrivers } from "../controllers/driver.controller.js";
 
@@ -29,6 +33,7 @@ router.use(roleMiddleware("super_admin"));
 
 router.post("/organizations", createOrganization);
 router.get("/organizations", getAllOrganizations);
+router.get("/organizations/:orgId", getOrganizationById);
 router.put("/organizations/:orgId", updateOrganization);
 router.post("/organizations/:orgId/admins", addAdminToOrg);
 router.get("/analytics", getSuperAdminAnalytics);
@@ -43,9 +48,16 @@ router.post("/vehicles/:truckId/unassign-driver", unassignDriverFromTruck);
 // Driver management
 router.get("/drivers", getAllDrivers);
 router.post("/drivers", createDriverBySuperAdmin);
+router.get("/drivers/:driverId/detail", getDriverDetail);
 router.put("/drivers/:driverId", updateDriver);
 router.delete("/drivers/:driverId", deleteDriver);
 router.post("/assign-driver-truck", assignDriverToTruck);
+
+// Pickup stats
+router.get("/pickup-stats", getPickupStats);
+
+// Admin management
+router.delete("/admins/:adminId", deleteAdmin);
 
 // Deletion requests
 router.get("/deletion-requests/pending-count", getPendingDeletionCount);

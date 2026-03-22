@@ -33,6 +33,8 @@ const usePickupStore = create((set, get) => ({
                 category: extras.category || "non-recyclable",
                 level: extras.level || "easy",
                 wasteUploadId: extras.wasteUploadId || null,
+                province: extras.province || null,
+                district: extras.district || null,
             };
 
             const res = await api.post("/pickups", body);

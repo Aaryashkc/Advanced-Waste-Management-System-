@@ -3,6 +3,7 @@ import User from "../models/User.model.js";
 import Task from "../models/Task.model.js";
 import Truck from "../models/Truck.model.js";
 import Driver from "../models/Driver.model.js";
+import PickupRequest from "../models/PickupRequest.model.js";
 import DeletionRequest from "../models/DeletionRequest.model.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
@@ -52,6 +53,111 @@ export const getAllOrganizations = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to retrieve organizations", error: error.message });
+  }
+};
+
+/**
+ * Get a single organization with full details:
+ * admins, trucks (with assigned drivers), drivers, districts
+ * GET /api/super-admin/organizations/:orgId
+ */
+export const getOrganizationById = async (req, res) => {
+  try {
+    const { orgId } = req.params;
+
+    const org = await Organization.findById(orgId)
+      .populate("admins", "name email phone isActive createdAt");
+
+    if (!org) return res.status(404).json({ message: "Organization not found" });
+
+    // Get trucks for this org
+    const trucks = await Truck.find({ orgId: org._id }).lean();
+
+    // Get all drivers for this org
+    const orgDriverUsers = await User.find({ orgId: org._id, role: "driver" }).select("_id name email phone isActive createdAt").lean();
+    const driverUserIds = orgDriverUsers.map(u => u._id);
+    const drivers = await Driver.find({ userId: { $in: driverUserIds } })
+      .populate("assignedTruckId", "licensePlate truckType capacity")
+      .lean();
+
+    // Map driver profile to user data
+    const driversWithUser = drivers.map(d => {
+      const user = orgDriverUsers.find(u => u._id.toString() === d.userId.toString());
+      return {
+        id: d._id,
+        userId: d.userId,
+        name: user?.name || "Unknown",
+        email: user?.email || "",
+        phone: user?.phone || "",
+        isAvailable: d.isAvailable,
+        assignedTruck: d.assignedTruckId ? {
+          id: d.assignedTruckId._id,
+          licensePlate: d.assignedTruckId.licensePlate,
+          truckType: d.assignedTruckId.truckType,
+          capacity: d.assignedTruckId.capacity,
+        } : null,
+        createdAt: user?.createdAt,
+      };
+    });
+
+    // Get districts for this org
+    const District = (await import("../models/District.model.js")).default;
+    const districts = await District.find({ orgId: org._id, isActive: true }).lean();
+
+    // Build driver map for trucks
+    const driverByTruck = {};
+    for (const d of driversWithUser) {
+      if (d.assignedTruck) {
+        driverByTruck[d.assignedTruck.id.toString()] = { name: d.name, id: d.id };
+      }
+    }
+
+    const trucksFormatted = trucks.map(t => ({
+      id: t._id,
+      licensePlate: t.licensePlate,
+      truckType: t.truckType,
+      capacity: t.capacity,
+      dutyType: t.dutyType,
+      isAvailable: t.isAvailable,
+      assignedDriver: driverByTruck[t._id.toString()] || null,
+      createdAt: t.createdAt,
+    }));
+
+    // Summary stats
+    const totalTrucks = trucks.length;
+    const availableTrucks = trucks.filter(t => t.isAvailable).length;
+    const totalDrivers = driversWithUser.length;
+    const availableDrivers = driversWithUser.filter(d => d.isAvailable).length;
+    const trucksWithDrivers = trucksFormatted.filter(t => t.assignedDriver).length;
+    const trucksWithoutDrivers = totalTrucks - trucksWithDrivers;
+    const totalCapacity = trucks.reduce((sum, t) => sum + (t.capacity || 0), 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        _id: org._id,
+        name: org.name,
+        location: org.location,
+        createdAt: org.createdAt,
+        admins: org.admins,
+        trucks: trucksFormatted,
+        drivers: driversWithUser,
+        districts,
+        stats: {
+          totalAdmins: org.admins?.length || 0,
+          totalTrucks,
+          availableTrucks,
+          totalDrivers,
+          availableDrivers,
+          trucksWithDrivers,
+          trucksWithoutDrivers,
+          totalDistricts: districts.length,
+          totalCapacity,
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch organization details", error: error.message });
   }
 };
 
@@ -494,6 +600,37 @@ export const deleteDriver = async (req, res) => {
   }
 };
 
+export const deleteAdmin = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+
+    const adminUser = await User.findById(adminId);
+    if (!adminUser) return res.status(404).json({ message: "Admin not found" });
+
+    if (adminUser.role === "super_admin") {
+      return res.status(403).json({ message: "Cannot delete a super admin" });
+    }
+
+    if (adminUser.role !== "admin") {
+      return res.status(400).json({ message: "User is not an admin" });
+    }
+
+    // Remove admin from organization's admins array
+    if (adminUser.orgId) {
+      await Organization.findByIdAndUpdate(adminUser.orgId, {
+        $pull: { admins: adminUser._id },
+      });
+    }
+
+    // Delete the user account permanently
+    await User.findByIdAndDelete(adminId);
+
+    res.status(200).json({ success: true, message: "Admin deleted permanently from database" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete admin", error: error.message });
+  }
+};
+
 // ========== Deletion Request Approval ==========
 
 export const getDeletionRequests = async (req, res) => {
@@ -564,5 +701,147 @@ export const getPendingDeletionCount = async (req, res) => {
     res.status(200).json({ success: true, count });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch pending deletion count", error: error.message });
+  }
+};
+
+/**
+ * Get detailed driver info with pickup history/stats
+ * GET /api/super-admin/drivers/:driverId/detail
+ */
+export const getDriverDetail = async (req, res) => {
+  try {
+    const { driverId } = req.params;
+
+    const driver = await Driver.findById(driverId)
+      .populate("userId", "name email phone role")
+      .populate("assignedTruckId")
+      .populate("orgId", "name location")
+      .lean();
+
+    if (!driver) {
+      return res.status(404).json({ message: "Driver not found" });
+    }
+
+    const userId = driver.userId?._id;
+
+    // Get all pickups by this driver
+    const pickups = await PickupRequest.find({ driverId: userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const completedPickups = pickups.filter(p => p.status === "COMPLETED");
+    const activePickup = pickups.find(p => ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"].includes(p.status));
+
+    // Stats breakdown
+    const stats = {
+      totalPickups: pickups.length,
+      completedPickups: completedPickups.length,
+      cancelledPickups: pickups.filter(p => p.status === "CANCELLED").length,
+      activePickup: activePickup ? {
+        id: activePickup._id,
+        status: activePickup.status,
+        location: activePickup.location,
+        category: activePickup.category,
+        createdAt: activePickup.createdAt,
+      } : null,
+      // Category breakdown
+      byCategory: {
+        recyclable: completedPickups.filter(p => p.category === "recyclable").length,
+        nonRecyclable: completedPickups.filter(p => p.category === "non-recyclable").length,
+        mixed: completedPickups.filter(p => p.category === "both").length,
+      },
+      // Level breakdown
+      byLevel: {
+        easy: completedPickups.filter(p => p.level === "easy").length,
+        medium: completedPickups.filter(p => p.level === "medium").length,
+        hard: completedPickups.filter(p => p.level === "hard").length,
+      },
+    };
+
+    // Recent pickups (last 20)
+    const recentPickups = pickups.slice(0, 20).map(p => ({
+      id: p._id,
+      status: p.status,
+      category: p.category,
+      level: p.level,
+      province: p.province,
+      district: p.district,
+      location: p.location,
+      createdAt: p.createdAt,
+      assignedAt: p.assignedAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        driver: {
+          _id: driver._id,
+          name: driver.userId?.name,
+          email: driver.userId?.email,
+          phone: driver.userId?.phone,
+          licenseNumber: driver.licenseNumber,
+          isAvailable: driver.isAvailable,
+          organization: driver.orgId,
+          truck: driver.assignedTruckId ? {
+            _id: driver.assignedTruckId._id,
+            licensePlate: driver.assignedTruckId.licensePlate,
+            capacity: driver.assignedTruckId.capacity,
+            dutyType: driver.assignedTruckId.dutyType,
+            isAvailable: driver.assignedTruckId.isAvailable,
+          } : null,
+        },
+        stats,
+        recentPickups,
+      },
+    });
+  } catch (error) {
+    console.error("Get driver detail error:", error);
+    res.status(500).json({ message: "Failed to fetch driver details", error: error.message });
+  }
+};
+
+/**
+ * Get pickup stats across all drivers (for super admin reports)
+ * GET /api/super-admin/pickup-stats
+ */
+export const getPickupStats = async (req, res) => {
+  try {
+    const allPickups = await PickupRequest.find({})
+      .populate("driverId", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const completed = allPickups.filter(p => p.status === "COMPLETED");
+
+    // Per-driver stats
+    const driverMap = {};
+    for (const p of completed) {
+      const dId = p.driverId?._id?.toString() || "unknown";
+      if (!driverMap[dId]) {
+        driverMap[dId] = { driverName: p.driverId?.name || "Unknown", count: 0, categories: {} };
+      }
+      driverMap[dId].count++;
+      const cat = p.category || "non-recyclable";
+      driverMap[dId].categories[cat] = (driverMap[dId].categories[cat] || 0) + 1;
+    }
+
+    const driverStats = Object.entries(driverMap)
+      .map(([id, data]) => ({ driverId: id, ...data }))
+      .sort((a, b) => b.count - a.count);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalPickups: allPickups.length,
+        completedPickups: completed.length,
+        cancelledPickups: allPickups.filter(p => p.status === "CANCELLED").length,
+        expiredPickups: allPickups.filter(p => p.status === "EXPIRED").length,
+        activePickups: allPickups.filter(p => ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"].includes(p.status)).length,
+        driverStats,
+      },
+    });
+  } catch (error) {
+    console.error("Get pickup stats error:", error);
+    res.status(500).json({ message: "Failed to fetch pickup stats", error: error.message });
   }
 };

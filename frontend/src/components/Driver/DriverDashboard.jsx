@@ -2,15 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getSocket } from "../../utils/socket";
 import useAuthStore from "../../stores/useAuthStore";
+import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import api from "../../utils/api";
 
 export default function DriverDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { driverAssignments, fetchDriverAssignments } = useMLScheduleStore();
 
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [pendingPickups, setPendingPickups] = useState([]);
+  const [showScheduleToast, setShowScheduleToast] = useState(true);
 
   // ── Fetch driver profile with truck + org ─────────────────────────────
   useEffect(() => {
@@ -24,6 +27,7 @@ export default function DriverDashboard() {
         setProfileLoading(false);
       }
     })();
+    fetchDriverAssignments();
   }, []);
 
   // ── Socket: listen for pickup events ──────────────────────────────────
@@ -33,13 +37,6 @@ export default function DriverDashboard() {
     const onCreated = (pickup) => {
       // If we don't have a profile yet or no truck, we shouldn't show requests
       if (!profile || !profile.truck) return;
-
-      const truckType = profile.truck.truckType;
-      const wasteCategory = pickup.category || "non-recyclable";
-
-      // Filter out completely incompatible requests
-      if (wasteCategory === "recyclable" && truckType === "NON_BIO") return;
-      if (wasteCategory === "non-recyclable" && truckType === "BIO") return;
 
       setPendingPickups((prev) => {
         if (prev.some((p) => p.id === pickup.id)) return prev;
@@ -166,6 +163,55 @@ export default function DriverDashboard() {
           </div>
         )}
 
+        {/* ─── ML Schedule Assignment Toast ──────────────────────────── */}
+        {showScheduleToast && driverAssignments.length > 0 && (
+          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-2xl p-5 sm:p-6 relative">
+            <button
+              onClick={() => setShowScheduleToast(false)}
+              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 hover:bg-blue-200 transition text-sm"
+            >
+              &#x2715;
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500" />
+              </span>
+              <p className="font-bold text-blue-800 text-lg">AI Schedule Active</p>
+              <span className="text-xs text-blue-600 font-medium uppercase tracking-wide bg-blue-100 px-2 py-0.5 rounded-full">Today</span>
+            </div>
+            <p className="text-sm text-blue-700 mb-4">You have been assigned to the following districts for waste collection today. Complete all assigned routes.</p>
+
+            <div className="space-y-2.5">
+              {driverAssignments.map((assignment, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between bg-white rounded-xl border border-blue-200 px-5 py-3.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[var(--primary)]">{assignment.district}</p>
+                    <p className="text-xs text-[var(--primary)]/55 mt-1">
+                      {assignment.districtType} &middot; {assignment.predictedWasteKg?.toLocaleString()} kg predicted
+                      {assignment.wasteCategory && <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        assignment.wasteCategory === "critical" ? "bg-red-100 text-red-700" :
+                        assignment.wasteCategory === "high" ? "bg-orange-100 text-orange-700" :
+                        assignment.wasteCategory === "medium" ? "bg-amber-100 text-amber-700" :
+                        "bg-green-100 text-green-700"
+                      }`}>{assignment.wasteCategory}</span>}
+                    </p>
+                  </div>
+                  <Link
+                    to="/driver-ml-assignments"
+                    className="ml-4 flex-shrink-0 bg-blue-600 text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-blue-700 active:scale-95 transition"
+                  >
+                    View Route
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ─── Main Grid ──────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 
@@ -216,13 +262,7 @@ export default function DriverDashboard() {
                   <div className="w-7 h-7 border-3 border-[var(--primary)]/15 border-t-[var(--accent)] rounded-full animate-spin" />
                 </div>
               ) : truck ? (
-                <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] p-4">
-                    <p className="text-xs text-[var(--primary)]/55 mb-1.5">Type</p>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${typeBadge(truck.truckType).cls}`}>
-                      {typeBadge(truck.truckType).icon} {truck.truckType}
-                    </span>
-                  </div>
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] p-4">
                     <p className="text-xs text-[var(--primary)]/55 mb-1.5">Capacity</p>
                     <p className="text-lg font-bold text-[var(--primary)]">
@@ -297,6 +337,20 @@ export default function DriverDashboard() {
                   {pendingPickups.length > 0 && (
                     <span className="absolute -top-2 -right-2 min-w-[1.25rem] h-5 rounded-full bg-red-500 ring-4 ring-white animate-pulse flex items-center justify-center text-white text-[10px] font-bold px-1">
                       {pendingPickups.length}
+                    </span>
+                  )}
+                </Link>
+                <Link
+                  to="/driver-ml-assignments"
+                  className="w-full relative bg-blue-600 text-white py-4 px-6 rounded-2xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-md flex items-center justify-center gap-2"
+                >
+                  <span>ML Schedule</span>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  {driverAssignments.length > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-[1.25rem] h-5 rounded-full bg-blue-800 ring-4 ring-white flex items-center justify-center text-white text-[10px] font-bold px-1">
+                      {driverAssignments.length}
                     </span>
                   )}
                 </Link>

@@ -1,0 +1,175 @@
+"""
+Load trained model and provide prediction functions.
+Handles model loading, feature preparation, and waste categorization.
+"""
+
+import os
+import joblib
+import numpy as np
+import pandas as pd
+from datetime import datetime, date
+from nepal_holidays import (
+    get_holiday_info,
+    get_holiday_impact_multiplier,
+    days_to_nearest_holiday,
+)
+
+MODEL_PATH = os.getenv("MODEL_PATH", "./models/waste_predictor.pkl")
+ENCODER_PATH = os.getenv("ENCODER_PATH", "./models/label_encoders.pkl")
+
+# ── Global model/encoder references (loaded once) ───────────────────────────
+_model = None
+_encoders = None
+_r2_score = 0.974  # Stored from training
+
+
+def load_model():
+    """Load model and encoders from .pkl files."""
+    global _model, _encoders
+    if _model is None:
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(
+                f"Model not found at {MODEL_PATH}. Run 'python train.py' first."
+            )
+        _model = joblib.load(MODEL_PATH)
+        _encoders = joblib.load(ENCODER_PATH)
+        print(f"[Model] Loaded from {MODEL_PATH}")
+    return _model, _encoders
+
+
+# ── Season helper ────────────────────────────────────────────────────────────
+def get_season(month):
+    if month in [6, 7, 8, 9]:
+        return "monsoon"
+    elif month in [10, 11, 12]:
+        return "autumn"
+    elif month in [1, 2]:
+        return "winter"
+    else:
+        return "spring"
+
+
+# ── District types ───────────────────────────────────────────────────────────
+DISTRICT_TYPES = {
+    "Kathmandu-Core": "commercial",
+    "Lalitpur": "commercial",
+    "Bhaktapur": "commercial",
+    "Kirtipur": "residential",
+    "Madhyapur Thimi": "residential",
+    "Budhanilkantha": "suburban",
+    "Tokha": "suburban",
+    "Chandragiri": "rural",
+    "Godawari": "rural",
+    "Dakshinkali": "rural",
+}
+
+DISTRICTS = list(DISTRICT_TYPES.keys())
+
+
+# ── Waste categorization ────────────────────────────────────────────────────
+def categorize_waste(kg):
+    """
+    Categorize predicted waste volume.
+    Thresholds tuned for Nepal context / Kathmandu Valley scale.
+    """
+    if kg < 500:
+        return "none"
+    elif kg < 1500:
+        return "low"
+    elif kg < 3500:
+        return "medium"
+    elif kg < 6000:
+        return "high"
+    else:
+        return "critical"
+
+
+def get_recommendation(waste_category, district, district_type):
+    """Generate human-readable recommendation based on prediction."""
+    recommendations = {
+        "none": f"Skip {district} — predicted waste is negligible. Save fuel and reallocate truck.",
+        "low": f"Reduced service for {district} — send a light-duty truck (< 1,000 kg).",
+        "medium": f"Standard service for {district} — assign a medium-duty truck (1,000–3,500 kg).",
+        "high": f"High volume expected in {district} — deploy heavy-duty truck (> 3,500 kg). Consider extra trip.",
+        "critical": f"CRITICAL waste surge in {district}! Deploy multiple trucks. Possible festival/event waste spike.",
+    }
+    return recommendations.get(waste_category, f"Standard service for {district}.")
+
+
+# ── Prediction function ─────────────────────────────────────────────────────
+def predict_waste(district, target_date):
+    """
+    Predict waste volume for a district on a given date.
+
+    Args:
+        district: str — one of the 10 Kathmandu Valley districts
+        target_date: date object
+
+    Returns:
+        dict with prediction details
+    """
+    model, encoders = load_model()
+
+    if district not in DISTRICT_TYPES:
+        raise ValueError(
+            f"Unknown district '{district}'. Valid: {DISTRICTS}"
+        )
+
+    # Prepare features (same order as training)
+    day_of_week = target_date.weekday()
+    month = target_date.month
+    is_weekend = 1 if day_of_week >= 5 else 0
+    holiday_name, _ = get_holiday_info(target_date)
+    is_holiday = 1 if holiday_name else 0
+    holiday_proximity = days_to_nearest_holiday(target_date)
+    season = get_season(month)
+    district_type = DISTRICT_TYPES[district]
+
+    # Encode categoricals
+    district_encoded = encoders["district"].transform([district])[0]
+    season_encoded = encoders["season"].transform([season])[0]
+    district_type_encoded = encoders["district_type"].transform([district_type])[0]
+
+    feature_names = [
+        "district_encoded", "day_of_week", "month", "is_weekend",
+        "is_holiday", "holiday_proximity", "season_encoded", "district_type_encoded",
+    ]
+    features = pd.DataFrame([[
+        district_encoded,
+        day_of_week,
+        month,
+        is_weekend,
+        is_holiday,
+        holiday_proximity,
+        season_encoded,
+        district_type_encoded,
+    ]], columns=feature_names)
+
+    predicted_kg = float(model.predict(features)[0])
+    predicted_kg = max(0, round(predicted_kg, 1))
+
+    waste_category = categorize_waste(predicted_kg)
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    return {
+        "district": district,
+        "district_type": district_type,
+        "date": target_date.isoformat(),
+        "day_name": day_names[day_of_week],
+        "predicted_waste_kg": predicted_kg,
+        "waste_category": waste_category,
+        "is_holiday": bool(is_holiday),
+        "holiday_name": holiday_name or None,
+        "recommendation": get_recommendation(waste_category, district, district_type),
+    }
+
+
+def get_model_info():
+    """Return model metadata."""
+    return {
+        "model": "GradientBoosting",
+        "r2_score": _r2_score,
+        "districts": DISTRICTS,
+        "district_types": DISTRICT_TYPES,
+        "waste_categories": ["none", "low", "medium", "high", "critical"],
+    }

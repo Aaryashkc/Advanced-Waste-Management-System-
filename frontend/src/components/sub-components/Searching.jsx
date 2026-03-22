@@ -182,7 +182,7 @@ function SearchPage() {
   const navigate = useNavigate();
 
   // Metadata from UploadWastePage navigation state
-  const { wasteUploadId = null, category = "non-recyclable", level = "easy" } =
+  const { wasteUploadId = null, category = "non-recyclable", level = "easy", province = null, district = null } =
     routerLocation.state || {};
 
   const { createPickup, cancelPickup, currentPickup, loading } = usePickupStore();
@@ -278,7 +278,7 @@ function SearchPage() {
         longitude: selectedLocation[1],
         address: selectedAddress,
       },
-      { wasteUploadId, category, level }
+      { wasteUploadId, category, level, province, district }
     );
 
     if (result.success) {

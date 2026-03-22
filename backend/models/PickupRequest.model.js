@@ -29,6 +29,16 @@ const pickupRequestSchema = new mongoose.Schema(
             address: { type: String, default: null },
         },
 
+        // Customer-selected province and district
+        province: {
+            type: String,
+            default: null,
+        },
+        district: {
+            type: String,
+            default: null,
+        },
+
         // Copied from the waste image upload
         category: {
             type: String,

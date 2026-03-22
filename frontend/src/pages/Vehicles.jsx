@@ -23,7 +23,7 @@ const Vehicles = () => {
   const [assignVehicle, setAssignVehicle] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [orgs, setOrgs] = useState([]);
-  const [form, setForm] = useState({ truckType: "BIO", capacity: "", licensePlate: "", orgId: "" });
+  const [form, setForm] = useState({ capacity: "", licensePlate: "", orgId: "" });
   const [editForm, setEditForm] = useState({});
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [deleteReason, setDeleteReason] = useState("");
@@ -47,7 +47,7 @@ const Vehicles = () => {
     setSubmitting(true);
     const result = await addVehicle({ ...form, capacity: Number(form.capacity) });
     setSubmitting(false);
-    if (result.success) { setShowAddModal(false); setForm({ truckType: "BIO", capacity: "", licensePlate: "", orgId: "" }); }
+    if (result.success) { setShowAddModal(false); setForm({ capacity: "", licensePlate: "", orgId: "" }); }
     else setFormError(result.error);
   };
 
@@ -87,7 +87,7 @@ const Vehicles = () => {
     }
   };
 
-  const openEdit = (v) => { setEditVehicle(v); setEditForm({ truckType: v.truckType, capacity: v.capacity, licensePlate: v.licensePlate, orgId: v.orgId || "", isAvailable: v.isAvailable }); setFormError(""); };
+  const openEdit = (v) => { setEditVehicle(v); setEditForm({ capacity: v.capacity, licensePlate: v.licensePlate, orgId: v.orgId || "", isAvailable: v.isAvailable }); setFormError(""); };
 
   const unassignedDrivers = drivers.filter(d => d.truck === "No Truck").length;
 
@@ -136,7 +136,6 @@ const Vehicles = () => {
               <thead>
                 <tr className="border-b border-[var(--primary)]/10 bg-[var(--primary)]/[0.03]">
                   <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">License Plate</th>
-                  <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Type</th>
                   <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Capacity</th>
                   <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Status</th>
                   {isSuperAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Organization</th>}
@@ -150,7 +149,6 @@ const Vehicles = () => {
                 ) : vehicles.map(v => (
                   <tr key={v.id} className="border-b border-[var(--primary)]/5 hover:bg-[var(--accent)]/5 transition-colors">
                     <td className="px-5 py-3.5 font-semibold text-[var(--primary)]">{v.licensePlate}</td>
-                    <td className="px-5 py-3.5"><span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${v.truckType === "BIO" ? "bg-green-100 text-green-700" : v.truckType === "MIXED" ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-700"}`}>{v.truckType === "BIO" ? "🌿" : v.truckType === "MIXED" ? "🔀" : "♻️"} {v.truckType}</span></td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[var(--primary)]/70">{v.capacity} kg</span>
@@ -192,7 +190,6 @@ const Vehicles = () => {
             <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
             <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Add New Vehicle</h2>
             <form onSubmit={handleAdd} className="space-y-4">
-              <div><label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Truck Type</label><select value={form.truckType} onChange={e => setForm({...form, truckType: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white"><option value="BIO">🌿 BIO</option><option value="NON_BIO">♻️ NON_BIO</option><option value="MIXED">🔀 MIXED</option></select></div>
               <div><label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Capacity (kg)</label><input type="number" value={form.capacity} onChange={e => setForm({...form, capacity: e.target.value})} placeholder="e.g. 5000" className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                 {form.capacity && getDutyType(form.capacity) && (
                   <div className={`mt-2 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${getDutyType(form.capacity).cls}`}>
@@ -217,7 +214,6 @@ const Vehicles = () => {
             <button onClick={() => setEditVehicle(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
             <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Edit Vehicle — {editVehicle.licensePlate}</h2>
             <form onSubmit={handleEdit} className="space-y-4">
-              <div><label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Truck Type</label><select value={editForm.truckType} onChange={e => setEditForm({...editForm, truckType: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white"><option value="BIO">🌿 BIO</option><option value="NON_BIO">♻️ NON_BIO</option><option value="MIXED">🔀 MIXED</option></select></div>
               <div><label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Capacity (kg)</label><input type="number" value={editForm.capacity} onChange={e => setEditForm({...editForm, capacity: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                 {editForm.capacity && getDutyType(editForm.capacity) && (
                   <div className={`mt-2 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${getDutyType(editForm.capacity).cls}`}>

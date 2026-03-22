@@ -15,14 +15,20 @@ import locationRoutes from "./routes/location.route.js";
 import pickupRoutes from "./routes/pickup.route.js";
 import contactRoutes from "./routes/contact.route.js";
 import internalMessageRoutes from "./routes/internalMessage.route.js";
+import mlScheduleRoutes from "./routes/mlSchedule.route.js";
+import districtRoutes from "./routes/district.route.js";
+import notificationRoutes from "./routes/notification.route.js";
 import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
+import { autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
 import { initSocket } from "./socket/socketServer.js";
 
 dotenv.config();
 
 // Single cron schedule guard so hot reload (e.g. nodemon) does not register multiple jobs
 let cleanupCronScheduled = false;
+let mlScheduleCronScheduled = false;
 const CRON_SCHEDULE = "0 2 * * *"; // 2:00 AM every day (server local time)
+const ML_SCHEDULE_CRON = "0 0 * * *"; // 12:00 AM (midnight) every day — generates today's schedule
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -53,6 +59,9 @@ app.use("/api/location", locationRoutes);
 app.use("/api/pickups", pickupRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/internal-messages", internalMessageRoutes);
+app.use("/api/ml-schedule", mlScheduleRoutes);
+app.use("/api/districts", districtRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -114,6 +123,15 @@ server.listen(PORT, () => {
             console.log(`Cleanup: removed ${r.deleted} expired waste upload(s), errors=${r.errors}`);
         })
         .catch((e) => console.error("Cleanup error:", e));
+    });
+  }
+
+  if (!mlScheduleCronScheduled) {
+    mlScheduleCronScheduled = true;
+    cron.schedule(ML_SCHEDULE_CRON, () => {
+      autoGenerateMLSchedule()
+        .then((r) => console.log(`ML auto-schedule: ${r.message}`))
+        .catch((e) => console.error("ML auto-schedule error:", e));
     });
   }
 });

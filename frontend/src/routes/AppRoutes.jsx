@@ -25,12 +25,19 @@ import AcceptTaskPage from "../components/Driver/AcceptTaskPage";
 import TaskRoutePage from "../components/Driver/TaskRoutePage";
 import TaskFlow from "../components/Driver/TaskFlow";
 import TestAnimationPage from "../pages/TestAnimationPage";
+import MLScheduleDashboard from "../components/ml/MLScheduleDashboard";
+import MLScheduleHistory from "../components/ml/MLScheduleHistory";
+import DriverMLAssignments from "../components/ml/DriverMLAssignments";
 import Vehicles from "../pages/Vehicles";
 import Drivers from "../pages/Drivers";
 import Organizations from "../pages/Organizations";
+import OrgDetail from "../pages/OrgDetail";
+import DriverDetail from "../pages/DriverDetail";
 import Admins from "../pages/Admins";
-import Zones from "../pages/Zones";
+import Districts from "../pages/Districts";
 import Notifications from "../pages/Notifications";
+import Reports from "../pages/Reports";
+import PickupStats from "../pages/PickupStats";
 import PickupStatusToast from "../components/users/PickupStatusToast";
 import DriverStatusToast from "../components/Driver/DriverStatusToast";
 import useAuthStore from "../stores/useAuthStore";
@@ -164,6 +171,14 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/driver-ml-assignments"
+          element={
+            <ProtectedRoute allowedRoles={['driver']}>
+              <DriverMLAssignments />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Protected Admin Routes (super_admin and admin) */}
         <Route
@@ -176,15 +191,25 @@ const AppRoutes = () => {
         >
           <Route index element={<Dashboard />} />
           <Route path="organizations" element={<Organizations />} />
+          <Route path="organizations/:orgId" element={<OrgDetail />} />
           <Route path="vehicles" element={<Vehicles />} />
           <Route path="drivers" element={<Drivers />} />
+          <Route path="drivers/:driverId" element={<DriverDetail />} />
           <Route path="admins" element={<Admins />} />
-          <Route path="zones" element={<Zones />} />
+          <Route path="districts" element={<Districts />} />
           <Route path="notifications" element={<Notifications />} />
-          <Route
-            path="reports"
-            element={<div className="text-center py-20 text-gray-500">Analytics & Reports Module (Coming Soon)</div>}
-          />
+          <Route path="ml-schedule" element={<MLScheduleDashboard />} />
+          <Route path="ml-schedule/history" element={<MLScheduleHistory />} />
+          <Route path="pickup-stats" element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <PickupStats />
+            </ProtectedRoute>
+          } />
+          <Route path="reports" element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <Reports />
+            </ProtectedRoute>
+          } />
         </Route>
 
         {/* Catch all */}

@@ -1,9 +1,12 @@
 import mongoose from "mongoose";
 
-// Helper: classify duty type from capacity
+// Helper: classify duty type from capacity (Nepal context)
+// Light:  < 1,000 kg  — Tata Ace, small pickups for narrow gallis
+// Medium: 1,000–3,500 kg — Tata 407, Eicher — standard municipal
+// Heavy:  > 3,500 kg  — Compactors, Ashok Leyland — main roads
 const classifyDuty = (capacity) => {
   if (!capacity || capacity < 1000) return 'light duty';
-  if (capacity <= 5000) return 'medium duty';
+  if (capacity <= 3500) return 'medium duty';
   return 'heavy duty';
 };
 
@@ -11,7 +14,7 @@ const truckSchema = new mongoose.Schema({
   truckType: {
     type: String,
     enum: ["BIO", "NON_BIO", "MIXED"],
-    required: true
+    default: "MIXED"
   },
   dutyType: {
     type: String,

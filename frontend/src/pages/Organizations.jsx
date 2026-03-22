@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import useOrganizationStore from "../stores/useOrganizationStore";
+
+const ORG_COLORS = [
+  "from-blue-500/20 to-blue-600/5",
+  "from-emerald-500/20 to-emerald-600/5",
+  "from-purple-500/20 to-purple-600/5",
+  "from-amber-500/20 to-amber-600/5",
+  "from-rose-500/20 to-rose-600/5",
+  "from-cyan-500/20 to-cyan-600/5",
+];
 
 const Organizations = () => {
   const { organizations, isLoading, error, fetchOrganizations, createOrganization, updateOrganization, addAdmin } = useOrganizationStore();
+  const navigate = useNavigate();
 
   const [showCreate, setShowCreate] = useState(false);
   const [editOrg, setEditOrg] = useState(null);
   const [adminOrg, setAdminOrg] = useState(null);
-  const [expandedOrg, setExpandedOrg] = useState(null);
 
   const [createForm, setCreateForm] = useState({ name: "", address: "" });
   const [editForm, setEditForm] = useState({ name: "", address: "" });
@@ -18,8 +28,7 @@ const Organizations = () => {
   useEffect(() => { fetchOrganizations(); }, [fetchOrganizations]);
 
   const handleCreate = async (e) => {
-    e.preventDefault();
-    setFormError("");
+    e.preventDefault(); setFormError("");
     if (!createForm.name || !createForm.address) { setFormError("Name and address are required"); return; }
     setSubmitting(true);
     const result = await createOrganization({ name: createForm.name, location: { address: createForm.address } });
@@ -29,9 +38,7 @@ const Organizations = () => {
   };
 
   const handleEdit = async (e) => {
-    e.preventDefault();
-    setFormError("");
-    setSubmitting(true);
+    e.preventDefault(); setFormError(""); setSubmitting(true);
     const result = await updateOrganization(editOrg._id, { name: editForm.name, location: { address: editForm.address } });
     setSubmitting(false);
     if (result.success) setEditOrg(null);
@@ -39,8 +46,7 @@ const Organizations = () => {
   };
 
   const handleAddAdmin = async (e) => {
-    e.preventDefault();
-    setFormError("");
+    e.preventDefault(); setFormError("");
     if (!adminForm.name || !adminForm.email || !adminForm.password) { setFormError("Name, email, and password are required"); return; }
     setSubmitting(true);
     const result = await addAdmin(adminOrg._id, adminForm);
@@ -49,51 +55,55 @@ const Organizations = () => {
     else setFormError(result.error);
   };
 
-  const openEdit = (org) => {
-    setEditOrg(org);
-    setEditForm({ name: org.name, address: org.location?.address || "" });
-    setFormError("");
-  };
+  const totalAdmins = organizations.reduce((sum, o) => sum + (o.admins?.length || 0), 0);
+  const totalFleet = organizations.reduce((sum, o) => sum + (o.fleet?.length || 0), 0);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--primary)]">🏢 Organizations</h1>
-          <p className="text-sm text-[var(--primary)]/60 mt-1">Create and manage waste management organizations</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--primary)] tracking-tight">Organizations</h1>
+          <p className="text-sm text-[var(--primary)]/60 mt-1">Manage waste management organizations and their resources</p>
         </div>
-        <button onClick={() => { setShowCreate(true); setFormError(""); }} className="px-5 py-2.5 bg-[var(--accent)] text-[var(--primary)] font-semibold rounded-xl shadow-sm hover:shadow-md hover:brightness-110 transition-all flex items-center gap-2">
-          <span className="text-lg">+</span> New Organization
+        <button onClick={() => { setShowCreate(true); setFormError(""); }} className="px-5 py-2.5 bg-[var(--primary)] text-white font-semibold rounded-xl shadow-sm hover:shadow-md hover:bg-[var(--primary)]/90 transition-all flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          New Organization
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-2xl">🏢</div>
+          <div className="w-12 h-12 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center">
+            <svg className="w-6 h-6 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+          </div>
           <div>
-            <p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Total Orgs</p>
+            <p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Organizations</p>
             <p className="text-2xl font-bold text-[var(--primary)]">{organizations.length}</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-2xl">👤</div>
+          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+            <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </div>
           <div>
             <p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Total Admins</p>
-            <p className="text-2xl font-bold text-green-600">{organizations.reduce((sum, o) => sum + (o.admins?.length || 0), 0)}</p>
+            <p className="text-2xl font-bold text-blue-600">{totalAdmins}</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl">🚛</div>
+          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+            <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h8m-8 4h8m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+          </div>
           <div>
             <p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Total Fleet</p>
-            <p className="text-2xl font-bold text-amber-600">{organizations.reduce((sum, o) => sum + (o.fleet?.length || 0), 0)}</p>
+            <p className="text-2xl font-bold text-amber-600">{totalFleet}</p>
           </div>
         </div>
       </div>
 
-      {/* Org Cards */}
+      {/* Org Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center h-48 bg-white/50 rounded-2xl border border-[var(--primary)]/10">
           <div className="w-8 h-8 border-4 border-[var(--primary)]/20 border-t-[var(--accent)] rounded-full animate-spin" />
@@ -101,93 +111,92 @@ const Organizations = () => {
       ) : error ? (
         <div className="p-6 bg-red-50 rounded-2xl border border-red-200 text-red-600 text-center font-medium">{error}</div>
       ) : organizations.length === 0 ? (
-        <div className="p-12 bg-white rounded-2xl border border-[var(--primary)]/10 text-center text-[var(--primary)]/40">
-          No organizations yet. Create your first one!
+        <div className="p-16 bg-white rounded-2xl border border-[var(--primary)]/10 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--primary)]/5 flex items-center justify-center">
+            <svg className="w-8 h-8 text-[var(--primary)]/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+          </div>
+          <p className="text-[var(--primary)]/40 font-medium">No organizations yet. Create your first one!</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {organizations.map(org => (
-            <div key={org._id} className="bg-white rounded-2xl border border-[var(--primary)]/10 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-              {/* Org Header */}
-              <div className="p-6 flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--accent)]/30 to-[var(--accent)]/10 flex items-center justify-center text-2xl font-bold text-[var(--primary)]">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {organizations.map((org, i) => (
+            <div
+              key={org._id}
+              onClick={() => navigate(`/admin-dashboard/organizations/${org._id}`)}
+              className="bg-white rounded-2xl border border-[var(--primary)]/10 shadow-sm overflow-hidden hover:shadow-lg hover:border-[var(--accent)]/30 transition-all cursor-pointer group"
+            >
+              {/* Color Top Band */}
+              <div className={`h-2 bg-gradient-to-r ${ORG_COLORS[i % ORG_COLORS.length]}`} />
+
+              <div className="p-5">
+                {/* Org Name & Location */}
+                <div className="flex items-start gap-3 mb-4">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${ORG_COLORS[i % ORG_COLORS.length]} flex items-center justify-center text-xl font-bold text-[var(--primary)] shrink-0`}>
                     {org.name?.charAt(0)?.toUpperCase()}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-[var(--primary)]">{org.name}</h3>
-                    <p className="text-sm text-[var(--primary)]/50 flex items-center gap-1">📍 {org.location?.address || "No address"}</p>
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-[var(--primary)] truncate group-hover:text-[var(--accent)] transition-colors">
+                      {org.name}
+                    </h3>
+                    <p className="text-xs text-[var(--primary)]/50 truncate">
+                      {org.location?.address || "No address"}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => openEdit(org)} className="px-3 py-1.5 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition">Edit</button>
-                  <button onClick={() => { setAdminOrg(org); setFormError(""); setAdminForm({ name: "", email: "", phone: "", password: "" }); }} className="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">+ Admin</button>
-                  <button onClick={() => setExpandedOrg(expandedOrg === org._id ? null : org._id)} className="px-3 py-1.5 text-xs font-semibold text-[var(--primary)]/60 bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition">
-                    {expandedOrg === org._id ? "▲ Less" : "▼ Details"}
+
+                {/* Resource Stats */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="p-3 rounded-xl bg-[var(--primary)]/[0.03] text-center">
+                    <p className="text-xl font-bold text-[var(--primary)]">{org.admins?.length || 0}</p>
+                    <p className="text-[11px] text-[var(--primary)]/50 font-medium uppercase tracking-wide">Admins</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[var(--primary)]/[0.03] text-center">
+                    <p className="text-xl font-bold text-[var(--primary)]">{org.fleet?.length || 0}</p>
+                    <p className="text-[11px] text-[var(--primary)]/50 font-medium uppercase tracking-wide">Trucks</p>
+                  </div>
+                </div>
+
+                {/* Admin Avatars */}
+                {org.admins?.length > 0 && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex -space-x-2">
+                      {org.admins.slice(0, 4).map(admin => (
+                        <div key={admin._id} className="w-7 h-7 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-700" title={admin.name}>
+                          {admin.name?.charAt(0)?.toUpperCase()}
+                        </div>
+                      ))}
+                      {org.admins.length > 4 && (
+                        <div className="w-7 h-7 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-gray-500">
+                          +{org.admins.length - 4}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-[var(--primary)]/40">{org.admins.length} admin{org.admins.length !== 1 ? "s" : ""}</span>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-3 border-t border-[var(--primary)]/5">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/admin-dashboard/organizations/${org._id}`); }}
+                    className="flex-1 py-2 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition text-center"
+                  >
+                    View Details
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditOrg(org); setEditForm({ name: org.name, address: org.location?.address || "" }); setFormError(""); }}
+                    className="py-2 px-3 text-xs font-semibold text-[var(--primary)]/60 bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setAdminOrg(org); setFormError(""); setAdminForm({ name: "", email: "", phone: "", password: "" }); }}
+                    className="py-2 px-3 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                  >
+                    + Admin
                   </button>
                 </div>
               </div>
-
-              {/* Quick Stats */}
-              <div className="px-6 pb-4 flex gap-6">
-                <div className="flex items-center gap-2 text-sm text-[var(--primary)]/60">
-                  <span className="w-6 h-6 rounded-md bg-indigo-50 flex items-center justify-center text-xs">👤</span>
-                  <span><strong className="text-[var(--primary)]">{org.admins?.length || 0}</strong> Admins</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-[var(--primary)]/60">
-                  <span className="w-6 h-6 rounded-md bg-green-50 flex items-center justify-center text-xs">🚛</span>
-                  <span><strong className="text-[var(--primary)]">{org.fleet?.length || 0}</strong> Vehicles</span>
-                </div>
-              </div>
-
-              {/* Expanded Details */}
-              {expandedOrg === org._id && (
-                <div className="border-t border-[var(--primary)]/10 p-6 bg-[var(--primary)]/[0.015] space-y-4">
-                  {/* Admins */}
-                  <div>
-                    <h4 className="text-sm font-bold text-[var(--primary)] mb-3 uppercase tracking-wider">Admins</h4>
-                    {org.admins?.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {org.admins.map(admin => (
-                          <div key={admin._id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[var(--primary)]/5">
-                            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-700">
-                              {admin.name?.charAt(0)?.toUpperCase() || "?"}
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-[var(--primary)]">{admin.name}</p>
-                              <p className="text-xs text-[var(--primary)]/50">{admin.email}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[var(--primary)]/40">No admins assigned yet</p>
-                    )}
-                  </div>
-
-                  {/* Fleet */}
-                  <div>
-                    <h4 className="text-sm font-bold text-[var(--primary)] mb-3 uppercase tracking-wider">Fleet</h4>
-                    {org.fleet?.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {org.fleet.map(truck => (
-                          <div key={truck._id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[var(--primary)]/5">
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg ${truck.truckType === "BIO" ? "bg-green-100" : "bg-slate-100"}`}>
-                              {truck.truckType === "BIO" ? "🌿" : "♻️"}
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-[var(--primary)]">{truck.licensePlate}</p>
-                              <p className="text-xs text-[var(--primary)]/50">{truck.truckType} · {truck.capacity} kg</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[var(--primary)]/40">No vehicles in fleet</p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -197,7 +206,7 @@ const Organizations = () => {
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
-            <button onClick={() => setShowCreate(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
+            <button onClick={() => setShowCreate(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">&#x2715;</button>
             <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Create Organization</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
@@ -209,7 +218,7 @@ const Organizations = () => {
                 <input type="text" value={createForm.address} onChange={e => setCreateForm({...createForm, address: e.target.value})} placeholder="e.g. Kathmandu, Nepal" className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
               </div>
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
-              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--accent)] text-[var(--primary)] font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--primary)] text-white font-bold rounded-xl hover:bg-[var(--primary)]/90 transition disabled:opacity-50">
                 {submitting ? "Creating..." : "Create Organization"}
               </button>
             </form>
@@ -221,7 +230,7 @@ const Organizations = () => {
       {editOrg && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
-            <button onClick={() => setEditOrg(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
+            <button onClick={() => setEditOrg(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">&#x2715;</button>
             <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Edit Organization</h2>
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
@@ -233,7 +242,7 @@ const Organizations = () => {
                 <input type="text" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
               </div>
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
-              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--accent)] text-[var(--primary)] font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">
+              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--primary)] text-white font-bold rounded-xl hover:bg-[var(--primary)]/90 transition disabled:opacity-50">
                 {submitting ? "Saving..." : "Save Changes"}
               </button>
             </form>
@@ -245,7 +254,7 @@ const Organizations = () => {
       {adminOrg && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
-            <button onClick={() => setAdminOrg(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
+            <button onClick={() => setAdminOrg(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">&#x2715;</button>
             <h2 className="text-xl font-bold text-[var(--primary)] mb-2">Add Admin</h2>
             <p className="text-sm text-[var(--primary)]/60 mb-6">Organization: <strong>{adminOrg.name}</strong></p>
             <form onSubmit={handleAddAdmin} className="space-y-4">
@@ -266,7 +275,7 @@ const Organizations = () => {
                 <input type="password" value={adminForm.password} onChange={e => setAdminForm({...adminForm, password: e.target.value})} placeholder="Min 6 characters" className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
               </div>
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
-              <button type="submit" disabled={submitting} className="w-full py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition disabled:opacity-50">
+              <button type="submit" disabled={submitting} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition disabled:opacity-50">
                 {submitting ? "Adding..." : "Add Admin"}
               </button>
             </form>

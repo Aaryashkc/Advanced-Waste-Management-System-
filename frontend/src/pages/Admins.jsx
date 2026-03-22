@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
 import useAdminStore from "../stores/useAdminStore";
+import useAuthStore from "../stores/useAuthStore";
 
 const Admins = () => {
-  const { admins, orgName, isLoading, error, fetchAdmins, createAdmin, updateAdmin } = useAdminStore();
+  const { admins, orgName, isLoading, error, fetchAdmins, createAdmin, updateAdmin, deleteAdmin } = useAdminStore();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
 
   const [showAdd, setShowAdd] = useState(false);
   const [editAdmin, setEditAdmin] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [editForm, setEditForm] = useState({});
   const [formError, setFormError] = useState("");
@@ -108,7 +112,12 @@ const Admins = () => {
                     <td className="px-5 py-3.5 text-[var(--primary)]/70">{a.phone || "—"}</td>
                     <td className="px-5 py-3.5 text-[var(--primary)]/50 text-sm">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "—"}</td>
                     <td className="px-5 py-3.5">
-                      <button onClick={() => openEdit(a)} className="px-3 py-1.5 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition">Edit</button>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => openEdit(a)} className="px-3 py-1.5 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition">Edit</button>
+                        {isSuperAdmin && (
+                          <button onClick={() => { setDeleteTarget(a); setFormError(""); }} className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">Delete</button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -146,6 +155,36 @@ const Admins = () => {
                 {submitting ? "Creating..." : "Create Admin"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Delete Admin Modal ===== */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+            <button onClick={() => setDeleteTarget(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">&#x2715;</button>
+            <h2 className="text-xl font-bold text-red-600 mb-2">Delete Admin</h2>
+            <p className="text-sm text-[var(--primary)]/60 mb-4">Admin: <strong>{deleteTarget.name}</strong></p>
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-red-50 border border-red-200">
+                <p className="text-sm text-red-700">This will permanently delete this admin from the database. This action cannot be undone.</p>
+              </div>
+              {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
+              <button
+                onClick={async () => {
+                  setSubmitting(true);
+                  const result = await deleteAdmin(deleteTarget.id);
+                  setSubmitting(false);
+                  if (result.success) setDeleteTarget(null);
+                  else setFormError(result.error);
+                }}
+                disabled={submitting}
+                className="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition disabled:opacity-50"
+              >
+                {submitting ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

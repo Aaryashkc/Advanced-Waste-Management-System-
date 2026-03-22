@@ -1,20 +1,49 @@
-import mongoose from "mongoose"
+import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema({
-    from:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
+  type: {
+    type: String,
+    enum: ["general", "driverless_truck", "no_driver", "no_truck", "schedule_failed", "redispatch_needed"],
+    default: "general",
+  },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  severity: {
+    type: String,
+    enum: ["info", "warning", "critical"],
+    default: "info",
+  },
+  from: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+  targetRoles: [{ type: String, enum: ["admin", "super_admin"] }],
+  orgId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    default: null,
+  },
+  relatedData: {
+    scheduleId: { type: mongoose.Schema.Types.ObjectId, ref: "MLSchedule" },
+    truckIds: [{ type: String }],
+    trucks: [{
+      id: String,
+      licensePlate: String,
+      orgName: String,
+      capacity: Number,
+    }],
+    districtName: { type: String },
+    date: { type: String },
+    reason: { type: String },
+  },
+  readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+}, { timestamps: true });
 
-    read:{
-        type: Boolean,
-        default: false
-    },
+notificationSchema.index({ createdAt: -1 });
+notificationSchema.index({ targetRoles: 1 });
+notificationSchema.index({ orgId: 1 });
 
-},{ timestamps: true}
-)
+const Notification = mongoose.model("Notification", notificationSchema);
 
-const Notification = mongoose.model("Notification", notificationSchema)
-
-export default Notification
+export default Notification;

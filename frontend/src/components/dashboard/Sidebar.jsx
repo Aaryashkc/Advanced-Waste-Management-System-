@@ -1,15 +1,25 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
+import useAuthStore from "../../stores/useAuthStore";
 
 const Sidebar = () => {
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
+
   const menuItems = [
     { name: "Dashboard", icon: "📊", path: "/admin-dashboard" },
-    { name: "Organizations", icon: "🏢", path: "/admin-dashboard/organizations" },
+    ...(isSuperAdmin ? [{ name: "Organizations", icon: "🏢", path: "/admin-dashboard/organizations" }] : []),
     { name: "Trucks", icon: "🚛", path: "/admin-dashboard/vehicles" },
     { name: "Drivers", icon: "👤", path: "/admin-dashboard/drivers" },
     { name: "Admins", icon: "👥", path: "/admin-dashboard/admins" },
-    { name: "Zones", icon: "📍", path: "/admin-dashboard/zones" },
-    { name: "Reports", icon: "📑", path: "/admin-dashboard/reports" },
+    { name: "Districts", icon: "📍", path: "/admin-dashboard/districts" },
+    { name: "ML Schedule", icon: "🤖", path: "/admin-dashboard/ml-schedule" },
+    { name: "Schedule History", icon: "📋", path: "/admin-dashboard/ml-schedule/history" },
+    { name: "Notifications", icon: "🔔", path: "/admin-dashboard/notifications" },
+    ...(isSuperAdmin ? [
+      { name: "Pickup Stats", icon: "📦", path: "/admin-dashboard/pickup-stats" },
+      { name: "Reports", icon: "📑", path: "/admin-dashboard/reports" },
+    ] : []),
   ];
 
   return (

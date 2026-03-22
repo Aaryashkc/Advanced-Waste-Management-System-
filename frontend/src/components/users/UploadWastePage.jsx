@@ -2,6 +2,18 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useUploadStore from '../../stores/useUploadStore';
 
+const PROVINCES = ["Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"];
+
+const PROVINCE_DISTRICTS = {
+  Koshi: ["Bhojpur", "Dhankuta", "Ilam", "Jhapa", "Khotang", "Morang", "Okhaldhunga", "Panchthar", "Sankhuwasabha", "Solukhumbu", "Sunsari", "Taplejung", "Terhathum", "Udayapur"],
+  Madhesh: ["Bara", "Dhanusha", "Mahottari", "Parsa", "Rautahat", "Saptari", "Sarlahi", "Siraha"],
+  Bagmati: ["Bhaktapur", "Chitwan", "Dhading", "Dolakha", "Kathmandu", "Kavrepalanchok", "Lalitpur", "Makwanpur", "Nuwakot", "Ramechhap", "Rasuwa", "Sindhuli", "Sindhupalchok"],
+  Gandaki: ["Baglung", "Gorkha", "Kaski", "Lamjung", "Manang", "Mustang", "Myagdi", "Nawalparasi East", "Parbat", "Syangja", "Tanahun"],
+  Lumbini: ["Arghakhanchi", "Banke", "Bardiya", "Dang", "Gulmi", "Kapilvastu", "Nawalparasi West", "Palpa", "Pyuthan", "Rolpa", "Rupandehi", "Rukum East"],
+  Karnali: ["Dailekh", "Dolpa", "Humla", "Jajarkot", "Jumla", "Kalikot", "Mugu", "Rukum West", "Salyan", "Surkhet", "Western Rukum"],
+  Sudurpashchim: ["Achham", "Baitadi", "Bajhang", "Bajura", "Dadeldhura", "Darchula", "Doti", "Kailali", "Kanchanpur"],
+};
+
 function UploadWastePage() {
   const navigate = useNavigate();
   const {
@@ -16,6 +28,8 @@ function UploadWastePage() {
 
   const [category, setCategory] = useState('non-recyclable');
   const [level, setLevel] = useState('easy');
+  const [province, setProvince] = useState('');
+  const [district, setDistrict] = useState('');
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -135,6 +149,10 @@ function UploadWastePage() {
   };
 
   const handleSubmit = async () => {
+    if (!province || !district) {
+      alert('Please select your province and district');
+      return;
+    }
     if (!file) {
       alert('Please upload an image first');
       return;
@@ -158,6 +176,8 @@ function UploadWastePage() {
             wasteUploadId: payload?.id || null,
             category: payload?.category || category,
             level: payload?.level || level,
+            province,
+            district,
           },
         });
       }, 1500);
@@ -260,7 +280,38 @@ function UploadWastePage() {
 
             <section className="rounded-2xl border border-[#354f52]/15 bg-white p-5 sm:p-6 shadow-sm">
               <h2 className="font-['Outfit',sans-serif] text-xl sm:text-2xl font-semibold text-[#354f52] mb-4">
-                3. Upload image
+                3. Your location
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#354f52]/80 mb-1.5">Province *</label>
+                  <select
+                    value={province}
+                    onChange={(e) => { setProvince(e.target.value); setDistrict(''); }}
+                    className="w-full px-4 py-3 rounded-xl border border-[#354f52]/20 bg-white text-[#354f52] font-medium focus:outline-none focus:ring-2 focus:ring-[#296200] transition"
+                  >
+                    <option value="">Select Province...</option>
+                    {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#354f52]/80 mb-1.5">District *</label>
+                  <select
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    disabled={!province}
+                    className="w-full px-4 py-3 rounded-xl border border-[#354f52]/20 bg-white text-[#354f52] font-medium focus:outline-none focus:ring-2 focus:ring-[#296200] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select District...</option>
+                    {province && PROVINCE_DISTRICTS[province]?.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[#354f52]/15 bg-white p-5 sm:p-6 shadow-sm">
+              <h2 className="font-['Outfit',sans-serif] text-xl sm:text-2xl font-semibold text-[#354f52] mb-4">
+                4. Upload image
               </h2>
 
               <label
@@ -349,6 +400,11 @@ function UploadWastePage() {
               </div>
 
               <div className="rounded-xl bg-[#f7f5ef] p-4 border border-[#354f52]/10">
+                <p className="text-xs uppercase tracking-wide text-[#5d6c6e] mb-1">Location</p>
+                <p className="font-semibold text-[#354f52]">{district || 'Not selected'}{province ? `, ${province}` : ''}</p>
+              </div>
+
+              <div className="rounded-xl bg-[#f7f5ef] p-4 border border-[#354f52]/10">
                 <p className="text-xs uppercase tracking-wide text-[#5d6c6e] mb-1">Image file</p>
                 <p className="font-semibold text-[#354f52] truncate" title={file?.name || 'No file selected'}>
                   {file ? file.name : lastUpload?.url ? 'Uploaded image available' : 'No file selected'}
@@ -383,8 +439,8 @@ function UploadWastePage() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!file || isSubmitting || justSubmitted}
-              className={`mt-6 w-full rounded-xl py-3.5 font-semibold text-base transition-all ${!file || isSubmitting || justSubmitted
+              disabled={!file || !province || !district || isSubmitting || justSubmitted}
+              className={`mt-6 w-full rounded-xl py-3.5 font-semibold text-base transition-all ${!file || !province || !district || isSubmitting || justSubmitted
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-[#296200] text-white hover:bg-[#245400] shadow-md'
                 }`}
