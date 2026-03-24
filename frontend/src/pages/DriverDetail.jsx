@@ -58,7 +58,7 @@ const DriverDetail = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-4 border-primary/20 border-t-[var(--accent)] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-primary/20 border-t-accent rounded-full animate-spin" />
       </div>
     );
   }
@@ -200,7 +200,7 @@ const DriverDetail = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-primary/[0.03]">
+                <tr className="bg-primary/3">
                   <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Date</th>
                   <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Status</th>
                   <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Category</th>
@@ -210,7 +210,7 @@ const DriverDetail = () => {
               </thead>
               <tbody className="divide-y divide-primary/5">
                 {recentPickups.map((p) => (
-                  <tr key={p.id} className="hover:bg-primary/[0.02] transition">
+                  <tr key={p.id} className="hover:bg-primary/2 transition">
                     <td className="px-5 py-3 text-sm text-primary/70">{new Date(p.createdAt).toLocaleDateString()}</td>
                     <td className="px-5 py-3">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[p.status] || "bg-gray-100 text-gray-600"}`}>{p.status}</span>
