@@ -117,6 +117,72 @@ function assignTrucksToDistricts(mlDistricts, trucksWithDrivers, districtOrgMap,
     });
   }
 
+  // === SECOND PASS: Auto-redispatch skipped/reduced districts ===
+  // Try to assign closest matching truck from ANY org (cross-org fallback)
+  // as long as the truck hasn't been assigned yet
+  const needsRedispatch = districtsData.filter(
+    (d) => d.action === "skip" || d.action === "reduced"
+  );
+
+  for (const district of needsRedispatch) {
+    const remainingTrucks = trucksWithDrivers.filter(
+      (t) => !assignedTruckIds.has(t.id)
+    );
+
+    if (remainingTrucks.length === 0) break;
+
+    const neededKg = district.predictedWasteKg || 0;
+    const currentCapacity = district.assignedTrucks.reduce(
+      (sum, t) => sum + (t.capacity || 0), 0
+    );
+    const deficit = neededKg - currentCapacity;
+
+    if (deficit <= 0 && district.assignedTrucks.length > 0) continue;
+
+    // Sort by closest capacity match to the deficit (or total need if no trucks yet)
+    const targetKg = district.assignedTrucks.length > 0 ? deficit : neededKg;
+    remainingTrucks.sort((a, b) => {
+      const diffA = Math.abs((a.capacity_kg || 0) - targetKg);
+      const diffB = Math.abs((b.capacity_kg || 0) - targetKg);
+      return diffA - diffB;
+    });
+
+    // Assign trucks until we meet or exceed the predicted waste
+    let totalCap = currentCapacity;
+    const newlyAssigned = [];
+    for (const truck of remainingTrucks) {
+      if (totalCap >= neededKg && (district.assignedTrucks.length + newlyAssigned.length) > 0) break;
+      newlyAssigned.push(truck);
+      totalCap += truck.capacity_kg || 0;
+      assignedTruckIds.add(truck.id);
+    }
+
+    if (newlyAssigned.length > 0) {
+      district.assignedTrucks.push(
+        ...newlyAssigned.map((t) => ({
+          truckId: t.id,
+          licensePlate: t.license_plate,
+          driverName: t.driver_name,
+          driverId: t.driver_id,
+          capacity: t.capacity_kg,
+          truckType: t.truck_type,
+          orgId: t.org_id,
+          orgName: t.org_name,
+        }))
+      );
+
+      if (totalCap >= neededKg) {
+        district.action = "dispatch";
+        district.skipReason = null;
+        district.recommendation = `Auto-assigned closest available truck(s): ${newlyAssigned.map(t => t.license_plate).join(", ")}`;
+      } else {
+        district.action = "reduced";
+        district.skipReason = null;
+        district.recommendation = `Partially covered with ${newlyAssigned.map(t => t.license_plate).join(", ")} (${Math.round(totalCap)}/${Math.round(neededKg)} kg)`;
+      }
+    }
+  }
+
   // Re-sort back to original order (by district name) for consistency
   districtsData.sort((a, b) => a.district.localeCompare(b.district));
 

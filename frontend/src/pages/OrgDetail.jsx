@@ -24,10 +24,10 @@ const TABS = [
 ];
 
 const StatCard = ({ label, value, color = "var(--primary)", sub }) => (
-  <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5">
-    <p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium mb-1">{label}</p>
+  <div className="bg-white rounded-2xl border border-primary/10 p-5">
+    <p className="text-xs text-primary/50 uppercase tracking-wider font-medium mb-1">{label}</p>
     <p className="text-3xl font-bold" style={{ color }}>{value}</p>
-    {sub && <p className="text-xs text-[var(--primary)]/40 mt-1">{sub}</p>}
+    {sub && <p className="text-xs text-primary/40 mt-1">{sub}</p>}
   </div>
 );
 
@@ -45,7 +45,7 @@ const OrgDetail = () => {
   if (isLoading || !currentOrg) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--accent)] rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-primary/20 border-t-[var(--accent)] rounded-full animate-spin" />
       </div>
     );
   }
@@ -99,25 +99,25 @@ const OrgDetail = () => {
     <div className="space-y-6">
       {/* Back + Header */}
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate("/admin-dashboard/organizations")} className="w-10 h-10 rounded-xl bg-[var(--primary)]/5 flex items-center justify-center hover:bg-[var(--primary)]/10 transition">
-          <svg className="w-5 h-5 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        <button onClick={() => navigate("/admin-dashboard/organizations")} className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center hover:bg-primary/10 transition">
+          <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--primary)] tracking-tight">{org?.name}</h1>
-          <p className="text-sm text-[var(--primary)]/50">{org?.location?.address || "No address set"}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight">{org?.name}</h1>
+          <p className="text-sm text-primary/50">{org?.location?.address || "No address set"}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[var(--primary)]/[0.03] p-1 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 bg-primary/[0.03] p-1 rounded-xl overflow-x-auto">
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === tab.id
-                ? "bg-white text-[var(--primary)] shadow-sm"
-                : "text-[var(--primary)]/50 hover:text-[var(--primary)]"
+                ? "bg-white text-primary shadow-sm"
+                : "text-primary/50 hover:text-primary"
             }`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} /></svg>
@@ -140,19 +140,19 @@ const OrgDetail = () => {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-6">
-              <h3 className="text-sm font-bold text-[var(--primary)] uppercase tracking-wider mb-4">Resource Distribution</h3>
+            <div className="bg-white rounded-2xl border border-primary/10 p-6">
+              <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Resource Distribution</h3>
               <div className="h-64">
                 <Doughnut data={resourceDoughnutData} options={doughnutOptions} />
               </div>
             </div>
             {trucks.length > 0 && (
-              <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-6">
-                <h3 className="text-sm font-bold text-[var(--primary)] uppercase tracking-wider mb-4">Truck Capacities</h3>
+              <div className="bg-white rounded-2xl border border-primary/10 p-6">
+                <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Truck Capacities</h3>
                 <div className="h-64">
                   <Bar data={capacityBarData} options={barOptions} />
                 </div>
-                <p className="text-xs text-[var(--primary)]/40 mt-2 text-center">
+                <p className="text-xs text-primary/40 mt-2 text-center">
                   <span className="inline-block w-3 h-3 rounded bg-green-500 mr-1 align-middle" /> Has driver
                   <span className="inline-block w-3 h-3 rounded bg-red-500 ml-3 mr-1 align-middle" /> No driver
                 </p>
@@ -162,30 +162,30 @@ const OrgDetail = () => {
 
           {/* Quick Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5">
-              <h3 className="text-sm font-bold text-[var(--primary)] uppercase tracking-wider mb-3">Admins ({admins.length})</h3>
+            <div className="bg-white rounded-2xl border border-primary/10 p-5">
+              <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Admins ({admins.length})</h3>
               {admins.length === 0 ? (
-                <p className="text-sm text-[var(--primary)]/40">No admins assigned</p>
+                <p className="text-sm text-primary/40">No admins assigned</p>
               ) : (
                 <div className="space-y-2">
                   {admins.map(a => (
-                    <div key={a._id} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--primary)]/[0.02]">
+                    <div key={a._id} className="flex items-center gap-3 p-2 rounded-lg bg-primary/[0.02]">
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
                         {a.name?.charAt(0)?.toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[var(--primary)]">{a.name}</p>
-                        <p className="text-xs text-[var(--primary)]/40">{a.email}</p>
+                        <p className="text-sm font-semibold text-primary">{a.name}</p>
+                        <p className="text-xs text-primary/40">{a.email}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5">
-              <h3 className="text-sm font-bold text-[var(--primary)] uppercase tracking-wider mb-3">Total Capacity</h3>
-              <p className="text-4xl font-bold text-[var(--primary)]">{(stats.totalCapacity || 0).toLocaleString()} <span className="text-base font-medium text-[var(--primary)]/40">kg</span></p>
-              <p className="text-xs text-[var(--primary)]/40 mt-1">Combined fleet capacity across {trucks.length} truck{trucks.length !== 1 ? "s" : ""}</p>
+            <div className="bg-white rounded-2xl border border-primary/10 p-5">
+              <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Total Capacity</h3>
+              <p className="text-4xl font-bold text-primary">{(stats.totalCapacity || 0).toLocaleString()} <span className="text-base font-medium text-primary/40">kg</span></p>
+              <p className="text-xs text-primary/40 mt-1">Combined fleet capacity across {trucks.length} truck{trucks.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
         </div>
@@ -194,29 +194,29 @@ const OrgDetail = () => {
       {activeTab === "trucks" && (
         <div className="space-y-4">
           {trucks.length === 0 ? (
-            <div className="p-12 bg-white rounded-2xl border border-[var(--primary)]/10 text-center text-[var(--primary)]/40">No trucks assigned to this organization.</div>
+            <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center text-primary/40">No trucks assigned to this organization.</div>
           ) : (
-            <div className="bg-white rounded-2xl border border-[var(--primary)]/10 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-[var(--primary)]/[0.03] border-b border-[var(--primary)]/10">
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">License Plate</th>
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">Capacity</th>
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">Type</th>
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">Assigned Driver</th>
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">Status</th>
+                    <tr className="bg-primary/[0.03] border-b border-primary/10">
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">License Plate</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Capacity</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Type</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Assigned Driver</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--primary)]/5">
+                  <tbody className="divide-y divide-primary/5">
                     {trucks.map(truck => (
-                      <tr key={truck.id} className="hover:bg-[var(--primary)]/[0.02] transition">
+                      <tr key={truck.id} className="hover:bg-primary/[0.02] transition">
                         <td className="px-5 py-4">
-                          <span className="font-bold text-[var(--primary)]">{truck.licensePlate}</span>
+                          <span className="font-bold text-primary">{truck.licensePlate}</span>
                         </td>
-                        <td className="px-5 py-4 text-sm text-[var(--primary)]/70">{truck.capacity} kg</td>
+                        <td className="px-5 py-4 text-sm text-primary/70">{truck.capacity} kg</td>
                         <td className="px-5 py-4">
-                          <span className="px-2.5 py-1 rounded-lg bg-[var(--primary)]/5 text-xs font-semibold text-[var(--primary)]/70 capitalize">{truck.truckType || "standard"}</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-primary/5 text-xs font-semibold text-primary/70 capitalize">{truck.truckType || "standard"}</span>
                         </td>
                         <td className="px-5 py-4">
                           {truck.assignedDriver ? (
@@ -224,7 +224,7 @@ const OrgDetail = () => {
                               <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-700">
                                 {truck.assignedDriver.name?.charAt(0)?.toUpperCase() || "D"}
                               </div>
-                              <span className="text-sm font-medium text-[var(--primary)]">{truck.assignedDriver.name || "Driver"}</span>
+                              <span className="text-sm font-medium text-primary">{truck.assignedDriver.name || "Driver"}</span>
                             </div>
                           ) : (
                             <span className="px-2.5 py-1 rounded-lg bg-red-50 text-xs font-bold text-red-500">No Driver</span>
@@ -248,31 +248,31 @@ const OrgDetail = () => {
       {activeTab === "drivers" && (
         <div className="space-y-4">
           {drivers.length === 0 ? (
-            <div className="p-12 bg-white rounded-2xl border border-[var(--primary)]/10 text-center text-[var(--primary)]/40">No drivers in this organization.</div>
+            <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center text-primary/40">No drivers in this organization.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {drivers.map(driver => (
-                <div key={driver.id} className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 hover:shadow-md transition">
+                <div key={driver.id} className="bg-white rounded-2xl border border-primary/10 p-5 hover:shadow-md transition">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-lg font-bold text-purple-700 shrink-0">
                       {driver.name?.charAt(0)?.toUpperCase() || "D"}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-base font-bold text-[var(--primary)] truncate">{driver.name || "Unknown"}</h3>
-                      <p className="text-xs text-[var(--primary)]/40 truncate">{driver.email}</p>
+                      <h3 className="text-base font-bold text-primary truncate">{driver.name || "Unknown"}</h3>
+                      <p className="text-xs text-primary/40 truncate">{driver.email}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-[var(--primary)]/50">Phone</span>
-                      <span className="font-medium text-[var(--primary)]">{driver.phone || "N/A"}</span>
+                      <span className="text-primary/50">Phone</span>
+                      <span className="font-medium text-primary">{driver.phone || "N/A"}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-[var(--primary)]/50">Status</span>
+                      <span className="text-primary/50">Status</span>
                       <span className={`font-medium ${driver.isAvailable ? "text-green-600" : "text-amber-600"}`}>{driver.isAvailable ? "Available" : "Unavailable"}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-[var(--primary)]/50">Assigned Truck</span>
+                      <span className="text-primary/50">Assigned Truck</span>
                       {driver.assignedTruck ? (
                         <span className="px-2 py-0.5 rounded-lg bg-green-50 text-xs font-bold text-green-700">{driver.assignedTruck.licensePlate}</span>
                       ) : (
@@ -290,26 +290,26 @@ const OrgDetail = () => {
       {activeTab === "districts" && (
         <div className="space-y-4">
           {districts.length === 0 ? (
-            <div className="p-12 bg-white rounded-2xl border border-[var(--primary)]/10 text-center text-[var(--primary)]/40">No districts assigned to this organization.</div>
+            <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center text-primary/40">No districts assigned to this organization.</div>
           ) : (
-            <div className="bg-white rounded-2xl border border-[var(--primary)]/10 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-[var(--primary)]/[0.03] border-b border-[var(--primary)]/10">
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">District Name</th>
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">Province</th>
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">Type</th>
-                      <th className="px-5 py-3 text-xs font-bold text-[var(--primary)]/60 uppercase tracking-wider">Status</th>
+                    <tr className="bg-primary/[0.03] border-b border-primary/10">
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">District Name</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Province</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Type</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--primary)]/5">
+                  <tbody className="divide-y divide-primary/5">
                     {districts.map(d => (
-                      <tr key={d._id} className="hover:bg-[var(--primary)]/[0.02] transition">
-                        <td className="px-5 py-4 font-bold text-[var(--primary)]">{d.name}</td>
-                        <td className="px-5 py-4 text-sm text-[var(--primary)]/70">{d.province || "N/A"}</td>
+                      <tr key={d._id} className="hover:bg-primary/[0.02] transition">
+                        <td className="px-5 py-4 font-bold text-primary">{d.name}</td>
+                        <td className="px-5 py-4 text-sm text-primary/70">{d.province || "N/A"}</td>
                         <td className="px-5 py-4">
-                          <span className="px-2.5 py-1 rounded-lg bg-[var(--primary)]/5 text-xs font-semibold text-[var(--primary)]/70 capitalize">{d.type || "N/A"}</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-primary/5 text-xs font-semibold text-primary/70 capitalize">{d.type || "N/A"}</span>
                         </td>
                         <td className="px-5 py-4">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${d.isActive !== false ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
@@ -329,22 +329,22 @@ const OrgDetail = () => {
       {activeTab === "admins" && (
         <div className="space-y-4">
           {admins.length === 0 ? (
-            <div className="p-12 bg-white rounded-2xl border border-[var(--primary)]/10 text-center text-[var(--primary)]/40">No admins in this organization.</div>
+            <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center text-primary/40">No admins in this organization.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {admins.map(admin => (
-                <div key={admin._id} className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 hover:shadow-md transition">
+                <div key={admin._id} className="bg-white rounded-2xl border border-primary/10 p-5 hover:shadow-md transition">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-blue-100 flex items-center justify-center text-xl font-bold text-blue-700 shrink-0">
                       {admin.name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-base font-bold text-[var(--primary)] truncate">{admin.name}</h3>
-                      <p className="text-xs text-[var(--primary)]/40 truncate">{admin.email}</p>
-                      {admin.phone && <p className="text-xs text-[var(--primary)]/40">{admin.phone}</p>}
+                      <h3 className="text-base font-bold text-primary truncate">{admin.name}</h3>
+                      <p className="text-xs text-primary/40 truncate">{admin.email}</p>
+                      {admin.phone && <p className="text-xs text-primary/40">{admin.phone}</p>}
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-[var(--primary)]/5">
+                  <div className="mt-3 pt-3 border-t border-primary/5">
                     <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-xs font-bold text-blue-600 uppercase">Admin</span>
                   </div>
                 </div>

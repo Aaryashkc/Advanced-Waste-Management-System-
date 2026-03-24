@@ -1,61 +1,63 @@
-import React, { useState, useEffect } from "react";
-import Button from "../common/Button";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../../stores/useAuthStore";
-import { io } from "socket.io-client";
+import { getSocket } from "../../utils/socket";
 import axios from "axios";
+import { Bell, LogOut, Menu } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
-const Topbar = ({ name = "Admin User", role = "System Administrator" }) => {
+const Topbar = ({ onMenuToggle }) => {
   const navigate = useNavigate();
   const { logout, user, token } = useAuthStore();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Use user data from store if available
-  const displayName = user?.name || name;
-  const displayRole = user?.role || role;
+  const displayName = user?.name || "Admin User";
+  const displayRole = user?.role || "admin";
+
+  // Fetch aggregated unread count across all notification types
+  const fetchTotalUnread = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [alertsRes, contactRes, orgAdminRes, driverRes] = await Promise.all([
+        axios.get(`${API_URL}/notifications/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_URL}/contact/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_URL}/internal-messages/org_admin/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_URL}/internal-messages/driver/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const total =
+        (alertsRes.data.count || 0) +
+        (contactRes.data.count || 0) +
+        (orgAdminRes.data.count || 0) +
+        (driverRes.data.count || 0);
+      setUnreadCount(total);
+    } catch (err) {
+      console.error("Failed to fetch unread counts:", err);
+    }
+  }, [token]);
 
   useEffect(() => {
-    // 1. Fetch initial unread count
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/contact/unread-count`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUnreadCount(response.data.count || 0);
-      } catch (err) {
-        console.error("Failed to fetch unread count:", err);
-      }
+    fetchTotalUnread();
+
+    const socket = getSocket();
+
+    // Listen for real-time events that affect unread count
+    const incrementCount = () => setUnreadCount(prev => prev + 1);
+
+    socket.on("notification:new", incrementCount);
+    socket.on("new_contact_message", incrementCount);
+    socket.on("update_unread_count", (count) => setUnreadCount(count));
+
+    // Periodically sync unread count (every 60 seconds)
+    const interval = setInterval(fetchTotalUnread, 60000);
+
+    return () => {
+      socket.off("notification:new", incrementCount);
+      socket.off("new_contact_message", incrementCount);
+      socket.off("update_unread_count");
+      clearInterval(interval);
     };
-
-    if (token) {
-      fetchUnreadCount();
-    }
-
-    // 2. Setup Socket.IO listener
-    if (!token) return;
-
-    const socket = io(SOCKET_URL, {
-      auth: { token },
-      withCredentials: true
-    });
-
-    socket.on("connect_error", (err) => {
-      console.warn("Socket connection error in topbar:", err.message);
-    });
-
-    socket.on("new_contact_message", () => {
-      setUnreadCount(prev => prev + 1);
-    });
-
-    socket.on("update_unread_count", (count) => {
-      setUnreadCount(count);
-    });
-
-    return () => socket.disconnect();
-  }, [token]);
+  }, [fetchTotalUnread]);
 
   const initials = React.useMemo(() => {
     const parts = String(displayName).trim().split(/\s+/).slice(0, 2);
@@ -70,63 +72,70 @@ const Topbar = ({ name = "Admin User", role = "System Administrator" }) => {
   };
 
   return (
-    <header className="h-16 bg-white/90 backdrop-blur border-b border-primary/12 fixed top-0 right-0 left-0 z-40">
+    <header className="h-16 bg-[#faf8f3]/90 backdrop-blur border-b border-primary/10 fixed top-0 right-0 left-0 z-40">
       <div className="h-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 min-w-0">
-          {/* Mobile brand icon */}
-          <div className="md:hidden w-10 h-10 rounded-2xl bg-[#f5f1e8] border border-primary/12 flex items-center justify-center">
-            <span className="text-xl">♻️</span>
-          </div>
+          {/* Mobile menu toggle */}
+          <button
+            onClick={onMenuToggle}
+            className="md:hidden p-2 rounded-lg hover:bg-primary/5 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5 text-primary/70" />
+          </button>
 
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-bold text-primary tracking-tight truncate">
               Admin Console
             </h1>
-            <p className="hidden sm:block text-xs text-primary/60 truncate">
+            <p className="hidden sm:block text-xs text-primary/50">
               Monitor vehicles, routes, and collections
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="flex items-center gap-3">
-            {/* Notification Bell */}
-            <button 
-              onClick={() => navigate("/admin-dashboard/notifications")}
-              className="relative p-2 rounded-full hover:bg-primary/5 transition-colors focus:outline-none" 
-              aria-label="Notifications"
-            >
-              <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
+        <div className="flex items-center gap-3">
+          {/* Notification Bell */}
+          <button
+            onClick={() => navigate("/admin-dashboard/notifications")}
+            className="relative p-2 rounded-lg hover:bg-primary/5 transition-colors"
+            aria-label="Notifications"
+          >
+            <Bell className="w-5 h-5 text-primary/70" />
+            {unreadCount > 0 && (
+              <>
+                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-[#faf8f3]">
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
-              )}
-            </button>
+                {/* Pulse ring for attention */}
+                <span className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-red-400 opacity-30 animate-ping" />
+              </>
+            )}
+          </button>
 
-            <div className="text-right hidden sm:block leading-tight border-l pl-3 border-primary/10">
-              <p className="text-sm font-semibold text-primary">
-                {displayName}
-              </p>
-              <p className="text-xs text-primary/60">{displayRole}</p>
+          <div className="hidden sm:block h-8 w-px bg-primary/10" />
+
+          {/* User info */}
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="text-right leading-tight">
+              <p className="text-sm font-semibold text-primary">{displayName}</p>
+              <p className="text-xs text-primary/50 capitalize">{displayRole.replace("_", " ")}</p>
             </div>
-
-            <div className="h-10 w-10 rounded-2xl bg-[#f5f1e8] border border-primary/12 flex items-center justify-center font-bold text-primary">
+            <div className="h-9 w-9 rounded-lg bg-primary/8 flex items-center justify-center text-sm font-bold text-primary">
               {initials}
             </div>
           </div>
 
           <div className="hidden sm:block h-8 w-px bg-primary/10" />
 
-          <Button
-            variant="outline"
+          {/* Logout */}
+          <button
             onClick={handleLogout}
-            className="px-3! py-2! text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary/70 rounded-lg hover:bg-primary/5 transition-colors"
           >
-            Logout
-          </Button>
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
         </div>
       </div>
     </header>

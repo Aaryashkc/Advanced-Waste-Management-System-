@@ -125,7 +125,7 @@ function ZoneModal({ isOpen, onClose, onSubmit, trucks, organizations, isSuperAd
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
         {/* Colored header */}
-        <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary)]/80 px-6 py-5">
+        <div className="bg-gradient-to-r from-primary to-primary/80 px-6 py-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-black">
@@ -157,7 +157,7 @@ function ZoneModal({ isOpen, onClose, onSubmit, trucks, organizations, isSuperAd
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">🏢 Organization *</label>
                 <select name="orgId" value={form.orgId} onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30">
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30">
                   <option value="">Select organization...</option>
                   {organizations.map(o => (
                     <option key={o._id || o.id} value={o._id || o.id}>{o.name}</option>
@@ -172,13 +172,13 @@ function ZoneModal({ isOpen, onClose, onSubmit, trucks, organizations, isSuperAd
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">🏙️ City *</label>
                 <input name="city" value={form.city} onChange={handleChange}
                   placeholder="e.g. Kathmandu"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30" />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">📌 Area *</label>
                 <input name="area" value={form.area} onChange={handleChange}
                   placeholder="e.g. Thamel"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30" />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
             </div>
 
@@ -187,7 +187,7 @@ function ZoneModal({ isOpen, onClose, onSubmit, trucks, organizations, isSuperAd
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">📅 Day *</label>
                 <select name="day" value={form.day} onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30">
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30">
                   <option value="">Select day...</option>
                   {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -196,7 +196,7 @@ function ZoneModal({ isOpen, onClose, onSubmit, trucks, organizations, isSuperAd
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">🕐 Pickup Time *</label>
                 <input name="time" value={form.time} onChange={handleChange}
                   placeholder="e.g. 7:00 AM"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30" />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
             </div>
 
@@ -249,7 +249,7 @@ function ZoneModal({ isOpen, onClose, onSubmit, trucks, organizations, isSuperAd
                 </div>
               ) : (
                 <select name="truckId" value={form.truckId} onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30">
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30">
                   <option value="">Select vehicle...</option>
                   {filteredTrucks.map(t => (
                     <option key={t.id || t._id} value={t.id || t._id}>
@@ -320,17 +320,17 @@ function ZoneCard({ zone, isSuperAdmin, onEdit, onDelete }) {
         {/* Top: location + time */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="min-w-0">
-            <h3 className="font-bold text-[var(--primary)] text-base truncate">{zone.city}</h3>
-            <p className="text-xs text-[var(--primary)]/55 truncate">{zone.area}</p>
+            <h3 className="font-bold text-primary text-base truncate">{zone.city}</h3>
+            <p className="text-xs text-primary/55 truncate">{zone.area}</p>
             {isSuperAdmin && zone.orgName && (
-              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--primary)]/10 text-[var(--primary)]">
+              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
                 🏢 {zone.orgName}
               </span>
             )}
           </div>
           {/* Time pill */}
           <div className="shrink-0 flex flex-col items-end gap-1">
-            <div className="flex items-center gap-1 bg-[var(--primary)] text-white px-2.5 py-1.5 rounded-lg shadow-sm">
+            <div className="flex items-center gap-1 bg-primary text-white px-2.5 py-1.5 rounded-lg shadow-sm">
               <svg className="w-3 h-3 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -345,12 +345,12 @@ function ZoneCard({ zone, isSuperAdmin, onEdit, onDelete }) {
           <div className="flex items-center gap-2 text-xs">
             <span className="w-5 text-center">👤</span>
             <span className="text-gray-500">Driver:</span>
-            <span className="font-semibold text-[var(--primary)] truncate flex-1">{zone.driver}</span>
+            <span className="font-semibold text-primary truncate flex-1">{zone.driver}</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
             <span className="w-5 text-center">🚛</span>
             <span className="text-gray-500">Vehicle:</span>
-            <span className="font-semibold text-[var(--primary)] truncate flex-1">{zone.truckName}</span>
+            <span className="font-semibold text-primary truncate flex-1">{zone.truckName}</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
             <span className="w-5 text-center">⚖️</span>
@@ -364,7 +364,7 @@ function ZoneCard({ zone, isSuperAdmin, onEdit, onDelete }) {
         {/* Actions */}
         <div className="flex gap-1.5">
           <button onClick={() => onEdit(zone)}
-            className="flex-1 py-1.5 rounded-lg border border-[var(--primary)]/15 text-[var(--primary)] text-xs font-medium hover:bg-[var(--primary)]/5 transition-colors">
+            className="flex-1 py-1.5 rounded-lg border border-primary/15 text-primary text-xs font-medium hover:bg-primary/5 transition-colors">
             Edit
           </button>
           {!confirmDelete ? (
@@ -445,7 +445,7 @@ function ZonesBubbleChart({ zones, organizations, isSuperAdmin }) {
 
   if (!zones.length) {
     return (
-      <div className="h-full flex items-center justify-center text-[var(--primary)]/40">
+      <div className="h-full flex items-center justify-center text-primary/40">
         <div className="text-center"><div className="text-4xl mb-2">🗺️</div><p className="text-sm">No zones to visualize yet</p></div>
       </div>
     );
@@ -504,13 +504,13 @@ const Zones = () => {
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--primary)] tracking-tight">Zone Management</h2>
-            <p className="text-sm sm:text-base text-[var(--primary)]/70 mt-1">
+            <h2 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight">Zone Management</h2>
+            <p className="text-sm sm:text-base text-primary/70 mt-1">
               {isSuperAdmin ? 'Monitor pickup zones across all organizations' : "Manage your organization's pickup zones"}
             </p>
           </div>
           <button onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-primary rounded-xl font-semibold text-sm hover:bg-[var(--primary)]/90 transition-colors shadow-sm">
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -526,26 +526,26 @@ const Zones = () => {
             { label: 'Areas', value: uniqueAreas, icon: '🗺️', c: 'text-green-600 bg-green-50' },
             { label: 'Weekly Pickups', value: totalZones, icon: '📅', c: 'text-amber-600 bg-amber-50' },
           ].map(s => (
-            <div key={s.label} className="bg-white rounded-2xl border border-[var(--primary)]/10 shadow-sm p-4">
+            <div key={s.label} className="bg-white rounded-2xl border border-primary/10 shadow-sm p-4">
               <div className="flex items-center gap-3">
                 <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${s.c}`}>{s.icon}</span>
-                <div><p className="text-2xl font-bold text-[var(--primary)]">{s.value}</p><p className="text-xs text-[var(--primary)]/60">{s.label}</p></div>
+                <div><p className="text-2xl font-bold text-primary">{s.value}</p><p className="text-xs text-primary/60">{s.label}</p></div>
               </div>
             </div>
           ))}
         </div>
 
         {/* Chart */}
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/10 shadow-sm p-6">
+        <div className="bg-white rounded-3xl border border-primary/10 shadow-sm p-6">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Zone Coverage Map</h3>
-            <p className="text-sm text-[var(--primary)]/60">Zones plotted by day of week — hover for details</p>
+            <h3 className="text-lg font-bold text-primary">Zone Coverage Map</h3>
+            <p className="text-sm text-primary/60">Zones plotted by day of week — hover for details</p>
           </div>
           <div className="h-60"><ZonesBubbleChart zones={zones} organizations={organizations} isSuperAdmin={isSuperAdmin} /></div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl border border-[var(--primary)]/10 shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-primary/10 shadow-sm p-4">
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
             <div className="relative flex-1">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -553,24 +553,24 @@ const Zones = () => {
               </svg>
               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search city, area, driver or vehicle..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/25 bg-gray-50" />
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 bg-gray-50" />
             </div>
             {isSuperAdmin && (
               <select value={selectedOrg} onChange={e => setSelectedOrg(e.target.value)}
-                className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/25 min-w-[155px]">
+                className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/25 min-w-[155px]">
                 <option value="all">All Organizations</option>
                 {organizations.map(o => <option key={o._id || o.id} value={o._id || o.id}>{o.name}</option>)}
               </select>
             )}
             <select value={selectedDuty} onChange={e => setSelectedDuty(e.target.value)}
-              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/25 min-w-[140px]">
+              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/25 min-w-[140px]">
               <option value="all">All Classes</option>
               <option value="light duty">🔵 Light Duty</option>
               <option value="medium duty">🟡 Medium Duty</option>
               <option value="heavy duty">🔴 Heavy Duty</option>
             </select>
             <select value={selectedDay} onChange={e => setSelectedDay(e.target.value)}
-              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/25 min-w-[130px]">
+              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/25 min-w-[130px]">
               <option value="all">All Days</option>
               {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -579,17 +579,17 @@ const Zones = () => {
 
         {/* Cards */}
         {isLoading ? (
-          <div className="flex items-center justify-center h-40 bg-white/50 rounded-3xl border border-[var(--primary)]/10">
+          <div className="flex items-center justify-center h-40 bg-white/50 rounded-3xl border border-primary/10">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-4 border-[var(--primary)]/20 border-t-[var(--primary)] rounded-full animate-spin" />
-              <p className="text-[var(--primary)]/60 text-sm">Loading zones...</p>
+              <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <p className="text-primary/60 text-sm">Loading zones...</p>
             </div>
           </div>
         ) : filteredZones.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 bg-white rounded-3xl border border-dashed border-[var(--primary)]/20 gap-2">
+          <div className="flex flex-col items-center justify-center h-40 bg-white rounded-3xl border border-dashed border-primary/20 gap-2">
             <div className="text-4xl">📍</div>
-            <p className="font-semibold text-[var(--primary)]">No zones found</p>
-            <p className="text-sm text-[var(--primary)]/60">
+            <p className="font-semibold text-primary">No zones found</p>
+            <p className="text-sm text-primary/60">
               {searchQuery || selectedDay !== 'all' || selectedDuty !== 'all' ? 'Try adjusting your filters' : 'Click "Add Zone" to get started'}
             </p>
           </div>
@@ -602,7 +602,7 @@ const Zones = () => {
         )}
 
         {!isLoading && filteredZones.length > 0 && (
-          <p className="text-xs text-[var(--primary)]/40 text-center">
+          <p className="text-xs text-primary/40 text-center">
             {filteredZones.length} of {zones.length} zones
           </p>
         )}

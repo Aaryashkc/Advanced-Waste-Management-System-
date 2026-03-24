@@ -7,6 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 const useAdminStore = create((set, get) => ({
   admins: [],
   orgName: "",
+  orgGroups: null,
   isLoading: false,
   error: null,
 
@@ -17,7 +18,12 @@ const useAdminStore = create((set, get) => ({
       const res = await axios.get(`${API_URL}/org-admin/admins`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      set({ admins: res.data.data, orgName: res.data.orgName || "", isLoading: false });
+      set({
+        admins: res.data.data,
+        orgName: res.data.orgName || "",
+        orgGroups: res.data.orgGroups || null,
+        isLoading: false
+      });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch admins', isLoading: false });
     }

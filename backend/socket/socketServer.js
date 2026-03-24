@@ -16,6 +16,8 @@ export function initSocket(httpServer) {
                 : true,
             credentials: true,
         },
+        pingInterval: 25000,
+        pingTimeout: 20000,
     });
 
     // ── JWT authentication middleware ──────────────────────────────────────────
@@ -41,7 +43,7 @@ export function initSocket(httpServer) {
 
     // ── Connection handler ─────────────────────────────────────────────────────
     io.on("connection", (socket) => {
-        const { _id, role } = socket.user;
+        const { _id, role, orgId } = socket.user;
 
         // Every customer joins their personal room so the server can target them
         if (role === "customer_admin") {
@@ -55,8 +57,16 @@ export function initSocket(httpServer) {
         }
 
         // Add admins to a shared 'admins' room for notifications
+        // Also add to org-specific room for scoped notifications
         if (role === "admin" || role === "super_admin") {
             socket.join("admins");
+            if (orgId) {
+                socket.join(`org:${orgId}`);
+            }
+            // Super admins join a dedicated room
+            if (role === "super_admin") {
+                socket.join("super_admins");
+            }
         }
 
         socket.on("disconnect", () => {
@@ -75,4 +85,21 @@ export function initSocket(httpServer) {
 export function getIO() {
     if (!io) throw new Error("Socket.IO not initialised — call initSocket() first");
     return io;
+}
+
+/**
+ * Emit a notification event to admin rooms.
+ * Use this when creating system notifications to push real-time updates.
+ */
+export function emitNotification(notification) {
+    if (!io) return;
+    io.to("admins").emit("notification:new", notification);
+}
+
+/**
+ * Emit updated unread counts to all admins.
+ */
+export function emitUnreadCounts(counts) {
+    if (!io) return;
+    io.to("admins").emit("notification:counts", counts);
 }

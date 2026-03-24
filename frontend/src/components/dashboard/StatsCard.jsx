@@ -1,37 +1,26 @@
 import React from "react";
 
-const StatsCard = ({ title, value, label, icon, trend }) => {
-  const trendStyles =
-    trend === "up"
-      ? "text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/20"
-      : trend === "down"
-      ? "text-red-600 bg-red-50 border-red-200/70"
-      : "text-[var(--primary)]/70 bg-black/5 border-black/10";
-
+const StatsCard = ({ title, value, label, icon, iconBg, valueColor }) => {
   return (
-    <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm hover:shadow-md transition-shadow">
-      <div className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--primary)]/60">
-              {title}
-            </p>
-            <h3 className="mt-2 text-3xl font-bold text-[var(--primary)] leading-tight">
-              {value}
-            </h3>
+    <div className="bg-white rounded-2xl border border-primary/10 p-5 hover:shadow-sm transition-shadow">
+      <div className="flex items-start gap-4">
+        {icon && (
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${iconBg || "bg-primary/8"}`}>
+            {typeof icon === "string" ? (
+              <span className="text-xl">{icon}</span>
+            ) : (
+              icon
+            )}
           </div>
-
-          <div className="shrink-0 w-12 h-12 rounded-2xl border border-[var(--primary)]/12 bg-[#f5f1e8] flex items-center justify-center text-2xl">
-            {icon}
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold ${trendStyles}`}
-          >
-            {label}
-          </span>
+        )}
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-primary/50">
+            {title}
+          </p>
+          <h3 className={`mt-1 text-2xl font-bold leading-tight ${valueColor || "text-primary"}`}>
+            {value}
+          </h3>
+          {label && <p className="mt-1 text-xs text-primary/40">{label}</p>}
         </div>
       </div>
     </div>

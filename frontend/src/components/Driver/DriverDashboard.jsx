@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getSocket } from "../../utils/socket";
 import useAuthStore from "../../stores/useAuthStore";
@@ -14,6 +14,9 @@ export default function DriverDashboard() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [pendingPickups, setPendingPickups] = useState([]);
   const [showScheduleToast, setShowScheduleToast] = useState(true);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [newPickupFlash, setNewPickupFlash] = useState(false);
+  const flashTimeoutRef = useRef(null);
 
   // ── Fetch driver profile with truck + org ─────────────────────────────
   useEffect(() => {
@@ -30,34 +33,75 @@ export default function DriverDashboard() {
     fetchDriverAssignments();
   }, []);
 
+  // ── Fetch pending pickups on mount (catch any missed during disconnect) ──
+  const fetchPendingPickups = useCallback(async () => {
+    try {
+      const res = await api.get("/pickups/pending");
+      if (res.data.pickups) {
+        setPendingPickups(res.data.pickups);
+      }
+    } catch (err) {
+      // Not critical — socket will handle live updates
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingPickups();
+  }, [fetchPendingPickups]);
+
   // ── Socket: listen for pickup events ──────────────────────────────────
   useEffect(() => {
     const socket = getSocket();
 
+    const onConnect = () => {
+      setSocketConnected(true);
+      // Re-fetch pending pickups on reconnect to catch missed events
+      fetchPendingPickups();
+    };
+    const onDisconnect = () => setSocketConnected(false);
+
     const onCreated = (pickup) => {
-      // If we don't have a profile yet or no truck, we shouldn't show requests
       if (!profile || !profile.truck) return;
 
       setPendingPickups((prev) => {
-        if (prev.some((p) => p.id === pickup.id)) return prev;
+        if (prev.some((p) => p.id === pickup.id || p._id === pickup._id)) return prev;
         return [pickup, ...prev];
       });
+
+      // Flash visual indicator for new pickup
+      setNewPickupFlash(true);
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+      flashTimeoutRef.current = setTimeout(() => setNewPickupFlash(false), 3000);
     };
-    const onAccepted = ({ id }) =>
-      setPendingPickups((prev) => prev.filter((p) => p.id !== id));
-    const onCancelled = ({ id }) =>
-      setPendingPickups((prev) => prev.filter((p) => p.id !== id));
+
+    const onAccepted = ({ id, _id }) => {
+      const pickupId = id || _id;
+      setPendingPickups((prev) => prev.filter((p) => (p.id || p._id) !== pickupId));
+    };
+
+    const onCancelled = ({ id, _id }) => {
+      const pickupId = id || _id;
+      setPendingPickups((prev) => prev.filter((p) => (p.id || p._id) !== pickupId));
+    };
+
+    // Track connection state
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    setSocketConnected(socket.connected);
 
     socket.on("pickup:created", onCreated);
     socket.on("pickup:accepted", onAccepted);
     socket.on("pickup:cancelled", onCancelled);
 
     return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       socket.off("pickup:created", onCreated);
       socket.off("pickup:accepted", onAccepted);
       socket.off("pickup:cancelled", onCancelled);
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
     };
-  }, []);
+  }, [profile, fetchPendingPickups]);
 
   const handleViewRequest = (pickupId) => {
     navigate("/accept-task", { state: { pickupId } });
@@ -74,12 +118,6 @@ export default function DriverDashboard() {
     return { label: duty || "—", cls: "bg-gray-100 text-gray-600" };
   };
 
-  const typeBadge = (type) => {
-    if (type === "BIO") return { icon: "🌿", cls: "bg-green-100 text-green-700" };
-    if (type === "MIXED") return { icon: "🔀", cls: "bg-purple-100 text-purple-700" };
-    return { icon: "♻️", cls: "bg-slate-100 text-slate-700" };
-  };
-
   return (
     <div className="app-bg min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -87,36 +125,36 @@ export default function DriverDashboard() {
         {/* ─── Header ─────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4 mb-8 sm:mb-10">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--primary)]">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary">
               Driver Dashboard
             </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--primary)]/70">
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-primary/70">
               <span className="inline-flex items-center gap-2">
                 <TruckIcon />
-                <span className="font-semibold text-[var(--primary)]">
+                <span className="font-semibold text-primary">
                   {user?.name || "Driver"}
                 </span>
               </span>
               {org && (
                 <>
-                  <span className="text-[var(--primary)]/25">•</span>
+                  <span className="text-primary/25">•</span>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="text-base">🏢</span>
                     <span>{org.name}</span>
                   </span>
                 </>
               )}
-              <span className="text-[var(--primary)]/25">•</span>
+              <span className="text-primary/25">•</span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Online
+                <span className={`w-2 h-2 rounded-full ${socketConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+                {socketConnected ? "Live" : "Reconnecting..."}
               </span>
             </div>
           </div>
 
           <Link
             to="/profile"
-            className="w-11 h-11 rounded-full border border-[var(--primary)]/30 bg-white flex items-center justify-center hover:shadow-sm active:scale-95 transition"
+            className="w-11 h-11 rounded-full border border-primary/30 bg-white flex items-center justify-center hover:shadow-sm active:scale-95 transition"
             aria-label="Profile"
           >
             <UserIcon />
@@ -125,7 +163,11 @@ export default function DriverDashboard() {
 
         {/* ─── Live Pickup Requests Banner ─────────────────────────────── */}
         {pendingPickups.length > 0 && (
-          <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-5 sm:p-6">
+          <div className={`mb-8 rounded-2xl p-5 sm:p-6 transition-all duration-300 ${
+            newPickupFlash
+              ? "bg-red-50 border-2 border-red-300 shadow-lg shadow-red-100"
+              : "bg-amber-50 border border-amber-200"
+          }`}>
             <div className="flex items-center justify-between mb-4">
               <p className="font-semibold text-amber-800 flex items-center gap-2">
                 <span className="relative flex h-3 w-3">
@@ -134,26 +176,33 @@ export default function DriverDashboard() {
                 </span>
                 {pendingPickups.length} New Pickup Request{pendingPickups.length > 1 ? "s" : ""}
               </p>
-              <span className="text-xs text-amber-600 font-medium uppercase tracking-wide">Live</span>
+              <div className="flex items-center gap-2">
+                {newPickupFlash && (
+                  <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full animate-pulse">
+                    NEW!
+                  </span>
+                )}
+                <span className="text-xs text-amber-600 font-medium uppercase tracking-wide">Live</span>
+              </div>
             </div>
 
             <div className="space-y-2.5">
               {pendingPickups.map((pickup) => (
                 <div
-                  key={pickup.id}
+                  key={pickup.id || pickup._id}
                   className="flex items-center justify-between bg-white rounded-xl border border-amber-200 px-5 py-3.5"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--primary)] truncate">
+                    <p className="text-sm font-semibold text-primary truncate">
                       {pickup.location?.address || `${pickup.location?.latitude?.toFixed(3)}, ${pickup.location?.longitude?.toFixed(3)}`}
                     </p>
-                    <p className="text-xs text-[var(--primary)]/55 mt-1">
+                    <p className="text-xs text-primary/55 mt-1">
                       {pickup.category} · {pickup.level} · {pickup.customerName || "Customer"}
                     </p>
                   </div>
                   <button
-                    onClick={() => handleViewRequest(pickup.id)}
-                    className="ml-4 flex-shrink-0 bg-[var(--primary)] text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition"
+                    onClick={() => handleViewRequest(pickup.id || pickup._id)}
+                    className="ml-4 flex-shrink-0 bg-primary text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition"
                   >
                     View
                   </button>
@@ -189,8 +238,8 @@ export default function DriverDashboard() {
                   className="flex items-center justify-between bg-white rounded-xl border border-blue-200 px-5 py-3.5"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-[var(--primary)]">{assignment.district}</p>
-                    <p className="text-xs text-[var(--primary)]/55 mt-1">
+                    <p className="text-sm font-bold text-primary">{assignment.district}</p>
+                    <p className="text-xs text-primary/55 mt-1">
                       {assignment.districtType} &middot; {assignment.predictedWasteKg?.toLocaleString()} kg predicted
                       {assignment.wasteCategory && <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
                         assignment.wasteCategory === "critical" ? "bg-red-100 text-red-700" :
@@ -212,6 +261,17 @@ export default function DriverDashboard() {
           </div>
         )}
 
+        {/* ─── Connection Lost Warning ──────────────────────────────── */}
+        {!socketConnected && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Connection Lost</p>
+              <p className="text-xs text-red-600/80">Attempting to reconnect. New pickup requests may be delayed.</p>
+            </div>
+          </div>
+        )}
+
         {/* ─── Main Grid ──────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
 
@@ -222,8 +282,8 @@ export default function DriverDashboard() {
             <Card>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--primary)]/50">Driver Profile</p>
-                  <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-[var(--primary)]">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">Driver Profile</p>
+                  <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-primary">
                     {profile?.name || user?.name || "Driver"}
                   </h2>
                 </div>
@@ -244,8 +304,8 @@ export default function DriverDashboard() {
             <Card>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--primary)]/50">Assigned Truck</p>
-                  <h3 className="mt-2 text-xl sm:text-2xl font-bold text-[var(--primary)]">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">Assigned Truck</p>
+                  <h3 className="mt-2 text-xl sm:text-2xl font-bold text-primary">
                     {truck ? truck.licensePlate : "No Truck Assigned"}
                   </h3>
                 </div>
@@ -259,32 +319,32 @@ export default function DriverDashboard() {
 
               {profileLoading ? (
                 <div className="mt-6 flex items-center justify-center py-8">
-                  <div className="w-7 h-7 border-3 border-[var(--primary)]/15 border-t-[var(--accent)] rounded-full animate-spin" />
+                  <div className="w-7 h-7 border-3 border-primary/15 border-t-[var(--accent)] rounded-full animate-spin" />
                 </div>
               ) : truck ? (
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <div className="rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] p-4">
-                    <p className="text-xs text-[var(--primary)]/55 mb-1.5">Capacity</p>
-                    <p className="text-lg font-bold text-[var(--primary)]">
-                      {truck.capacity?.toLocaleString()}<span className="text-xs font-medium text-[var(--primary)]/60 ml-0.5">kg</span>
+                  <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
+                    <p className="text-xs text-primary/55 mb-1.5">Capacity</p>
+                    <p className="text-lg font-bold text-primary">
+                      {truck.capacity?.toLocaleString()}<span className="text-xs font-medium text-primary/60 ml-0.5">kg</span>
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] p-4">
-                    <p className="text-xs text-[var(--primary)]/55 mb-1.5">Duty Class</p>
+                  <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
+                    <p className="text-xs text-primary/55 mb-1.5">Duty Class</p>
                     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${dutyBadge(truck.dutyType).cls}`}>
                       {dutyBadge(truck.dutyType).label}
                     </span>
                   </div>
-                  <div className="rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] p-4">
-                    <p className="text-xs text-[var(--primary)]/55 mb-1.5">License Plate</p>
-                    <p className="font-bold text-[var(--primary)] tracking-wide">{truck.licensePlate}</p>
+                  <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
+                    <p className="text-xs text-primary/55 mb-1.5">License Plate</p>
+                    <p className="font-bold text-primary tracking-wide">{truck.licensePlate}</p>
                   </div>
                 </div>
               ) : (
-                <div className="mt-6 rounded-2xl border-2 border-dashed border-[var(--primary)]/15 bg-[#f5f1e8]/50 px-6 py-10 text-center">
+                <div className="mt-6 rounded-2xl border-2 border-dashed border-primary/15 bg-[#f5f1e8]/50 px-6 py-10 text-center">
                   <p className="text-3xl mb-2">🚛</p>
-                  <p className="text-sm font-medium text-[var(--primary)]/60">No truck assigned yet</p>
-                  <p className="text-xs text-[var(--primary)]/40 mt-1">Contact your admin to get assigned</p>
+                  <p className="text-sm font-medium text-primary/60">No truck assigned yet</p>
+                  <p className="text-xs text-primary/40 mt-1">Contact your admin to get assigned</p>
                 </div>
               )}
             </Card>
@@ -293,8 +353,8 @@ export default function DriverDashboard() {
             <Card>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--primary)]/50">Real-time Requests</p>
-                  <h3 className="mt-2 text-xl font-bold text-[var(--primary)]">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">Real-time Requests</p>
+                  <h3 className="mt-2 text-xl font-bold text-primary">
                     {pendingPickups.length > 0
                       ? `${pendingPickups.length} pending`
                       : "No pending requests"}
@@ -303,7 +363,7 @@ export default function DriverDashboard() {
                 <span
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold ${pendingPickups.length > 0
                       ? "bg-amber-100 text-amber-700"
-                      : "bg-[var(--primary)]/8 text-[var(--primary)]/70"
+                      : "bg-primary/8 text-primary/70"
                     }`}
                 >
                   {pendingPickups.length > 0 ? "Active" : "Quiet"}
@@ -312,7 +372,7 @@ export default function DriverDashboard() {
 
               <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <InfoTile label="Live requests" value={`${pendingPickups.length}`} />
-                <InfoTile label="Socket" value="Connected" />
+                <InfoTile label="Socket" value={socketConnected ? "Connected" : "Disconnected"} highlight={!socketConnected} />
                 <InfoTile label="Status" value="Active" />
                 <InfoTile label="Priority" value="Normal" />
               </div>
@@ -324,11 +384,11 @@ export default function DriverDashboard() {
 
             {/* ── Actions Card ────────────────────────────────────────── */}
             <Card>
-              <h3 className="text-lg font-bold text-[var(--primary)] mb-5">Quick Actions</h3>
+              <h3 className="text-lg font-bold text-primary mb-5">Quick Actions</h3>
               <div className="space-y-3">
                 <Link
                   to="/accept-task"
-                  className="w-full relative bg-[#213a3d] text-white py-4 px-6 rounded-2xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-md border-2 border-[var(--primary)]/20 flex items-center justify-center gap-2"
+                  className="w-full relative bg-[#213a3d] text-white py-4 px-6 rounded-2xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-md border-2 border-primary/20 flex items-center justify-center gap-2"
                 >
                   <span>View Requests</span>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -359,12 +419,12 @@ export default function DriverDashboard() {
 
             {/* ── System Status Card ──────────────────────────────────── */}
             <Card>
-              <h3 className="text-lg font-bold text-[var(--primary)] mb-5">System Status</h3>
+              <h3 className="text-lg font-bold text-primary mb-5">System Status</h3>
               <div className="space-y-3">
-                <StatusRow label="GPS" value="Connected" />
-                <StatusRow label="Network" value="Good" />
-                <StatusRow label="Socket" value="Live" />
-                <StatusRow label="Shift" value="Active" />
+                <StatusRow label="GPS" value="Connected" ok />
+                <StatusRow label="Network" value="Good" ok />
+                <StatusRow label="Socket" value={socketConnected ? "Live" : "Offline"} ok={socketConnected} />
+                <StatusRow label="Shift" value="Active" ok />
               </div>
               <button className="mt-6 w-full py-3.5 rounded-2xl bg-[var(--accent)] text-white font-semibold hover:opacity-95 active:scale-[0.99] transition text-sm">
                 Start Shift
@@ -374,11 +434,11 @@ export default function DriverDashboard() {
             {/* ── Organization Card ───────────────────────────────────── */}
             {org && (
               <Card>
-                <h3 className="text-lg font-bold text-[var(--primary)] mb-5">Organization</h3>
-                <div className="rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] p-5 text-center">
+                <h3 className="text-lg font-bold text-primary mb-5">Organization</h3>
+                <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-5 text-center">
                   <span className="text-3xl mb-3 block">🏢</span>
-                  <p className="text-lg font-bold text-[var(--primary)]">{org.name}</p>
-                  <p className="text-xs text-[var(--primary)]/50 mt-1 uppercase tracking-wider font-medium">Active Member</p>
+                  <p className="text-lg font-bold text-primary">{org.name}</p>
+                  <p className="text-xs text-primary/50 mt-1 uppercase tracking-wider font-medium">Active Member</p>
                 </div>
               </Card>
             )}
@@ -393,7 +453,7 @@ export default function DriverDashboard() {
 
 function Card({ children }) {
   return (
-    <div className="bg-white rounded-3xl border border-[var(--primary)]/12 shadow-sm p-6 sm:p-8">
+    <div className="bg-white rounded-3xl border border-primary/12 shadow-sm p-6 sm:p-8">
       {children}
     </div>
   );
@@ -401,30 +461,33 @@ function Card({ children }) {
 
 function MiniStat({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] p-4">
+    <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-sm">{icon}</span>
-        <p className="text-xs text-[var(--primary)]/55 font-medium">{label}</p>
+        <p className="text-xs text-primary/55 font-medium">{label}</p>
       </div>
-      <p className="font-semibold text-[var(--primary)] truncate text-sm">{value}</p>
+      <p className="font-semibold text-primary truncate text-sm">{value}</p>
     </div>
   );
 }
 
-function InfoTile({ label, value }) {
+function InfoTile({ label, value, highlight = false }) {
   return (
-    <div className="rounded-2xl border border-[var(--primary)]/10 bg-white p-4">
-      <p className="text-xs text-[var(--primary)]/55 mb-1.5">{label}</p>
-      <p className="font-semibold text-[var(--primary)] text-sm">{value}</p>
+    <div className={`rounded-2xl border p-4 ${highlight ? "border-red-200 bg-red-50" : "border-primary/10 bg-white"}`}>
+      <p className="text-xs text-primary/55 mb-1.5">{label}</p>
+      <p className={`font-semibold text-sm ${highlight ? "text-red-600" : "text-primary"}`}>{value}</p>
     </div>
   );
 }
 
-function StatusRow({ label, value }) {
+function StatusRow({ label, value, ok = true }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-[var(--primary)]/10 bg-[#f5f1e8] px-4 py-3.5">
-      <span className="text-sm text-[var(--primary)]/65">{label}</span>
-      <span className="text-sm font-semibold text-[var(--primary)]">{value}</span>
+    <div className="flex items-center justify-between rounded-2xl border border-primary/10 bg-[#f5f1e8] px-4 py-3.5">
+      <span className="text-sm text-primary/65 flex items-center gap-2">
+        <span className={`w-2 h-2 rounded-full ${ok ? "bg-green-500" : "bg-red-500"}`} />
+        {label}
+      </span>
+      <span className={`text-sm font-semibold ${ok ? "text-primary" : "text-red-600"}`}>{value}</span>
     </div>
   );
 }
@@ -433,8 +496,8 @@ function TruckIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M3 7h11v10H3V7Zm11 4h4l3 3v3h-7v-6Z" stroke="currentColor" strokeWidth="2" className="text-red-400" />
-      <circle cx="7" cy="19" r="2" fill="currentColor" className="text-[var(--primary)]" />
-      <circle cx="18" cy="19" r="2" fill="currentColor" className="text-[var(--primary)]" />
+      <circle cx="7" cy="19" r="2" fill="currentColor" className="text-primary" />
+      <circle cx="18" cy="19" r="2" fill="currentColor" className="text-primary" />
     </svg>
   );
 }
@@ -442,8 +505,8 @@ function TruckIcon() {
 function UserIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeWidth="2" className="text-[var(--primary)]" />
-      <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="2" className="text-[var(--primary)]" />
+      <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeWidth="2" className="text-primary" />
+      <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="2" className="text-primary" />
     </svg>
   );
 }

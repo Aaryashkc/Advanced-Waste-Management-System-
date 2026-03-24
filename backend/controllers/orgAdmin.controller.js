@@ -4,27 +4,65 @@ import Driver from "../models/Driver.model.js";
 import Task from "../models/Task.model.js";
 import Organization from "../models/Organization.model.js";
 import DeletionRequest from "../models/DeletionRequest.model.js";
+import PickupRequest from "../models/PickupRequest.model.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
 export const getOrgAdmins = async (req, res) => {
   try {
-    const orgId = req.user.orgId;
-    if (!orgId) return res.status(403).json({ message: "Organization ID required" });
+    const { role, orgId } = req.user;
+    const isSuperAdmin = role === "super_admin";
 
-    const admins = await User.find({ orgId, role: "admin, superAdmin" }).select("name email phone createdAt");
-    const org = await Organization.findById(orgId).select("name");
+    let filter;
+    if (isSuperAdmin) {
+      // Super admins see all admins across all orgs
+      filter = { role: { $in: ["admin", "super_admin"] } };
+    } else {
+      if (!orgId) return res.status(403).json({ message: "Organization ID required" });
+      // Org admins only see admins from their own org (not super_admins)
+      filter = { orgId, role: "admin" };
+    }
+
+    const admins = await User.find(filter)
+      .select("name email phone role orgId createdAt isActive")
+      .populate("orgId", "name")
+      .sort({ createdAt: -1 });
+
+    const orgName = isSuperAdmin ? "All Organizations" : (await Organization.findById(orgId).select("name"))?.name || "Unknown";
+
+    // For super admin: group admins by organization
+    const adminData = admins.map(a => ({
+      id: a._id,
+      name: a.name,
+      email: a.email,
+      phone: a.phone || "",
+      role: a.role,
+      organization: a.orgId ? { id: a.orgId._id, name: a.orgId.name } : null,
+      isActive: a.isActive !== false,
+      createdAt: a.createdAt
+    }));
+
+    // Build org groups for super admin view
+    let orgGroups = null;
+    if (isSuperAdmin) {
+      const groups = {};
+      for (const admin of adminData) {
+        const orgKey = admin.organization?.name || "Global / Unassigned";
+        if (!groups[orgKey]) groups[orgKey] = { orgName: orgKey, orgId: admin.organization?.id || null, admins: [] };
+        groups[orgKey].admins.push(admin);
+      }
+      orgGroups = Object.values(groups).sort((a, b) => {
+        if (a.orgName === "Global / Unassigned") return 1;
+        if (b.orgName === "Global / Unassigned") return -1;
+        return a.orgName.localeCompare(b.orgName);
+      });
+    }
 
     res.status(200).json({
       success: true,
-      orgName: org?.name || "Unknown",
-      data: admins.map(a => ({
-        id: a._id,
-        name: a.name,
-        email: a.email,
-        phone: a.phone || "",
-        createdAt: a.createdAt
-      }))
+      orgName,
+      data: adminData,
+      orgGroups
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch admins", error: error.message });
@@ -33,13 +71,21 @@ export const getOrgAdmins = async (req, res) => {
 
 export const updateOrgAdmin = async (req, res) => {
   try {
-    const orgId = req.user.orgId;
+    const { role, orgId } = req.user;
+    const isSuperAdmin = role === "super_admin";
     const { adminId } = req.params;
     const { name, email, phone } = req.body;
 
     const admin = await User.findById(adminId);
-    if (!admin || admin.orgId?.toString() !== orgId?.toString() || admin.role !== "admin") {
-      return res.status(404).json({ message: "Admin not found in your organization" });
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    // Org admins can only update admins in their own org
+    if (!isSuperAdmin) {
+      if (admin.orgId?.toString() !== orgId?.toString() || admin.role !== "admin") {
+        return res.status(404).json({ message: "Admin not found in your organization" });
+      }
     }
 
     if (name) admin.name = name;
@@ -538,19 +584,51 @@ export const getAdminAnalytics = async (req, res) => {
       { $group: { _id: "$status", count: { $sum: 1 } } }
     ]);
 
+    // 6. Pickup stats for this org
+    const pickupStatusAgg = await PickupRequest.aggregate([
+      { $match: { orgId: orgIdObj } },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+    const pickupStatusMap = {};
+    let totalPickups = 0;
+    for (const s of pickupStatusAgg) {
+      pickupStatusMap[s._id] = s.count;
+      totalPickups += s.count;
+    }
+
+    const pickupTrend = await PickupRequest.aggregate([
+      { $match: { orgId: orgIdObj, createdAt: { $gte: sevenDaysAgo } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          total: { $sum: 1 },
+          completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
     res.status(200).json({
       success: true,
       data: {
         ecosystemStats: {
-          totalOrganizations: totalDrivers, // Reusing keys for ease, will map appropriately in frontend if needed
+          totalOrganizations: totalDrivers,
           totalWasteCollected,
           activeVehicles,
-          activeRoutes 
+          activeRoutes,
+          totalPickups,
+          completedPickups: pickupStatusMap.COMPLETED || 0,
+          activePickups: (pickupStatusMap.PENDING || 0) + (pickupStatusMap.ASSIGNED || 0) +
+            (pickupStatusMap.EN_ROUTE || 0) + (pickupStatusMap.ARRIVED || 0) + (pickupStatusMap.COLLECTING || 0),
         },
         organizationData: driverData,
         timeSeriesDataRaw,
         wasteTypeDistribution,
-        taskStatusDistribution
+        taskStatusDistribution,
+        pickupStats: {
+          statusDistribution: pickupStatusAgg.map(s => ({ status: s._id, count: s.count })),
+          dailyTrend: pickupTrend.map(d => ({ date: d._id, total: d.total, completed: d.completed })),
+        },
       }
     });
 

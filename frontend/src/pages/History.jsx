@@ -128,10 +128,10 @@ const History = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--primary)] tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight">
           History
         </h1>
-        <p className="text-sm text-[var(--primary)]/60 mt-1">
+        <p className="text-sm text-primary/60 mt-1">
           {isSuperAdmin
             ? "Complete pickup history across all organizations"
             : "Pickup history for your organization"}
@@ -139,7 +139,7 @@ const History = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[var(--primary)]/[0.04] rounded-2xl p-1.5">
+      <div className="flex gap-1 bg-primary/[0.04] rounded-2xl p-1.5">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -149,8 +149,8 @@ const History = () => {
             }}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               activeTab === tab.id
-                ? "bg-white text-[var(--primary)] shadow-sm"
-                : "text-[var(--primary)]/50 hover:text-[var(--primary)]/70"
+                ? "bg-white text-primary shadow-sm"
+                : "text-primary/50 hover:text-primary/70"
             }`}
           >
             <span>{tab.icon}</span>
@@ -163,7 +163,7 @@ const History = () => {
       {activeTab === "pickups" && pickupStats && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
-            { label: "Total", value: pickupStats.total, color: "text-[var(--primary)]", bg: "bg-white" },
+            { label: "Total", value: pickupStats.total, color: "text-primary", bg: "bg-white" },
             { label: "Completed", value: pickupStats.completed, color: "text-emerald-600", bg: "bg-emerald-50" },
             { label: "Active", value: pickupStats.active, color: "text-blue-600", bg: "bg-blue-50" },
             { label: "Cancelled", value: pickupStats.cancelled, color: "text-red-500", bg: "bg-red-50" },
@@ -171,10 +171,10 @@ const History = () => {
           ].map((s) => (
             <div
               key={s.label}
-              className={`${s.bg} rounded-2xl border border-[var(--primary)]/10 p-4 text-center`}
+              className={`${s.bg} rounded-2xl border border-primary/10 p-4 text-center`}
             >
               <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-[var(--primary)]/50 font-medium mt-1">{s.label}</p>
+              <p className="text-xs text-primary/50 font-medium mt-1">{s.label}</p>
             </div>
           ))}
         </div>
@@ -182,26 +182,26 @@ const History = () => {
 
       {activeTab === "customers" && customerTotals.totalCustomers !== undefined && (
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 text-center">
-            <p className="text-3xl font-bold text-[var(--primary)]">{customerTotals.totalCustomers}</p>
-            <p className="text-xs text-[var(--primary)]/50 font-medium mt-1">Total Customers</p>
+          <div className="bg-white rounded-2xl border border-primary/10 p-5 text-center">
+            <p className="text-3xl font-bold text-primary">{customerTotals.totalCustomers}</p>
+            <p className="text-xs text-primary/50 font-medium mt-1">Total Customers</p>
           </div>
-          <div className="bg-emerald-50 rounded-2xl border border-[var(--primary)]/10 p-5 text-center">
+          <div className="bg-emerald-50 rounded-2xl border border-primary/10 p-5 text-center">
             <p className="text-3xl font-bold text-emerald-600">{customerTotals.totalPickups}</p>
-            <p className="text-xs text-[var(--primary)]/50 font-medium mt-1">Total Pickups</p>
+            <p className="text-xs text-primary/50 font-medium mt-1">Total Pickups</p>
           </div>
         </div>
       )}
 
       {activeTab === "drivers" && driverTotals.totalDrivers !== undefined && (
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 text-center">
-            <p className="text-3xl font-bold text-[var(--primary)]">{driverTotals.totalDrivers}</p>
-            <p className="text-xs text-[var(--primary)]/50 font-medium mt-1">Total Drivers</p>
+          <div className="bg-white rounded-2xl border border-primary/10 p-5 text-center">
+            <p className="text-3xl font-bold text-primary">{driverTotals.totalDrivers}</p>
+            <p className="text-xs text-primary/50 font-medium mt-1">Total Drivers</p>
           </div>
-          <div className="bg-blue-50 rounded-2xl border border-[var(--primary)]/10 p-5 text-center">
+          <div className="bg-blue-50 rounded-2xl border border-primary/10 p-5 text-center">
             <p className="text-3xl font-bold text-blue-600">{driverTotals.totalPickups}</p>
-            <p className="text-xs text-[var(--primary)]/50 font-medium mt-1">Assigned Pickups</p>
+            <p className="text-xs text-primary/50 font-medium mt-1">Assigned Pickups</p>
           </div>
         </div>
       )}
@@ -213,7 +213,7 @@ const History = () => {
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 text-[var(--primary)] bg-white"
+              className="px-4 py-2.5 rounded-xl border border-primary/15 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 text-primary bg-white"
             >
               <option value="">All Statuses</option>
               <option value="COMPLETED">Completed</option>
@@ -228,7 +228,7 @@ const History = () => {
             <select
               value={categoryFilter}
               onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 text-[var(--primary)] bg-white"
+              className="px-4 py-2.5 rounded-xl border border-primary/15 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 text-primary bg-white"
             >
               <option value="">All Categories</option>
               <option value="recyclable">Recyclable</option>
@@ -239,7 +239,7 @@ const History = () => {
         )}
         {(activeTab === "customers" || activeTab === "drivers") && (
           <div className="relative flex-1 max-w-sm">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--primary)]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -247,7 +247,7 @@ const History = () => {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--primary)]/15 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 text-[var(--primary)]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-primary/15 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 text-primary"
             />
           </div>
         )}
@@ -256,7 +256,7 @@ const History = () => {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-16">
-          <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--accent)] rounded-full animate-spin" />
+          <div className="w-10 h-10 border-4 border-primary/20 border-t-accent rounded-full animate-spin" />
         </div>
       )}
 
@@ -264,42 +264,42 @@ const History = () => {
       {!loading && activeTab === "pickups" && (
         <>
           {pickups.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-[var(--primary)]/10">
+            <div className="text-center py-16 bg-white rounded-2xl border border-primary/10">
               <p className="text-4xl mb-3">📭</p>
-              <h3 className="text-lg font-semibold text-[var(--primary)]/70 mb-1">No Pickups Found</h3>
-              <p className="text-sm text-[var(--primary)]/50">
+              <h3 className="text-lg font-semibold text-primary/70 mb-1">No Pickups Found</h3>
+              <p className="text-sm text-primary/50">
                 {statusFilter || categoryFilter
                   ? "Try adjusting the filters."
                   : "No pickup history available yet."}
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-[var(--primary)]/10 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-[var(--primary)]/[0.03] border-b border-[var(--primary)]/10">
-                      <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Customer</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Driver</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Category</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Level</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Location</th>
+                    <tr className="bg-primary/[0.03] border-b border-primary/10">
+                      <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Customer</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Driver</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Category</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Level</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Location</th>
                       {isSuperAdmin && (
-                        <th className="px-4 py-3 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Org</th>
+                        <th className="px-4 py-3 text-xs font-semibold text-primary/60 uppercase tracking-wider">Org</th>
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--primary)]/5">
+                  <tbody className="divide-y divide-primary/5">
                     {pickups.map((p) => (
-                      <tr key={p._id} className="hover:bg-[var(--primary)]/[0.02] transition">
-                        <td className="px-4 py-3 text-sm text-[var(--primary)]/70 whitespace-nowrap">
+                      <tr key={p._id} className="hover:bg-primary/[0.02] transition">
+                        <td className="px-4 py-3 text-sm text-primary/70 whitespace-nowrap">
                           {new Date(p.createdAt).toLocaleDateString("en-US", {
                             month: "short", day: "numeric", year: "numeric",
                           })}
                           <br />
-                          <span className="text-xs text-[var(--primary)]/40">
+                          <span className="text-xs text-primary/40">
                             {new Date(p.createdAt).toLocaleTimeString("en-US", {
                               hour: "2-digit", minute: "2-digit",
                             })}
@@ -307,23 +307,23 @@ const History = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-xs font-bold text-[var(--primary)]">
+                            <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-primary">
                               {p.customer?.name?.charAt(0)?.toUpperCase() || "?"}
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-[var(--primary)]">{p.customer?.name || "Unknown"}</p>
-                              <p className="text-xs text-[var(--primary)]/40">{p.customer?.phone || ""}</p>
+                              <p className="text-sm font-medium text-primary">{p.customer?.name || "Unknown"}</p>
+                              <p className="text-xs text-primary/40">{p.customer?.phone || ""}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           {p.driver ? (
                             <div>
-                              <p className="text-sm font-medium text-[var(--primary)]">{p.driver.name}</p>
-                              <p className="text-xs text-[var(--primary)]/40">{p.driver.phone || ""}</p>
+                              <p className="text-sm font-medium text-primary">{p.driver.name}</p>
+                              <p className="text-xs text-primary/40">{p.driver.phone || ""}</p>
                             </div>
                           ) : (
-                            <span className="text-xs text-[var(--primary)]/30 italic">No driver</span>
+                            <span className="text-xs text-primary/30 italic">No driver</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -331,7 +331,7 @@ const History = () => {
                             {p.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-[var(--primary)]/70 capitalize">{p.category}</td>
+                        <td className="px-4 py-3 text-sm text-primary/70 capitalize">{p.category}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             p.level === "hard" ? "bg-red-100 text-red-700" :
@@ -341,11 +341,11 @@ const History = () => {
                             {p.level}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-[var(--primary)]/70 max-w-[200px] truncate">
+                        <td className="px-4 py-3 text-sm text-primary/70 max-w-[200px] truncate">
                           {p.district ? `${p.district}${p.province ? `, ${p.province}` : ""}` : p.location?.address || "—"}
                         </td>
                         {isSuperAdmin && (
-                          <td className="px-4 py-3 text-sm text-[var(--primary)]/60">{p.organization}</td>
+                          <td className="px-4 py-3 text-sm text-primary/60">{p.organization}</td>
                         )}
                       </tr>
                     ))}
@@ -355,15 +355,15 @@ const History = () => {
 
               {/* Pagination */}
               {pagination.pages > 1 && (
-                <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--primary)]/10">
-                  <p className="text-xs text-[var(--primary)]/50">
+                <div className="flex items-center justify-between px-5 py-3 border-t border-primary/10">
+                  <p className="text-xs text-primary/50">
                     Showing {(pagination.page - 1) * 30 + 1}-{Math.min(pagination.page * 30, pagination.total)} of {pagination.total}
                   </p>
                   <div className="flex gap-1">
                     <button
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--primary)]/15 hover:bg-[var(--primary)]/5 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border border-primary/15 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed transition"
                     >
                       Prev
                     </button>
@@ -384,8 +384,8 @@ const History = () => {
                           onClick={() => setCurrentPage(pageNum)}
                           className={`w-8 h-8 rounded-lg text-xs font-medium transition ${
                             currentPage === pageNum
-                              ? "bg-[var(--accent)] text-[var(--primary)] font-bold"
-                              : "border border-[var(--primary)]/15 hover:bg-[var(--primary)]/5"
+                              ? "bg-accent text-primary font-bold"
+                              : "border border-primary/15 hover:bg-primary/5"
                           }`}
                         >
                           {pageNum}
@@ -395,7 +395,7 @@ const History = () => {
                     <button
                       onClick={() => setCurrentPage((p) => Math.min(pagination.pages, p + 1))}
                       disabled={currentPage === pagination.pages}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--primary)]/15 hover:bg-[var(--primary)]/5 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border border-primary/15 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed transition"
                     >
                       Next
                     </button>
@@ -411,17 +411,17 @@ const History = () => {
       {!loading && activeTab === "customers" && (
         <>
           {filteredCustomers.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-[var(--primary)]/10">
+            <div className="text-center py-16 bg-white rounded-2xl border border-primary/10">
               <p className="text-4xl mb-3">👥</p>
-              <h3 className="text-lg font-semibold text-[var(--primary)]/70 mb-1">No Customers Found</h3>
-              <p className="text-sm text-[var(--primary)]/50">No customer pickup history yet.</p>
+              <h3 className="text-lg font-semibold text-primary/70 mb-1">No Customers Found</h3>
+              <p className="text-sm text-primary/50">No customer pickup history yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {filteredCustomers.map((c, idx) => (
                 <div
                   key={c.customerId}
-                  className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 hover:shadow-md transition-shadow"
+                  className="bg-white rounded-2xl border border-primary/10 p-5 hover:shadow-md transition-shadow"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     {/* Rank + Avatar */}
@@ -430,25 +430,25 @@ const History = () => {
                         idx === 0 ? "bg-amber-100 text-amber-700" :
                         idx === 1 ? "bg-gray-200 text-gray-600" :
                         idx === 2 ? "bg-orange-100 text-orange-700" :
-                        "bg-[var(--primary)]/5 text-[var(--primary)]/50"
+                        "bg-primary/5 text-primary/50"
                       }`}>
                         {idx + 1}
                       </div>
-                      <div className="w-10 h-10 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-sm font-bold text-[var(--primary)]">
+                      <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold text-primary">
                         {c.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--primary)] truncate">{c.name}</p>
-                        <p className="text-xs text-[var(--primary)]/40 truncate">{c.email}</p>
-                        {c.phone && <p className="text-xs text-[var(--primary)]/40">{c.phone}</p>}
+                        <p className="text-sm font-semibold text-primary truncate">{c.name}</p>
+                        <p className="text-xs text-primary/40 truncate">{c.email}</p>
+                        {c.phone && <p className="text-xs text-primary/40">{c.phone}</p>}
                       </div>
                     </div>
 
                     {/* Stats */}
                     <div className="flex flex-wrap gap-2 sm:ml-auto">
-                      <div className="px-3 py-1.5 rounded-xl bg-[var(--primary)]/[0.04] text-center min-w-[70px]">
-                        <p className="text-lg font-bold text-[var(--primary)]">{c.totalPickups}</p>
-                        <p className="text-[10px] text-[var(--primary)]/50 font-medium uppercase">Total</p>
+                      <div className="px-3 py-1.5 rounded-xl bg-primary/[0.04] text-center min-w-[70px]">
+                        <p className="text-lg font-bold text-primary">{c.totalPickups}</p>
+                        <p className="text-[10px] text-primary/50 font-medium uppercase">Total</p>
                       </div>
                       <div className="px-3 py-1.5 rounded-xl bg-emerald-50 text-center min-w-[70px]">
                         <p className="text-lg font-bold text-emerald-600">{c.completed}</p>
@@ -466,7 +466,7 @@ const History = () => {
                   </div>
 
                   {/* Category breakdown + last pickup */}
-                  <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-[var(--primary)]/5">
+                  <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-primary/5">
                     <div className="flex gap-1.5">
                       {c.categories.recyclable > 0 && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
@@ -485,7 +485,7 @@ const History = () => {
                       )}
                     </div>
                     {c.lastPickupAt && (
-                      <span className="text-[10px] text-[var(--primary)]/40 ml-auto">
+                      <span className="text-[10px] text-primary/40 ml-auto">
                         Last pickup: {new Date(c.lastPickupAt).toLocaleDateString("en-US", {
                           month: "short", day: "numeric", year: "numeric",
                         })}
@@ -503,17 +503,17 @@ const History = () => {
       {!loading && activeTab === "drivers" && (
         <>
           {filteredDrivers.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-[var(--primary)]/10">
+            <div className="text-center py-16 bg-white rounded-2xl border border-primary/10">
               <p className="text-4xl mb-3">🚛</p>
-              <h3 className="text-lg font-semibold text-[var(--primary)]/70 mb-1">No Drivers Found</h3>
-              <p className="text-sm text-[var(--primary)]/50">No driver pickup history yet.</p>
+              <h3 className="text-lg font-semibold text-primary/70 mb-1">No Drivers Found</h3>
+              <p className="text-sm text-primary/50">No driver pickup history yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {filteredDrivers.map((d, idx) => (
                 <div
                   key={d.driverId}
-                  className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 hover:shadow-md transition-shadow cursor-pointer"
+                  className="bg-white rounded-2xl border border-primary/10 p-5 hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => navigate(`/admin-dashboard/drivers/${d.driverId}`)}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -523,7 +523,7 @@ const History = () => {
                         idx === 0 ? "bg-amber-100 text-amber-700" :
                         idx === 1 ? "bg-gray-200 text-gray-600" :
                         idx === 2 ? "bg-orange-100 text-orange-700" :
-                        "bg-[var(--primary)]/5 text-[var(--primary)]/50"
+                        "bg-primary/5 text-primary/50"
                       }`}>
                         {idx + 1}
                       </div>
@@ -531,17 +531,17 @@ const History = () => {
                         {d.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--primary)] truncate">{d.name}</p>
-                        <p className="text-xs text-[var(--primary)]/40 truncate">{d.email}</p>
-                        {d.phone && <p className="text-xs text-[var(--primary)]/40">{d.phone}</p>}
+                        <p className="text-sm font-semibold text-primary truncate">{d.name}</p>
+                        <p className="text-xs text-primary/40 truncate">{d.email}</p>
+                        {d.phone && <p className="text-xs text-primary/40">{d.phone}</p>}
                       </div>
                     </div>
 
                     {/* Stats */}
                     <div className="flex flex-wrap gap-2 sm:ml-auto">
-                      <div className="px-3 py-1.5 rounded-xl bg-[var(--primary)]/[0.04] text-center min-w-[70px]">
-                        <p className="text-lg font-bold text-[var(--primary)]">{d.totalPickups}</p>
-                        <p className="text-[10px] text-[var(--primary)]/50 font-medium uppercase">Total</p>
+                      <div className="px-3 py-1.5 rounded-xl bg-primary/[0.04] text-center min-w-[70px]">
+                        <p className="text-lg font-bold text-primary">{d.totalPickups}</p>
+                        <p className="text-[10px] text-primary/50 font-medium uppercase">Total</p>
                       </div>
                       <div className="px-3 py-1.5 rounded-xl bg-emerald-50 text-center min-w-[70px]">
                         <p className="text-lg font-bold text-emerald-600">{d.completed}</p>
@@ -559,7 +559,7 @@ const History = () => {
                   </div>
 
                   {/* Category breakdown + completion rate */}
-                  <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-[var(--primary)]/5">
+                  <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-primary/5">
                     <div className="flex gap-1.5">
                       {d.categories.recyclable > 0 && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
@@ -579,18 +579,18 @@ const History = () => {
                     </div>
                     <div className="flex items-center gap-2 ml-auto">
                       {d.totalPickups > 0 && (
-                        <span className="text-[10px] text-[var(--primary)]/40">
+                        <span className="text-[10px] text-primary/40">
                           {((d.completed / d.totalPickups) * 100).toFixed(0)}% completion
                         </span>
                       )}
                       {d.lastPickupAt && (
-                        <span className="text-[10px] text-[var(--primary)]/40">
+                        <span className="text-[10px] text-primary/40">
                           Last: {new Date(d.lastPickupAt).toLocaleDateString("en-US", {
                             month: "short", day: "numeric",
                           })}
                         </span>
                       )}
-                      <svg className="w-4 h-4 text-[var(--primary)]/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-4 h-4 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>

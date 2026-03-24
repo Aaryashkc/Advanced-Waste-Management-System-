@@ -43,6 +43,14 @@ import PickupStatusToast from "../components/users/PickupStatusToast";
 import DriverStatusToast from "../components/Driver/DriverStatusToast";
 import useAuthStore from "../stores/useAuthStore";
 
+const AdminRedirect = () => {
+  const { isAuthenticated, user } = useAuthStore();
+  if (isAuthenticated && (user?.role === "super_admin" || user?.role === "admin")) {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
+  return <HomePage />;
+};
+
 const AppRoutes = () => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
@@ -53,10 +61,14 @@ const AppRoutes = () => {
       {!isAdminRoute && <Header />}
 
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<HomePage />} />
+        {/* Public Routes - admins get redirected to dashboard */}
+        <Route path="/" element={<AdminRedirect />} />
         <Route path="/test-animation" element={<TestAnimationPage />} />
-        <Route path="/login" element={<CustomerLoginPage />} />
+        <Route path="/login" element={
+          isAuthenticated && (user?.role === "super_admin" || user?.role === "admin")
+            ? <Navigate to="/admin-dashboard" replace />
+            : <CustomerLoginPage />
+        } />
         <Route path="/signup" element={<CustomerSignUpPage />} />
         <Route path="/otp-verification" element={<OTPVerificationPage />} />
         <Route path="/unauthorized" element={<Unauthorized />} />

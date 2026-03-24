@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import useDistrictStore from "../stores/useDistrictStore";
 import useAuthStore from "../stores/useAuthStore";
+import { MapPin, CheckCircle, PauseCircle, Store } from "lucide-react";
+import StatsCard from "../components/dashboard/StatsCard";
 
 const TYPE_BADGES = {
-  commercial: { cls: "bg-blue-100 text-blue-700", icon: "🏬" },
-  residential: { cls: "bg-purple-100 text-purple-700", icon: "🏠" },
-  suburban: { cls: "bg-teal-100 text-teal-700", icon: "🏘️" },
-  rural: { cls: "bg-emerald-100 text-emerald-700", icon: "🌾" },
+  commercial: { cls: "bg-blue-100 text-blue-700", icon: "C" },
+  residential: { cls: "bg-purple-100 text-purple-700", icon: "R" },
+  suburban: { cls: "bg-teal-100 text-teal-700", icon: "S" },
+  rural: { cls: "bg-emerald-100 text-emerald-700", icon: "U" },
 };
 
 const PROVINCES = ["Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"];
@@ -96,80 +98,70 @@ const Districts = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--primary)]">Collection Areas</h1>
-          <p className="text-sm text-[var(--primary)]/60 mt-1">{isSuperAdmin ? "Manage collection areas across all organizations" : "View your organization's collection areas"}</p>
+          <h1 className="text-2xl font-bold text-primary">Collection Areas</h1>
+          <p className="text-sm text-primary/50 mt-1">{isSuperAdmin ? "Manage collection areas across all organizations" : "View your organization's collection areas"}</p>
         </div>
         {isSuperAdmin && (
-          <button onClick={() => { setShowAddModal(true); setFormError(""); }} className="px-5 py-2.5 bg-[var(--accent)] text-[var(--primary)] font-semibold rounded-xl shadow-sm hover:shadow-md hover:brightness-110 transition-all flex items-center gap-2">
-            <span className="text-lg">+</span> Add Area
+          <button onClick={() => { setShowAddModal(true); setFormError(""); }} className="px-5 py-2.5 bg-primary text-white font-semibold text-sm rounded-xl hover:bg-primary/90 transition-colors flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-lg leading-none">+</span> Add Area
           </button>
         )}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-2xl">📍</div>
-          <div><p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Total</p><p className="text-2xl font-bold text-[var(--primary)]">{districts.length}</p></div>
-        </div>
-        <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-2xl">✅</div>
-          <div><p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Active</p><p className="text-2xl font-bold text-green-600">{activeCount}</p></div>
-        </div>
-        <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl">⏸️</div>
-          <div><p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Inactive</p><p className="text-2xl font-bold text-amber-600">{inactiveCount}</p></div>
-        </div>
-        <div className="bg-white rounded-2xl border border-[var(--primary)]/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-2xl">🏬</div>
-          <div><p className="text-xs text-[var(--primary)]/50 uppercase tracking-wider font-medium">Commercial</p><p className="text-2xl font-bold text-purple-600">{typeCount("commercial")}</p></div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatsCard title="Total Areas" value={districts.length} label="All collection areas" icon={<MapPin className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
+        <StatsCard title="Active" value={activeCount} label="Currently served" icon={<CheckCircle className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-100" valueColor="text-emerald-600" />
+        <StatsCard title="Inactive" value={inactiveCount} label="Paused areas" icon={<PauseCircle className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" valueColor="text-amber-600" />
+        <StatsCard title="Commercial" value={typeCount("commercial")} label="Business districts" icon={<Store className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" valueColor="text-blue-600" />
       </div>
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-white/50 rounded-2xl border border-[var(--primary)]/10"><div className="w-8 h-8 border-4 border-[var(--primary)]/20 border-t-[var(--accent)] rounded-full animate-spin" /></div>
+        <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-primary/10">
+          <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+        </div>
       ) : error ? (
-        <div className="p-6 bg-red-50 rounded-2xl border border-red-200 text-red-600 text-center font-medium">{error}</div>
+        <div className="p-6 bg-white rounded-2xl border border-red-200 text-red-600 text-center text-sm">{error}</div>
       ) : (
-        <div className="bg-white rounded-2xl border border-[var(--primary)]/10 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-[var(--primary)]/10 bg-[var(--primary)]/[0.03]">
-                  <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Name</th>
-                  <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Province</th>
-                  <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Type</th>
-                  {isSuperAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Organization</th>}
-                  <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Coordinates</th>
-                  <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Status</th>
-                  {isSuperAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-[var(--primary)]/60 uppercase tracking-wider">Actions</th>}
+                <tr className="border-b border-primary/8 bg-primary/[0.03]">
+                  <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Name</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Province</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Type</th>
+                  {isSuperAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Organization</th>}
+                  <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Coordinates</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Status</th>
+                  {isSuperAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {districts.length === 0 ? (
-                  <tr><td colSpan={isSuperAdmin ? 7 : 5} className="px-6 py-12 text-center text-[var(--primary)]/40">No collection areas found.</td></tr>
+                  <tr><td colSpan={isSuperAdmin ? 7 : 5} className="px-6 py-12 text-center text-primary/30 text-sm">No collection areas found.</td></tr>
                 ) : districts.map(d => {
-                  const badge = TYPE_BADGES[d.type] || { cls: "bg-gray-100 text-gray-700", icon: "📍" };
+                  const badge = TYPE_BADGES[d.type] || { cls: "bg-gray-100 text-gray-700", icon: "?" };
                   return (
-                    <tr key={d._id} className="border-b border-[var(--primary)]/5 hover:bg-[var(--accent)]/5 transition-colors">
-                      <td className="px-5 py-3.5 font-semibold text-[var(--primary)]">{d.name}</td>
-                      <td className="px-5 py-3.5 text-sm text-[var(--primary)]/70">{d.province || "—"}</td>
+                    <tr key={d._id} className="border-b border-primary/5 hover:bg-primary/[0.02] transition-colors">
+                      <td className="px-5 py-3.5 font-semibold text-primary">{d.name}</td>
+                      <td className="px-5 py-3.5 text-sm text-primary/60">{d.province || "--"}</td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${badge.cls}`}>
-                          {badge.icon} {d.type}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badge.cls}`}>
+                          {d.type}
                         </span>
                       </td>
-                      {isSuperAdmin && <td className="px-5 py-3.5 text-[var(--primary)]/70">{d.orgId?.name || "—"}</td>}
-                      <td className="px-5 py-3.5 text-[var(--primary)]/70 text-sm">
+                      {isSuperAdmin && <td className="px-5 py-3.5 text-sm text-primary/60">{d.orgId?.name || "--"}</td>}
+                      <td className="px-5 py-3.5 text-primary/60 text-sm">
                         {d.coordinates?.latitude && d.coordinates?.longitude
                           ? `${d.coordinates.latitude.toFixed(4)}, ${d.coordinates.longitude.toFixed(4)}`
-                          : "—"}
+                          : "--"}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${d.isActive !== false ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${d.isActive !== false ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${d.isActive !== false ? "bg-emerald-500" : "bg-gray-400"}`} />
                           {d.isActive !== false ? "Active" : "Inactive"}
                         </span>
@@ -177,8 +169,8 @@ const Districts = () => {
                       {isSuperAdmin && (
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <button onClick={() => openEdit(d)} className="px-2.5 py-1 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/5 rounded-lg hover:bg-[var(--primary)]/10 transition">Edit</button>
-                            <button onClick={() => { setDeleteTarget(d); setFormError(""); }} className="px-2.5 py-1 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">Delete</button>
+                            <button onClick={() => openEdit(d)} className="px-2.5 py-1.5 text-xs font-semibold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition">Edit</button>
+                            <button onClick={() => { setDeleteTarget(d); setFormError(""); }} className="px-2.5 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">Delete</button>
                           </div>
                         </td>
                       )}
@@ -191,131 +183,137 @@ const Districts = () => {
         </div>
       )}
 
-      {/* ===== Add Modal ===== */}
+      {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
-            <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
-            <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Add New Area</h2>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-7 relative mx-4">
+            <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center text-primary/60 hover:bg-primary/10 transition">
+              <span className="text-lg leading-none">&times;</span>
+            </button>
+            <h2 className="text-lg font-bold text-primary mb-5">Add New Area</h2>
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Area Name *</label>
-                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Kathmandu Central" className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
+                <label className="block text-sm font-medium text-primary/60 mb-1">Area Name *</label>
+                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Kathmandu Central" className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Type</label>
-                <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
-                  <option value="residential">🏠 Residential</option>
-                  <option value="commercial">🏬 Commercial</option>
-                  <option value="suburban">🏘️ Suburban</option>
-                  <option value="rural">🌾 Rural</option>
+                <label className="block text-sm font-medium text-primary/60 mb-1">Type</label>
+                <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="suburban">Suburban</option>
+                  <option value="rural">Rural</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Province *</label>
-                <select value={form.province} onChange={e => setForm({...form, province: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
+                <label className="block text-sm font-medium text-primary/60 mb-1">Province *</label>
+                <select value={form.province} onChange={e => setForm({...form, province: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
                   <option value="">Select Province...</option>
                   {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Latitude</label>
-                  <input type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="27.7172" className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Latitude</label>
+                  <input type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="27.7172" className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Longitude</label>
-                  <input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="85.3240" className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Longitude</label>
+                  <input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="85.3240" className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
                 </div>
               </div>
               {isSuperAdmin && (
                 <div>
-                  <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Organization *</label>
-                  <select value={form.orgId} onChange={e => setForm({...form, orgId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Organization *</label>
+                  <select value={form.orgId} onChange={e => setForm({...form, orgId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
                     <option value="">Select Organization...</option>
                     {orgs.map(o => <option key={o._id} value={o._id}>{o.name}</option>)}
                   </select>
                 </div>
               )}
-              {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
-              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--accent)] text-[var(--primary)] font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">{submitting ? "Adding..." : "Add Area"}</button>
+              {formError && <p className="text-red-500 text-sm">{formError}</p>}
+              <button type="submit" disabled={submitting} className="w-full py-2.5 bg-primary text-white font-semibold text-sm rounded-xl hover:bg-primary/90 transition disabled:opacity-50">{submitting ? "Adding..." : "Add Area"}</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* ===== Edit Modal ===== */}
+      {/* Edit Modal */}
       {editDistrict && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
-            <button onClick={() => setEditDistrict(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
-            <h2 className="text-xl font-bold text-[var(--primary)] mb-6">Edit Area — {editDistrict.name}</h2>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-7 relative mx-4">
+            <button onClick={() => setEditDistrict(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center text-primary/60 hover:bg-primary/10 transition">
+              <span className="text-lg leading-none">&times;</span>
+            </button>
+            <h2 className="text-lg font-bold text-primary mb-5">Edit Area</h2>
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Area Name</label>
-                <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
+                <label className="block text-sm font-medium text-primary/60 mb-1">Area Name</label>
+                <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Type</label>
-                <select value={editForm.type} onChange={e => setEditForm({...editForm, type: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
-                  <option value="residential">🏠 Residential</option>
-                  <option value="commercial">🏬 Commercial</option>
-                  <option value="suburban">🏘️ Suburban</option>
-                  <option value="rural">🌾 Rural</option>
+                <label className="block text-sm font-medium text-primary/60 mb-1">Type</label>
+                <select value={editForm.type} onChange={e => setEditForm({...editForm, type: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="suburban">Suburban</option>
+                  <option value="rural">Rural</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Province *</label>
-                <select value={editForm.province} onChange={e => setEditForm({...editForm, province: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
+                <label className="block text-sm font-medium text-primary/60 mb-1">Province *</label>
+                <select value={editForm.province} onChange={e => setEditForm({...editForm, province: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
                   <option value="">Select Province...</option>
                   {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Latitude</label>
-                  <input type="number" step="any" value={editForm.latitude} onChange={e => setEditForm({...editForm, latitude: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Latitude</label>
+                  <input type="number" step="any" value={editForm.latitude} onChange={e => setEditForm({...editForm, latitude: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Longitude</label>
-                  <input type="number" step="any" value={editForm.longitude} onChange={e => setEditForm({...editForm, longitude: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Longitude</label>
+                  <input type="number" step="any" value={editForm.longitude} onChange={e => setEditForm({...editForm, longitude: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
                 </div>
               </div>
               {isSuperAdmin && (
                 <div>
-                  <label className="block text-sm font-medium text-[var(--primary)]/70 mb-1">Organization</label>
-                  <select value={editForm.orgId} onChange={e => setEditForm({...editForm, orgId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-[var(--primary)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Organization</label>
+                  <select value={editForm.orgId} onChange={e => setEditForm({...editForm, orgId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
                     <option value="">Select Organization...</option>
                     {orgs.map(o => <option key={o._id} value={o._id}>{o.name}</option>)}
                   </select>
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-[var(--primary)]/70">Active</label>
+                <label className="text-sm font-medium text-primary/60">Active</label>
                 <button type="button" onClick={() => setEditForm({...editForm, isActive: !editForm.isActive})} className={`w-12 h-6 rounded-full transition-colors ${editForm.isActive ? "bg-emerald-400" : "bg-gray-300"} relative`}>
                   <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${editForm.isActive ? "left-6" : "left-0.5"}`} />
                 </button>
               </div>
-              {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
-              <button type="submit" disabled={submitting} className="w-full py-3 bg-[var(--accent)] text-[var(--primary)] font-bold rounded-xl hover:brightness-110 transition disabled:opacity-50">{submitting ? "Saving..." : "Save Changes"}</button>
+              {formError && <p className="text-red-500 text-sm">{formError}</p>}
+              <button type="submit" disabled={submitting} className="w-full py-2.5 bg-primary text-white font-semibold text-sm rounded-xl hover:bg-primary/90 transition disabled:opacity-50">{submitting ? "Saving..." : "Save Changes"}</button>
             </form>
           </div>
         </div>
       )}
 
-      {/* ===== Delete Modal ===== */}
+      {/* Delete Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
-            <button onClick={() => setDeleteTarget(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--primary)]/5 flex items-center justify-center text-[var(--primary)]/60 hover:bg-[var(--primary)]/10 transition">✕</button>
-            <h2 className="text-xl font-bold text-red-600 mb-2">Delete Area</h2>
-            <p className="text-sm text-[var(--primary)]/60 mb-4">Area: <strong>{deleteTarget.name}</strong> ({deleteTarget.type})</p>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-7 relative mx-4">
+            <button onClick={() => setDeleteTarget(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center text-primary/60 hover:bg-primary/10 transition">
+              <span className="text-lg leading-none">&times;</span>
+            </button>
+            <h2 className="text-lg font-bold text-red-600 mb-2">Delete Area</h2>
+            <p className="text-sm text-primary/50 mb-4">Area: <strong>{deleteTarget.name}</strong> ({deleteTarget.type})</p>
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-red-50 border border-red-200">
                 <p className="text-sm text-red-700">This will permanently delete this area and remove it from all schedules.</p>
               </div>
-              {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
-              <button onClick={handleDelete} disabled={submitting} className="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition disabled:opacity-50">{submitting ? "Deleting..." : "Confirm Delete"}</button>
+              {formError && <p className="text-red-500 text-sm">{formError}</p>}
+              <button onClick={handleDelete} disabled={submitting} className="w-full py-2.5 bg-red-500 text-white font-semibold text-sm rounded-xl hover:bg-red-600 transition disabled:opacity-50">{submitting ? "Deleting..." : "Confirm Delete"}</button>
             </div>
           </div>
         </div>

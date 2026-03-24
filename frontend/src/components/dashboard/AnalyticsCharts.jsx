@@ -247,10 +247,10 @@ const AnalyticsCharts = ({ analyticsData }) => {
       {/* Top Row: Bar and Scatter */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance Bar Chart */}
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Organization Performance</h3>
-            <p className="text-sm text-[var(--primary)]/65">Which organization is collecting the most waste</p>
+            <h3 className="text-lg font-bold text-primary">Organization Performance</h3>
+            <p className="text-sm text-primary/65">Which organization is collecting the most waste</p>
           </div>
           <div className="h-72 w-full">
             <Bar data={barData} options={commonOptions} />
@@ -258,10 +258,10 @@ const AnalyticsCharts = ({ analyticsData }) => {
         </div>
 
         {/* Scatter Plot: Efficiency */}
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Fleet Efficiency</h3>
-            <p className="text-sm text-[var(--primary)]/65">Correlation between vehicles and waste collected</p>
+            <h3 className="text-lg font-bold text-primary">Fleet Efficiency</h3>
+            <p className="text-sm text-primary/65">Correlation between vehicles and waste collected</p>
           </div>
           <div className="h-72 w-full">
             <Scatter data={scatterData} options={scatterOptions} />
@@ -272,42 +272,42 @@ const AnalyticsCharts = ({ analyticsData }) => {
       {/* Middle Row: Pie and Doughnut Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Waste Distribution (Pie) */}
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Waste Type Distribution</h3>
-            <p className="text-sm text-[var(--primary)]/65">Volume breakdown by waste category (Total kg)</p>
+            <h3 className="text-lg font-bold text-primary">Waste Type Distribution</h3>
+            <p className="text-sm text-primary/65">Volume breakdown by waste category (Total kg)</p>
           </div>
           <div className="h-64 w-full flex justify-center">
             {wasteTypeDistribution.length > 0 ? (
                <Pie data={pieData} options={standardPieOptions} />
             ) : (
-               <p className="text-[var(--primary)]/60 flex items-center h-full">No waste data yet</p>
+               <p className="text-primary/60 flex items-center h-full">No waste data yet</p>
             )}
           </div>
         </div>
 
         {/* Task Status (Doughnut) */}
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Task Ecosystem Status</h3>
-            <p className="text-sm text-[var(--primary)]/65">Overall completion health across all organizations</p>
+            <h3 className="text-lg font-bold text-primary">Task Ecosystem Status</h3>
+            <p className="text-sm text-primary/65">Overall completion health across all organizations</p>
           </div>
           <div className="h-64 w-full flex justify-center">
             {taskStatusDistribution.length > 0 ? (
                <Doughnut data={doughnutData} options={roundedPieOptions} />
             ) : (
-               <p className="text-[var(--primary)]/60 flex items-center h-full">No tasks yet</p>
+               <p className="text-primary/60 flex items-center h-full">No tasks yet</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Bottom Row: Line Chart Trend */}
-      <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+      <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-[var(--primary)]">Collection Trends</h3>
-            <p className="text-sm text-[var(--primary)]/65">Daily waste collection across top organizations (This Week)</p>
+            <h3 className="text-lg font-bold text-primary">Collection Trends</h3>
+            <p className="text-sm text-primary/65">Daily waste collection across top organizations (This Week)</p>
           </div>
         </div>
         <div className="h-80 w-full relative">

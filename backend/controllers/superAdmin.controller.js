@@ -324,6 +324,35 @@ export const getSuperAdminAnalytics = async (req, res) => {
     // Map time series to a more charting friendly format dynamically in the frontend, 
     // but we can pass the raw aggregated array here.
 
+    // 6. Pickup Stats (real pickup data for dashboard)
+    const pickupStatusAgg = await PickupRequest.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    const pickupStatusMap = {};
+    let totalPickups = 0;
+    for (const s of pickupStatusAgg) {
+      pickupStatusMap[s._id] = s.count;
+      totalPickups += s.count;
+    }
+
+    // 7. Pickup daily trend (last 7 days)
+    const pickupTrend = await PickupRequest.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          total: { $sum: 1 },
+          completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
     res.status(200).json({
       success: true,
       data: {
@@ -331,12 +360,20 @@ export const getSuperAdminAnalytics = async (req, res) => {
           totalOrganizations,
           totalWasteCollected,
           activeVehicles,
-          activeRoutes // pending/assigned tasks
+          activeRoutes,
+          totalPickups,
+          completedPickups: pickupStatusMap.COMPLETED || 0,
+          activePickups: (pickupStatusMap.PENDING || 0) + (pickupStatusMap.ASSIGNED || 0) +
+            (pickupStatusMap.EN_ROUTE || 0) + (pickupStatusMap.ARRIVED || 0) + (pickupStatusMap.COLLECTING || 0),
         },
         organizationData: orgData,
         timeSeriesDataRaw: timeSeriesAggregation,
         wasteTypeDistribution: wasteTypeAggregation,
-        taskStatusDistribution: taskStatusAggregation
+        taskStatusDistribution: taskStatusAggregation,
+        pickupStats: {
+          statusDistribution: pickupStatusAgg.map(s => ({ status: s._id, count: s.count })),
+          dailyTrend: pickupTrend.map(d => ({ date: d._id, total: d.total, completed: d.completed })),
+        },
       }
     });
 
@@ -808,38 +845,106 @@ export const getDriverDetail = async (req, res) => {
  */
 export const getPickupStats = async (req, res) => {
   try {
-    const allPickups = await PickupRequest.find({})
-      .populate("driverId", "name")
-      .sort({ createdAt: -1 })
-      .lean();
+    // Use aggregation instead of loading all docs
+    const [statusStats, driverStats, categoryStats, dailyTrend] = await Promise.all([
+      // 1. Status breakdown
+      PickupRequest.aggregate([
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
+        },
+      ]),
 
-    const completed = allPickups.filter(p => p.status === "COMPLETED");
+      // 2. Top drivers by completed pickups
+      PickupRequest.aggregate([
+        { $match: { status: "COMPLETED", driverId: { $ne: null } } },
+        {
+          $group: {
+            _id: "$driverId",
+            count: { $sum: 1 },
+            recyclable: { $sum: { $cond: [{ $eq: ["$category", "recyclable"] }, 1, 0] } },
+            nonRecyclable: { $sum: { $cond: [{ $eq: ["$category", "non-recyclable"] }, 1, 0] } },
+            mixed: { $sum: { $cond: [{ $eq: ["$category", "both"] }, 1, 0] } },
+            avgResponseMs: { $avg: "$responseTimeMs" },
+            avgTaskDurationMs: { $avg: "$taskDurationMs" },
+          },
+        },
+        { $sort: { count: -1 } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "driver",
+            pipeline: [{ $project: { name: 1 } }],
+          },
+        },
+        { $unwind: { path: "$driver", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            driverId: "$_id",
+            driverName: { $ifNull: ["$driver.name", "Unknown"] },
+            count: 1,
+            categories: {
+              recyclable: "$recyclable",
+              "non-recyclable": "$nonRecyclable",
+              both: "$mixed",
+            },
+            avgResponseMs: { $round: [{ $ifNull: ["$avgResponseMs", 0] }, 0] },
+            avgTaskDurationMs: { $round: [{ $ifNull: ["$avgTaskDurationMs", 0] }, 0] },
+            _id: 0,
+          },
+        },
+      ]),
 
-    // Per-driver stats
-    const driverMap = {};
-    for (const p of completed) {
-      const dId = p.driverId?._id?.toString() || "unknown";
-      if (!driverMap[dId]) {
-        driverMap[dId] = { driverName: p.driverId?.name || "Unknown", count: 0, categories: {} };
-      }
-      driverMap[dId].count++;
-      const cat = p.category || "non-recyclable";
-      driverMap[dId].categories[cat] = (driverMap[dId].categories[cat] || 0) + 1;
+      // 3. Category breakdown
+      PickupRequest.aggregate([
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+      ]),
+
+      // 4. Daily trend (last 14 days)
+      PickupRequest.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            total: { $sum: 1 },
+            completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+            cancelled: { $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] } },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    // Build summary
+    const statusMap = {};
+    let totalPickups = 0;
+    for (const s of statusStats) {
+      statusMap[s._id] = s.count;
+      totalPickups += s.count;
     }
-
-    const driverStats = Object.entries(driverMap)
-      .map(([id, data]) => ({ driverId: id, ...data }))
-      .sort((a, b) => b.count - a.count);
 
     res.status(200).json({
       success: true,
       data: {
-        totalPickups: allPickups.length,
-        completedPickups: completed.length,
-        cancelledPickups: allPickups.filter(p => p.status === "CANCELLED").length,
-        expiredPickups: allPickups.filter(p => p.status === "EXPIRED").length,
-        activePickups: allPickups.filter(p => ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"].includes(p.status)).length,
+        totalPickups,
+        completedPickups: statusMap.COMPLETED || 0,
+        cancelledPickups: statusMap.CANCELLED || 0,
+        expiredPickups: statusMap.EXPIRED || 0,
+        activePickups: (statusMap.PENDING || 0) + (statusMap.ASSIGNED || 0) +
+          (statusMap.EN_ROUTE || 0) + (statusMap.ARRIVED || 0) + (statusMap.COLLECTING || 0),
+        completionRate: totalPickups > 0 ? Math.round(((statusMap.COMPLETED || 0) / totalPickups) * 100) : 0,
+        statusDistribution: statusStats.map(s => ({ status: s._id, count: s.count })),
+        categoryDistribution: categoryStats.map(c => ({ category: c._id, count: c.count })),
         driverStats,
+        dailyTrend: dailyTrend.map(d => ({ date: d._id, total: d.total, completed: d.completed, cancelled: d.cancelled })),
       },
     });
   } catch (error) {

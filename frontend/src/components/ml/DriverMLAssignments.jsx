@@ -40,30 +40,30 @@ const DriverMLAssignments = () => {
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-5">
-        <h1 className="text-xl font-bold text-[var(--primary)]">
+        <h1 className="text-xl font-bold text-primary">
           Scheduling (Daily)
         </h1>
-        <p className="text-sm text-[var(--primary)]/60 mt-0.5">
+        <p className="text-sm text-primary/60 mt-0.5">
           Your assigned waste collection areas
         </p>
       </div>
 
       <div className="px-4 py-5 space-y-4">
         {/* Day Toggle */}
-        <div className="flex gap-1 bg-white rounded-2xl border border-[var(--primary)]/10 p-1.5">
+        <div className="flex gap-1 bg-white rounded-2xl border border-primary/10 p-1.5">
           <button
             onClick={() => setActiveDay("today")}
             className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
               activeDay === "today"
-                ? "bg-[var(--accent)] text-[var(--primary)] shadow-sm"
-                : "text-[var(--primary)]/50 hover:text-[var(--primary)]/70"
+                ? "bg-[var(--accent)] text-primary shadow-sm"
+                : "text-primary/50 hover:text-primary/70"
             }`}
           >
             <span className="block text-xs font-normal opacity-70">Today</span>
             <span>{todayLabel}</span>
             {todayCount > 0 && (
               <span className={`ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
-                activeDay === "today" ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "bg-[var(--primary)]/10 text-[var(--primary)]/60"
+                activeDay === "today" ? "bg-primary/10 text-primary" : "bg-primary/10 text-primary/60"
               }`}>
                 {todayCount}
               </span>
@@ -73,15 +73,15 @@ const DriverMLAssignments = () => {
             onClick={() => setActiveDay("tomorrow")}
             className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
               activeDay === "tomorrow"
-                ? "bg-[var(--accent)] text-[var(--primary)] shadow-sm"
-                : "text-[var(--primary)]/50 hover:text-[var(--primary)]/70"
+                ? "bg-[var(--accent)] text-primary shadow-sm"
+                : "text-primary/50 hover:text-primary/70"
             }`}
           >
             <span className="block text-xs font-normal opacity-70">Tomorrow</span>
             <span>{tomorrowLabel}</span>
             {tomorrowCount > 0 && (
               <span className={`ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
-                activeDay === "tomorrow" ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "bg-[var(--primary)]/10 text-[var(--primary)]/60"
+                activeDay === "tomorrow" ? "bg-primary/10 text-primary" : "bg-primary/10 text-primary/60"
               }`}>
                 {tomorrowCount}
               </span>
@@ -99,8 +99,8 @@ const DriverMLAssignments = () => {
         {/* Loading */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-10 h-10 border-4 border-[var(--primary)]/20 border-t-[var(--accent)] rounded-full animate-spin" />
-            <p className="text-sm text-[var(--primary)]/50 mt-3">Loading schedule...</p>
+            <div className="w-10 h-10 border-4 border-primary/20 border-t-[var(--accent)] rounded-full animate-spin" />
+            <p className="text-sm text-primary/50 mt-3">Loading schedule...</p>
           </div>
         )}
 
@@ -150,7 +150,7 @@ const DriverMLAssignments = () => {
               return (
                 <div
                   key={idx}
-                  className="bg-white rounded-2xl border border-[var(--primary)]/10 overflow-hidden shadow-sm"
+                  className="bg-white rounded-2xl border border-primary/10 overflow-hidden shadow-sm"
                 >
                   {/* Card Header - District */}
                   <div className="px-5 pt-5 pb-3">
@@ -158,11 +158,11 @@ const DriverMLAssignments = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-lg">📍</span>
-                          <h3 className="text-lg font-bold text-[var(--primary)]">
+                          <h3 className="text-lg font-bold text-primary">
                             {a.district}
                           </h3>
                         </div>
-                        <p className="text-xs text-[var(--primary)]/40 mt-0.5 ml-7 capitalize">
+                        <p className="text-xs text-primary/40 mt-0.5 ml-7 capitalize">
                           {a.districtType} area{a.orgName ? ` · ${a.orgName}` : ""}
                         </p>
                       </div>
@@ -183,13 +183,13 @@ const DriverMLAssignments = () => {
 
                   {/* Waste + Truck Info */}
                   <div className="px-5 pb-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-[var(--primary)]/[0.03] p-3">
-                      <p className="text-[10px] text-[var(--primary)]/50 uppercase tracking-wider font-medium mb-1">
+                    <div className="rounded-xl bg-primary/[0.03] p-3">
+                      <p className="text-[10px] text-primary/50 uppercase tracking-wider font-medium mb-1">
                         Expected Waste
                       </p>
-                      <p className="text-xl font-bold text-[var(--primary)]">
+                      <p className="text-xl font-bold text-primary">
                         {a.predictedWasteKg?.toLocaleString()}
-                        <span className="text-xs font-normal text-[var(--primary)]/40 ml-1">kg</span>
+                        <span className="text-xs font-normal text-primary/40 ml-1">kg</span>
                       </p>
                     </div>
                     {a.truck && (
@@ -210,7 +210,7 @@ const DriverMLAssignments = () => {
                   {/* Recommendation */}
                   {a.recommendation && (
                     <div className="px-5 pb-4">
-                      <p className="text-xs text-[var(--primary)]/50 leading-relaxed">
+                      <p className="text-xs text-primary/50 leading-relaxed">
                         {a.recommendation}
                       </p>
                     </div>
@@ -236,19 +236,19 @@ const DriverMLAssignments = () => {
 
         {/* Empty state */}
         {!loading && !error && assignments.length === 0 && (
-          <div className="text-center py-16 bg-white rounded-2xl border border-[var(--primary)]/10">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--primary)]/5 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-[var(--primary)]/25" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-16 bg-white rounded-2xl border border-primary/10">
+            <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-primary/25" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-[var(--primary)]/70 mb-1">
+            <h3 className="text-base font-semibold text-primary/70 mb-1">
               {!currentData
                 ? `No schedule for ${activeDay === "today" ? "today" : "tomorrow"} yet`
                 : "You're not assigned to any areas"
               }
             </h3>
-            <p className="text-sm text-[var(--primary)]/40 max-w-xs mx-auto">
+            <p className="text-sm text-primary/40 max-w-xs mx-auto">
               {!currentData
                 ? "The admin hasn't generated a schedule yet. Check back later."
                 : "No areas have been assigned to you for this day. Contact your admin if this seems wrong."
@@ -262,7 +262,7 @@ const DriverMLAssignments = () => {
           <button
             onClick={fetchDriverAssignments}
             disabled={loading}
-            className="px-5 py-2 rounded-xl text-sm font-medium text-[var(--primary)]/60 border border-[var(--primary)]/10 hover:bg-white disabled:opacity-40 transition"
+            className="px-5 py-2 rounded-xl text-sm font-medium text-primary/60 border border-primary/10 hover:bg-white disabled:opacity-40 transition"
           >
             Refresh
           </button>

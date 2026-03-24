@@ -160,63 +160,63 @@ const AdminAnalyticsCharts = ({ analyticsData }) => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Driver Performance</h3>
-            <p className="text-sm text-[var(--primary)]/65">Waste collected by each driver</p>
+            <h3 className="text-lg font-bold text-primary">Driver Performance</h3>
+            <p className="text-sm text-primary/65">Waste collected by each driver</p>
           </div>
           <div className="h-72 w-full">
             {organizationData.length > 0 ? (
                <Bar data={barData} options={commonOptions} />
             ) : (
-               <p className="text-[var(--primary)]/60 flex items-center justify-center h-full">No driver data yet</p>
+               <p className="text-primary/60 flex items-center justify-center h-full">No driver data yet</p>
             )}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Waste Type Distribution</h3>
-            <p className="text-sm text-[var(--primary)]/65">Volume breakdown by waste category</p>
+            <h3 className="text-lg font-bold text-primary">Waste Type Distribution</h3>
+            <p className="text-sm text-primary/65">Volume breakdown by waste category</p>
           </div>
           <div className="h-64 w-full flex justify-center">
             {wasteTypeDistribution.length > 0 ? (
                <Pie data={pieData} options={standardPieOptions} />
             ) : (
-               <p className="text-[var(--primary)]/60 flex items-center h-full">No waste data yet</p>
+               <p className="text-primary/60 flex items-center h-full">No waste data yet</p>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-[var(--primary)]">Task Ecosystem Status</h3>
-            <p className="text-sm text-[var(--primary)]/65">Completion health across tasks</p>
+            <h3 className="text-lg font-bold text-primary">Task Ecosystem Status</h3>
+            <p className="text-sm text-primary/65">Completion health across tasks</p>
           </div>
           <div className="h-64 w-full flex justify-center">
             {taskStatusDistribution.length > 0 ? (
                <Doughnut data={doughnutData} options={roundedPieOptions} />
             ) : (
-               <p className="text-[var(--primary)]/60 flex items-center h-full">No tasks yet</p>
+               <p className="text-primary/60 flex items-center h-full">No tasks yet</p>
             )}
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-[var(--primary)]/15 shadow-sm p-6 hover:shadow-md transition-shadow">
+      <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-[var(--primary)]">Collection Trends</h3>
-            <p className="text-sm text-[var(--primary)]/65">Daily waste collection (Last 7 Days)</p>
+            <h3 className="text-lg font-bold text-primary">Collection Trends</h3>
+            <p className="text-sm text-primary/65">Daily waste collection (Last 7 Days)</p>
           </div>
         </div>
         <div className="h-80 w-full relative">
           {timeSeriesDataRaw.length > 0 ? (
              <Line data={timeSeriesData} options={lineOptions} />
           ) : (
-             <p className="text-[var(--primary)]/60 flex items-center justify-center h-full">No collection data in the last 7 days</p>
+             <p className="text-primary/60 flex items-center justify-center h-full">No collection data in the last 7 days</p>
           )}
         </div>
       </div>

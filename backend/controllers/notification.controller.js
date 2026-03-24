@@ -1,4 +1,5 @@
 import Notification from "../models/notification.model.js";
+import { emitNotification } from "../socket/socketServer.js";
 
 /**
  * Get notifications for the current user based on their role.
@@ -147,6 +148,23 @@ export const createSystemNotification = async ({
       relatedData,
     });
     await notification.save();
+
+    // Push real-time notification to admins via socket
+    try {
+      emitNotification({
+        _id: notification._id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        severity: notification.severity,
+        targetRoles: notification.targetRoles,
+        orgId: notification.orgId,
+        relatedData: notification.relatedData,
+        createdAt: notification.createdAt,
+        isRead: false,
+      });
+    } catch (_) { /* socket may not be initialized during tests */ }
+
     return notification;
   } catch (error) {
     console.error("Failed to create system notification:", error.message);
