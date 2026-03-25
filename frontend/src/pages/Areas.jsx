@@ -12,7 +12,6 @@ const TYPE_BADGES = {
   rural: { cls: "bg-emerald-100 text-emerald-700", icon: "U" },
 };
 
-const PROVINCES = ["Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"];
 
 const Areas = () => {
   const { areas, loading, error, fetchAreas, createArea, updateArea, deleteArea } = useAreaStore();
@@ -23,7 +22,7 @@ const Areas = () => {
   const [editArea, setEditArea] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [orgs, setOrgs] = useState([]);
-  const [form, setForm] = useState({ name: "", type: "residential", province: "", latitude: null, longitude: null, address: "", orgId: "" });
+  const [form, setForm] = useState({ name: "", type: "residential", latitude: null, longitude: null, address: "", orgId: "", scaleFactor: 1.0 });
   const [editForm, setEditForm] = useState({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -41,18 +40,18 @@ const Areas = () => {
 
   const handleAdd = async (e) => {
     e.preventDefault(); setFormError("");
-    if (!form.name || !form.province || (isSuperAdmin && !form.orgId)) { setFormError("All required fields must be filled"); return; }
+    if (!form.name || (isSuperAdmin && !form.orgId)) { setFormError("All required fields must be filled"); return; }
     setSubmitting(true);
     const payload = {
       name: form.name,
       type: form.type,
-      province: form.province,
+      scaleFactor: Number(form.scaleFactor) || 1.0,
       ...(form.latitude && form.longitude ? { coordinates: { latitude: Number(form.latitude), longitude: Number(form.longitude) }, address: form.address } : {}),
       ...(isSuperAdmin && form.orgId ? { orgId: form.orgId } : {}),
     };
     const result = await createArea(payload);
     setSubmitting(false);
-    if (result.success) { setShowAddModal(false); setForm({ name: "", type: "residential", province: "", latitude: null, longitude: null, address: "", orgId: "" }); }
+    if (result.success) { setShowAddModal(false); setForm({ name: "", type: "residential", latitude: null, longitude: null, address: "", orgId: "", scaleFactor: 1.0 }); }
     else setFormError(result.error);
   };
 
@@ -61,8 +60,8 @@ const Areas = () => {
     const payload = {
       name: editForm.name,
       type: editForm.type,
-      province: editForm.province,
       isActive: editForm.isActive,
+      scaleFactor: Number(editForm.scaleFactor) || 1.0,
       ...(editForm.latitude && editForm.longitude ? { coordinates: { latitude: Number(editForm.latitude), longitude: Number(editForm.longitude) }, address: editForm.address } : {}),
       ...(isSuperAdmin && editForm.orgId ? { orgId: editForm.orgId } : {}),
     };
@@ -83,12 +82,12 @@ const Areas = () => {
     setEditForm({
       name: d.name,
       type: d.type,
-      province: d.province || "",
       latitude: d.coordinates?.latitude || null,
       longitude: d.coordinates?.longitude || null,
       address: d.address || "",
       orgId: d.orgId?._id || d.orgId || "",
       isActive: d.isActive !== false,
+      scaleFactor: d.scaleFactor || 1.0,
     });
     setFormError("");
   };
@@ -134,7 +133,6 @@ const Areas = () => {
               <thead>
                 <tr className="border-b border-primary/8 bg-primary/3">
                   <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Name</th>
-                  <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Province</th>
                   <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Type</th>
                   {isSuperAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Organization</th>}
                   <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase tracking-wider">Location</th>
@@ -151,7 +149,6 @@ const Areas = () => {
                   return (
                     <tr key={d._id} className="border-b border-primary/5 hover:bg-primary/2 transition-colors">
                       <td className="px-5 py-3.5 font-semibold text-primary">{d.name}</td>
-                      <td className="px-5 py-3.5 text-sm text-primary/60">{d.province || "--"}</td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badge.cls}`}>
                           {d.type}
@@ -222,11 +219,9 @@ const Areas = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-primary/60 mb-1">Province *</label>
-                  <select value={form.province} onChange={e => setForm({...form, province: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
-                    <option value="">Select...</option>
-                    {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Size Scale</label>
+                  <input type="number" step="0.1" min="0.1" max="5.0" value={form.scaleFactor} onChange={e => setForm({...form, scaleFactor: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
+                  <p className="text-[11px] text-primary/40 mt-1">ML size multiplier (1.0 = avg)</p>
                 </div>
               </div>
               <LocationPickerMap
@@ -276,11 +271,9 @@ const Areas = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-primary/60 mb-1">Province *</label>
-                  <select value={editForm.province} onChange={e => setEditForm({...editForm, province: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-sm">
-                    <option value="">Select...</option>
-                    {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Size Scale</label>
+                  <input type="number" step="0.1" min="0.1" max="5.0" value={editForm.scaleFactor} onChange={e => setEditForm({...editForm, scaleFactor: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
+                  <p className="text-[11px] text-primary/40 mt-1">ML size multiplier (1.0 = avg)</p>
                 </div>
               </div>
               <LocationPickerMap

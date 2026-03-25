@@ -9,7 +9,7 @@ Nepal-context truck capacity tiers:
   - Heavy duty:  > 3,500 kg  (Compactors, Ashok Leyland — main roads)
 """
 
-from model import predict_waste, DISTRICTS, categorize_waste
+from model import predict_waste, predict_waste_by_type, DISTRICTS, DISTRICT_TYPES, categorize_waste
 
 
 def get_duty_type_for_waste(waste_kg):
@@ -118,20 +118,23 @@ def assign_trucks_to_district(district, predicted_kg, waste_category, available_
     return assignments
 
 
-def generate_schedule(target_date, trucks, unavailable_drivers=None):
+def generate_schedule(target_date, trucks, unavailable_drivers=None, extra_areas=None):
     """
-    Generate a full day schedule for all districts.
+    Generate a full day schedule for all districts + any extra (new) areas.
 
     Args:
         target_date: date object
         trucks: list of truck dicts from MongoDB (real data from backend)
             Each truck: { id, license_plate, capacity_kg, duty_type, org_id, org_name, driver_id, driver_name }
         unavailable_drivers: list of driver IDs that are not available
+        extra_areas: list of dicts for new areas not in trained data
+            Each: { name: str, type: str, scale_factor: float }
 
     Returns:
         dict with full schedule details
     """
     unavailable = set(unavailable_drivers or [])
+    extra_areas = extra_areas or []
 
     # Filter out trucks whose drivers are unavailable
     available_trucks = [
@@ -143,16 +146,33 @@ def generate_schedule(target_date, trucks, unavailable_drivers=None):
     district_results = []
     total_predicted = 0
 
-    # 1. Predict waste for all districts
+    # 1. Predict waste for all trained districts
     predictions = []
     for district in DISTRICTS:
         pred = predict_waste(district, target_date)
         predictions.append(pred)
 
-    # 2. Sort by predicted waste descending (prioritize high-waste districts)
+    # 2. Predict waste for extra (new/unknown) areas using type-based averaging
+    for area in extra_areas:
+        area_name = area.get("name", "").strip()
+        area_type = area.get("type", "residential")
+        scale = area.get("scale_factor", 1.0)
+
+        # Skip if this area is already a trained district
+        if area_name in DISTRICT_TYPES:
+            continue
+
+        try:
+            pred = predict_waste_by_type(area_name, area_type, target_date, scale)
+            predictions.append(pred)
+        except ValueError:
+            # Skip areas with invalid types
+            continue
+
+    # 3. Sort by predicted waste descending (prioritize high-waste districts)
     predictions.sort(key=lambda p: p["predicted_waste_kg"], reverse=True)
 
-    # 3. Assign trucks to each district
+    # 4. Assign trucks to each district
     for pred in predictions:
         district = pred["district"]
         predicted_kg = pred["predicted_waste_kg"]
@@ -215,7 +235,7 @@ def generate_schedule(target_date, trucks, unavailable_drivers=None):
         "date": target_date.isoformat(),
         "day_name": day_names[target_date.weekday()],
         "summary": {
-            "total_districts": len(DISTRICTS),
+            "total_districts": len(predictions),
             "dispatched": dispatched,
             "skipped": skipped,
             "reduced": reduced,

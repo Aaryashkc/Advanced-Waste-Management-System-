@@ -79,12 +79,12 @@ export const getAreaById = async (req, res) => {
  */
 export const createArea = async (req, res) => {
   try {
-    const { name, type, province, coordinates, orgId, address } = req.body;
+    const { name, type, coordinates, orgId, address, scaleFactor } = req.body;
 
-    if (!name || !type || !province) {
+    if (!name || !type) {
       return res.status(400).json({
         success: false,
-        message: "name, type, and province are required",
+        message: "name and type are required",
       });
     }
 
@@ -102,9 +102,9 @@ export const createArea = async (req, res) => {
     const area = new Area({
       name,
       type,
-      province,
       coordinates: coordinates || {},
       address: address || "",
+      scaleFactor: scaleFactor || 1.0,
       orgId: orgId || null,
     });
 

@@ -204,6 +204,44 @@ const useMLScheduleStore = create((set, get) => ({
         }
     },
 
+    // Driver marks an area assignment as completed
+    completeAssignment: async (scheduleId, areaName, note = "") => {
+        set({ loading: true, error: null });
+        try {
+            const response = await api.post(`/ml-schedule/${scheduleId}/complete-area`, {
+                area: areaName,
+                note,
+            });
+            // Refresh driver assignments after completion
+            get().fetchDriverAssignments();
+            set({ loading: false });
+            return response.data;
+        } catch (error) {
+            console.error("Failed to complete assignment:", error);
+            set({
+                error: error.response?.data?.message || "Failed to mark assignment as completed",
+                loading: false,
+            });
+            return null;
+        }
+    },
+
+    // Fetch completion history
+    completions: [],
+    fetchCompletions: async (page = 1) => {
+        set({ loading: true, error: null });
+        try {
+            const response = await api.get(`/ml-schedule/completions?page=${page}&limit=50`);
+            set({ completions: response.data.data || [], loading: false });
+        } catch (error) {
+            console.error("Failed to fetch completions:", error);
+            set({
+                error: error.response?.data?.message || "Failed to fetch completion history",
+                loading: false,
+            });
+        }
+    },
+
     // Clear current schedule
     clearCurrentSchedule: () => set({ currentSchedule: null, prediction: null }),
 

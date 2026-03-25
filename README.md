@@ -5,7 +5,6 @@ A full-stack waste management application with OTP-based authentication, schedul
 ## Project Structure
 
 ```
-maskey/
 ├── backend/          # Node.js/Express backend
 ├── frontend/         # React/Vite frontend
 └── package.json      # Root package.json

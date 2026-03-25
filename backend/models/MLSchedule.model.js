@@ -8,7 +8,15 @@ const assignedTruckSchema = new mongoose.Schema({
   capacity: { type: Number },
   truckType: { type: String },
   orgId: { type: String },
-  orgName: { type: String }
+  orgName: { type: String },
+  completionStatus: {
+    type: String,
+    enum: ["pending", "in_progress", "completed", "failed"],
+    default: "pending",
+  },
+  completedAt: { type: Date, default: null },
+  completedBy: { type: String, default: null },
+  completionNote: { type: String, default: null },
 }, { _id: false });
 
 const areaEntrySchema = new mongoose.Schema({

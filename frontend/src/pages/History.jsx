@@ -344,7 +344,7 @@ const History = () => {
                           <td className="px-4 py-3 text-sm font-medium text-purple-600 whitespace-nowrap">{fmt(p.responseTimeMs)}</td>
                           <td className="px-4 py-3 text-sm font-medium text-amber-600 whitespace-nowrap">{fmt(p.taskDurationMs)}</td>
                           <td className="px-4 py-3 text-sm text-primary/70 max-w-32 truncate">
-                            {p.area ? `${p.area}${p.province ? `, ${p.province}` : ""}` : p.location?.address || "\u2014"}
+                            {p.area || p.location?.address || "\u2014"}
                           </td>
                           {isSuperAdmin && (
                             <td className="px-4 py-3 text-sm text-primary/60">{p.organization}</td>

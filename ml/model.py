@@ -115,7 +115,7 @@ def predict_waste(district, target_date):
     Predict waste volume for a district on a given date.
 
     Args:
-        district: str — one of the 10 Kathmandu Valley districts
+        district: str — one of the trained Kathmandu Valley districts
         target_date: date object
 
     Returns:
@@ -174,6 +174,65 @@ def predict_waste(district, target_date):
         "is_holiday": bool(is_holiday),
         "holiday_name": holiday_name or None,
         "recommendation": get_recommendation(waste_category, district, district_type),
+    }
+
+
+def predict_waste_by_type(district_name, district_type, target_date, scale_factor=1.0):
+    """
+    Predict waste for an UNKNOWN area by averaging predictions of all trained
+    districts with the same type, then applying a scale factor.
+
+    This allows new areas added via the admin UI to get predictions without
+    retraining the model. The scale_factor adjusts for area size differences
+    (default 1.0 = average sized area of that type).
+
+    Args:
+        district_name: str — name of the new area (for display only)
+        district_type: str — one of: commercial, residential, suburban, rural
+        target_date: date object
+        scale_factor: float — size multiplier (0.5 = half-sized, 2.0 = double)
+
+    Returns:
+        dict with prediction details
+    """
+    valid_types = ["commercial", "residential", "suburban", "rural"]
+    if district_type not in valid_types:
+        raise ValueError(f"Unknown district_type '{district_type}'. Valid: {valid_types}")
+
+    # Find all trained districts of the same type
+    same_type_districts = [d for d, t in DISTRICT_TYPES.items() if t == district_type]
+
+    if not same_type_districts:
+        raise ValueError(f"No trained districts found for type '{district_type}'")
+
+    # Predict for each trained district of the same type
+    predictions = []
+    for d in same_type_districts:
+        pred = predict_waste(d, target_date)
+        predictions.append(pred["predicted_waste_kg"])
+
+    # Average the predictions and apply scale factor
+    avg_kg = sum(predictions) / len(predictions)
+    predicted_kg = max(0, round(avg_kg * scale_factor, 1))
+
+    waste_category = categorize_waste(predicted_kg)
+    day_of_week = target_date.weekday()
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    holiday_name, _ = get_holiday_info(target_date)
+
+    return {
+        "district": district_name,
+        "district_type": district_type,
+        "date": target_date.isoformat(),
+        "day_name": day_names[day_of_week],
+        "predicted_waste_kg": predicted_kg,
+        "waste_category": waste_category,
+        "is_holiday": bool(holiday_name),
+        "holiday_name": holiday_name or None,
+        "recommendation": get_recommendation(waste_category, district_name, district_type),
+        "prediction_method": "type_average",
+        "scale_factor": scale_factor,
+        "based_on_districts": same_type_districts,
     }
 
 

@@ -298,7 +298,6 @@ const OrgDetail = () => {
                   <thead>
                     <tr className="bg-primary/3 border-b border-primary/10">
                       <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Area Name</th>
-                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Province</th>
                       <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Type</th>
                       <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Status</th>
                     </tr>
@@ -307,7 +306,6 @@ const OrgDetail = () => {
                     {areas.map(d => (
                       <tr key={d._id} className="hover:bg-primary/2 transition">
                         <td className="px-5 py-4 font-bold text-primary">{d.name}</td>
-                        <td className="px-5 py-4 text-sm text-primary/70">{d.province || "N/A"}</td>
                         <td className="px-5 py-4">
                           <span className="px-2.5 py-1 rounded-lg bg-primary/5 text-xs font-semibold text-primary/70 capitalize">{d.type || "N/A"}</span>
                         </td>

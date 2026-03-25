@@ -12,19 +12,6 @@ const areaSchema = new mongoose.Schema({
     enum: ["commercial", "residential", "suburban", "rural"],
     required: true
   },
-  province: {
-    type: String,
-    enum: [
-      "Koshi",
-      "Madhesh",
-      "Bagmati",
-      "Gandaki",
-      "Lumbini",
-      "Karnali",
-      "Sudurpashchim"
-    ],
-    required: true
-  },
   coordinates: {
     latitude: { type: Number },
     longitude: { type: Number }
@@ -32,6 +19,12 @@ const areaSchema = new mongoose.Schema({
   address: {
     type: String,
     default: ""
+  },
+  scaleFactor: {
+    type: Number,
+    default: 1.0,
+    min: 0.1,
+    max: 5.0
   },
   orgId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -60,7 +53,6 @@ areaSchema.pre("save", function (next) {
 areaSchema.index({ name: 1 });
 areaSchema.index({ type: 1 });
 areaSchema.index({ orgId: 1 });
-areaSchema.index({ province: 1 });
 
 const Area = mongoose.model("Area", areaSchema);
 

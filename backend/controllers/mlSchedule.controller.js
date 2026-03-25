@@ -220,8 +220,12 @@ export const predictArea = async (req, res) => {
       });
     }
 
-    // ML service uses "district" as its param name — we map area→district
-    const result = await mlPredict(area, date);
+    // Look up the area in DB to get type and scale factor for unknown districts
+    const dbArea = await Area.findOne({ name: area, isActive: true }).lean();
+    const areaType = dbArea?.type || null;
+    const scaleFactor = dbArea?.scaleFactor || 1.0;
+
+    const result = await mlPredict(area, date, areaType, scaleFactor);
 
     if (result.fallback) {
       return res.status(503).json({
@@ -313,8 +317,18 @@ export const generateSchedule = async (req, res) => {
       areaOrgNameMap[a.name.toLowerCase()] = a.orgId?.name || null;
     }
 
-    // 4. Call ML service with only driver-assigned trucks
-    const result = await mlGenerate(date, trucksWithDrivers, unavailableDrivers || []);
+    // 3c. Build extra areas list — DB areas that aren't in the ML trained set
+    //     These get type-based predictions with scale factors
+    const extraAreas = allAreas
+      .filter((a) => a.type && a.name)
+      .map((a) => ({
+        name: a.name,
+        type: a.type,
+        scale_factor: a.scaleFactor || 1.0,
+      }));
+
+    // 4. Call ML service with only driver-assigned trucks + extra areas
+    const result = await mlGenerate(date, trucksWithDrivers, unavailableDrivers || [], extraAreas);
 
     if (result.fallback) {
       return res.status(503).json({
@@ -701,10 +715,27 @@ export const getPublicMLSchedule = async (req, res) => {
       status: "confirmed",
     }).lean();
 
-    // If none found for today, find the latest confirmed schedule (any date)
+    // Fallback: today's draft schedule (generated but not yet confirmed)
+    if (!schedule) {
+      schedule = await MLSchedule.findOne({
+        date: { $gte: today, $lt: tomorrow },
+        status: "draft",
+      }).lean();
+    }
+
+    // Fallback: latest confirmed schedule (any date)
     if (!schedule) {
       schedule = await MLSchedule.findOne({
         status: "confirmed",
+      })
+        .sort({ date: -1 })
+        .lean();
+    }
+
+    // Fallback: latest draft schedule (any date)
+    if (!schedule) {
+      schedule = await MLSchedule.findOne({
+        status: "draft",
       })
         .sort({ date: -1 })
         .lean();
@@ -728,6 +759,7 @@ export const getPublicMLSchedule = async (req, res) => {
         totalPredictedWasteKg: schedule.totalPredictedWasteKg,
         summary: schedule.summary,
         areas: schedule.areas,
+        createdAt: schedule.createdAt,
       },
     });
   } catch (error) {
@@ -1216,6 +1248,232 @@ export const getDriverMLAssignments = async (req, res) => {
       message: "Failed to fetch driver assignments",
       error: error.message,
     });
+  }
+};
+
+/**
+ * Driver marks their area assignment as completed.
+ * POST /api/ml-schedule/:id/complete-area
+ * Body: { area, note? }
+ */
+export const completeAreaAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { area: areaName, note } = req.body;
+    const userId = req.user._id;
+
+    if (!areaName) {
+      return res.status(400).json({ success: false, message: "area name is required" });
+    }
+
+    // Find the driver document for this user
+    const driver = await Driver.findOne({ userId }).lean();
+    if (!driver) {
+      return res.status(404).json({ success: false, message: "Driver profile not found" });
+    }
+
+    const driverId = driver._id.toString();
+
+    const schedule = await MLSchedule.findById(id);
+    if (!schedule) {
+      return res.status(404).json({ success: false, message: "Schedule not found" });
+    }
+
+    if (schedule.status !== "confirmed" && schedule.status !== "completed") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot complete assignments on a '${schedule.status}' schedule. Schedule must be confirmed first.`,
+      });
+    }
+
+    const areaEntry = schedule.areas.find((d) => d.area === areaName);
+    if (!areaEntry) {
+      return res.status(404).json({ success: false, message: `Area '${areaName}' not found in schedule` });
+    }
+
+    // Find the truck assignment for THIS driver
+    const truckAssignment = areaEntry.assignedTrucks.find((t) => t.driverId === driverId);
+    if (!truckAssignment) {
+      return res.status(403).json({ success: false, message: "You are not assigned to this area" });
+    }
+
+    if (truckAssignment.completionStatus === "completed") {
+      return res.status(400).json({ success: false, message: "This assignment is already marked as completed" });
+    }
+
+    // Mark as completed
+    truckAssignment.completionStatus = "completed";
+    truckAssignment.completedAt = new Date();
+    truckAssignment.completedBy = userId.toString();
+    truckAssignment.completionNote = note || null;
+
+    // Check if ALL truck assignments across ALL areas in this schedule are completed
+    const allCompleted = schedule.areas.every((a) =>
+      a.assignedTrucks.every(
+        (t) => t.completionStatus === "completed" || a.action === "skip"
+      )
+    );
+
+    if (allCompleted) {
+      schedule.status = "completed";
+    }
+
+    await schedule.save();
+
+    // Notify admins about completion via socket
+    try {
+      const io = getIO();
+      const driverName = driver.userId ? (await User.findById(driver.userId).select("name").lean())?.name : "Unknown";
+
+      io.to("admins").emit("schedule:area-completed", {
+        scheduleId: schedule._id,
+        area: areaName,
+        driverName,
+        licensePlate: truckAssignment.licensePlate,
+        completedAt: truckAssignment.completedAt,
+        allCompleted,
+        date: schedule.date.toISOString().split("T")[0],
+      });
+
+      // Notify the driver back with confirmation
+      io.to(`driver:${userId}`).emit("assignment:completed", {
+        scheduleId: schedule._id,
+        area: areaName,
+        message: `You completed collection at ${areaName}`,
+      });
+
+      // Create persistent notification for admins
+      await createSystemNotification({
+        type: "area_completed",
+        title: `Collection Completed — ${areaName}`,
+        message: `${driverName} completed waste collection at ${areaName} (${truckAssignment.licensePlate}).${allCompleted ? " All assignments for this schedule are now complete." : ""}`,
+        severity: "info",
+        targetRoles: ["admin", "super_admin"],
+        relatedData: {
+          scheduleId: schedule._id,
+          area: areaName,
+          driverId,
+          date: schedule.date.toISOString().split("T")[0],
+        },
+      });
+    } catch (_) { /* socket may not be ready */ }
+
+    res.status(200).json({
+      success: true,
+      message: allCompleted
+        ? `Area '${areaName}' completed. All assignments done — schedule marked as completed!`
+        : `Area '${areaName}' marked as completed`,
+      data: {
+        area: areaName,
+        completionStatus: "completed",
+        completedAt: truckAssignment.completedAt,
+        scheduleCompleted: allCompleted,
+      },
+    });
+  } catch (error) {
+    console.error("Complete area assignment error:", error);
+    res.status(500).json({ success: false, message: "Failed to complete assignment", error: error.message });
+  }
+};
+
+/**
+ * Get schedule completion history — for admins/super_admin and drivers.
+ * GET /api/ml-schedule/completions
+ * Query: { page, limit, driverId? }
+ */
+export const getScheduleCompletions = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const role = req.user.role;
+    const userId = req.user._id;
+
+    // Get schedules that have at least one completed assignment
+    const filter = {
+      status: { $in: ["confirmed", "completed"] },
+      "areas.assignedTrucks.completionStatus": "completed",
+    };
+
+    const schedules = await MLSchedule.find(filter)
+      .sort({ date: -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await MLSchedule.countDocuments(filter);
+
+    // For drivers, filter to only their completions
+    let completions = [];
+
+    if (role === "driver") {
+      const driver = await Driver.findOne({ userId }).lean();
+      const driverId = driver?._id?.toString();
+
+      for (const s of schedules) {
+        for (const area of s.areas) {
+          for (const truck of area.assignedTrucks) {
+            if (truck.driverId === driverId && truck.completionStatus === "completed") {
+              completions.push({
+                scheduleId: s._id,
+                date: s.date.toISOString().split("T")[0],
+                dayName: s.dayName,
+                area: area.area,
+                areaType: area.areaType,
+                predictedWasteKg: area.predictedWasteKg,
+                wasteCategory: area.wasteCategory,
+                truck: {
+                  licensePlate: truck.licensePlate,
+                  truckType: truck.truckType,
+                  capacity: truck.capacity,
+                },
+                completedAt: truck.completedAt,
+                completionNote: truck.completionNote,
+                driverName: truck.driverName,
+              });
+            }
+          }
+        }
+      }
+    } else {
+      // Admin/super_admin — show all completions
+      for (const s of schedules) {
+        for (const area of s.areas) {
+          for (const truck of area.assignedTrucks) {
+            if (truck.completionStatus === "completed") {
+              completions.push({
+                scheduleId: s._id,
+                date: s.date.toISOString().split("T")[0],
+                dayName: s.dayName,
+                area: area.area,
+                areaType: area.areaType,
+                predictedWasteKg: area.predictedWasteKg,
+                wasteCategory: area.wasteCategory,
+                orgName: area.orgName || truck.orgName,
+                truck: {
+                  licensePlate: truck.licensePlate,
+                  truckType: truck.truckType,
+                  capacity: truck.capacity,
+                },
+                completedAt: truck.completedAt,
+                completionNote: truck.completionNote,
+                driverName: truck.driverName,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Sort by completedAt desc
+    completions.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    res.status(200).json({
+      success: true,
+      data: completions,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total },
+    });
+  } catch (error) {
+    console.error("Get schedule completions error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch completions", error: error.message });
   }
 };
 

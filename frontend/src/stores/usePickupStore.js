@@ -35,7 +35,6 @@ const usePickupStore = create((set, get) => ({
                 longitude: locationData.longitude,
                 category: extras.category || "non-recyclable",
                 level: extras.level || "easy",
-                province: extras.province || null,
                 area: extras.area || null,
             };
             const res = await api.post("/pickups/estimate", body);
@@ -66,7 +65,6 @@ const usePickupStore = create((set, get) => ({
                 category: extras.category || "non-recyclable",
                 level: extras.level || "easy",
                 wasteUploadId: extras.wasteUploadId || null,
-                province: extras.province || null,
                 area: extras.area || null,
                 // Pricing data from estimate
                 estimatedPrice: estimate?.estimatedPrice || null,

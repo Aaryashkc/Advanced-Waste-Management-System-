@@ -10,6 +10,8 @@ import {
   getDriverMLAssignments,
   getPublicMLSchedule,
   redispatchArea,
+  completeAreaAssignment,
+  getScheduleCompletions,
 } from "../controllers/mlSchedule.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
@@ -22,8 +24,12 @@ router.get("/public", authMiddleware, roleMiddleware("customer_admin", "admin", 
 // All remaining routes require authentication
 router.use(authMiddleware);
 
-// Driver endpoint (must be before /:id to avoid route conflict)
+// Driver endpoints (must be before /:id to avoid route conflict)
 router.get("/driver-assignments", roleMiddleware("driver"), getDriverMLAssignments);
+router.post("/:id/complete-area", roleMiddleware("driver"), completeAreaAssignment);
+
+// Completion history — drivers see their own, admins see all
+router.get("/completions", roleMiddleware("driver", "admin", "super_admin"), getScheduleCompletions);
 
 // ML service health check
 router.get("/health", roleMiddleware("admin", "super_admin"), getMLHealth);

@@ -22,11 +22,17 @@ const mlApi = axios.create({
 
 /**
  * Predict waste for a single area on a specific date.
- * Note: ML service still uses "district" as its API param name internally.
+ * Known areas use direct model prediction.
+ * Unknown areas require district_type and optional scale_factor for type-based prediction.
  */
-export async function predictArea(area, date) {
+export async function predictArea(area, date, districtType = null, scaleFactor = 1.0) {
   try {
-    const response = await mlApi.post("/predict", { district: area, date });
+    const payload = { district: area, date };
+    if (districtType) {
+      payload.district_type = districtType;
+      payload.scale_factor = scaleFactor;
+    }
+    const response = await mlApi.post("/predict", payload);
     return response.data;
   } catch (error) {
     console.error("[mlClient] predictArea error:", error.message);
@@ -44,13 +50,16 @@ export async function predictArea(area, date) {
  * @param {string} date - ISO date string
  * @param {Object[]} trucks - Real truck data from MongoDB
  * @param {string[]} unavailableDrivers - Driver IDs that are unavailable
+ * @param {Object[]} extraAreas - New areas from DB for type-based prediction
+ *   Each: { name, type, scale_factor }
  */
-export async function generateSchedule(date, trucks = [], unavailableDrivers = []) {
+export async function generateSchedule(date, trucks = [], unavailableDrivers = [], extraAreas = []) {
   try {
     const response = await mlApi.post("/schedule", {
       date,
       trucks,
       unavailable_drivers: unavailableDrivers,
+      extra_areas: extraAreas,
     });
     return response.data;
   } catch (error) {
