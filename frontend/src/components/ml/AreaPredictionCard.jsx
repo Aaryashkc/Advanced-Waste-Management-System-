@@ -10,28 +10,28 @@ const WASTE_COLORS = {
   none: "bg-gray-100 text-gray-600",
 };
 
-const DistrictPredictionCard = ({ district, scheduleId }) => {
+const AreaPredictionCard = ({ area, scheduleId }) => {
   const user = useAuthStore((s) => s.user);
-  const redispatchDistrict = useMLScheduleStore((s) => s.redispatchDistrict);
+  const redispatchArea = useMLScheduleStore((s) => s.redispatchArea);
   const [redispatching, setRedispatching] = useState(false);
   const [redispatchError, setRedispatchError] = useState(null);
 
-  const isSkipped = district.action === "skip";
-  const isReduced = district.action === "reduced";
-  const hasTrucks = district.assignedTrucks && district.assignedTrucks.length > 0;
+  const isSkipped = area.action === "skip";
+  const isReduced = area.action === "reduced";
+  const hasTrucks = area.assignedTrucks && area.assignedTrucks.length > 0;
   const canRedispatch = (isSkipped || (isReduced && !hasTrucks)) && scheduleId && (user?.role === "admin" || user?.role === "super_admin");
 
   const handleRedispatch = async () => {
     setRedispatching(true);
     setRedispatchError(null);
-    const result = await redispatchDistrict(scheduleId, district.district);
+    const result = await redispatchArea(scheduleId, area.area);
     setRedispatching(false);
     if (!result) {
       setRedispatchError(useMLScheduleStore.getState().error || "Failed to redispatch");
     }
   };
 
-  const wasteBadge = WASTE_COLORS[district.wasteCategory] || WASTE_COLORS.none;
+  const wasteBadge = WASTE_COLORS[area.wasteCategory] || WASTE_COLORS.none;
 
   return (
     <div className={`rounded-2xl border p-4 transition-all hover:shadow-sm ${
@@ -43,34 +43,34 @@ const DistrictPredictionCard = ({ district, scheduleId }) => {
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="font-semibold text-primary text-base leading-tight">
-            {district.district}
+            {area.area}
           </h3>
           <p className="text-[11px] text-primary/40 mt-0.5 capitalize">
-            {district.districtType}{district.orgName ? ` · ${district.orgName}` : ""}
+            {area.areaType}{area.orgName ? ` · ${area.orgName}` : ""}
           </p>
         </div>
         <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${wasteBadge}`}>
-          {district.wasteCategory || "N/A"}
+          {area.wasteCategory || "N/A"}
         </span>
       </div>
 
       {/* Predicted Waste */}
       <p className="text-2xl font-bold text-primary mb-3">
-        {district.predictedWasteKg?.toLocaleString()}{" "}
+        {area.predictedWasteKg?.toLocaleString()}{" "}
         <span className="text-sm font-normal text-primary/40">kg</span>
       </p>
 
       {/* Holiday */}
-      {district.isHoliday && (
+      {area.isHoliday && (
         <p className="text-xs text-red-600 font-medium mb-2 px-2 py-1 bg-red-50 rounded-lg border border-red-100">
-          Holiday: {district.holidayName || "Holiday"}
+          Holiday: {area.holidayName || "Holiday"}
         </p>
       )}
 
       {/* Assigned Trucks */}
       {hasTrucks && (
         <div className="space-y-1.5 mb-3">
-          {district.assignedTrucks.map((truck, idx) => {
+          {area.assignedTrucks.map((truck, idx) => {
             const noDriver = !truck.driverId || truck.driverName === "Unassigned";
             return (
               <div
@@ -100,7 +100,7 @@ const DistrictPredictionCard = ({ district, scheduleId }) => {
       {/* Skip Reason */}
       {isSkipped && (
         <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3 border border-red-100">
-          {district.skipReason || "No truck/driver available"}
+          {area.skipReason || "No truck/driver available"}
         </div>
       )}
 
@@ -110,9 +110,9 @@ const DistrictPredictionCard = ({ district, scheduleId }) => {
       )}
 
       {/* Recommendation */}
-      {district.recommendation && (
+      {area.recommendation && (
         <p className="text-[11px] text-primary/50 leading-relaxed mb-3">
-          {district.recommendation}
+          {area.recommendation}
         </p>
       )}
 
@@ -145,4 +145,4 @@ const DistrictPredictionCard = ({ district, scheduleId }) => {
   );
 };
 
-export default DistrictPredictionCard;
+export default AreaPredictionCard;

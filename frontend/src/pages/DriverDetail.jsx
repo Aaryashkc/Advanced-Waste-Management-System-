@@ -218,7 +218,7 @@ const DriverDetail = () => {
                     <td className="px-5 py-3 text-sm text-primary/70 capitalize">{p.category}</td>
                     <td className="px-5 py-3 text-sm text-primary/70 capitalize">{p.level}</td>
                     <td className="px-5 py-3 text-sm text-primary/70">
-                      {p.district ? `${p.district}, ${p.province}` : (p.location?.address || `${p.location?.latitude?.toFixed(3)}, ${p.location?.longitude?.toFixed(3)}`)}
+                      {p.area ? `${p.area}, ${p.province}` : (p.location?.address || `${p.location?.latitude?.toFixed(3)}, ${p.location?.longitude?.toFixed(3)}`)}
                     </td>
                   </tr>
                 ))}

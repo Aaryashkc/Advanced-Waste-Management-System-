@@ -13,6 +13,7 @@ import {
   Bell,
   BarChart3,
   FileText,
+  DollarSign,
   X,
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     { name: "Admins", icon: UserCog, path: "/admin-dashboard/admins" },
     { name: "Areas", icon: MapPin, path: "/admin-dashboard/areas" },
     { name: "ML Schedule", icon: BrainCircuit, path: "/admin-dashboard/ml-schedule" },
+    { name: "Pricing", icon: DollarSign, path: "/admin-dashboard/pricing" },
     { name: "History", icon: ClipboardList, path: "/admin-dashboard/history" },
     { name: "Notifications", icon: Bell, path: "/admin-dashboard/notifications" },
     ...(isSuperAdmin

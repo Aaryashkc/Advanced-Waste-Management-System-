@@ -9,23 +9,56 @@ import api from "../utils/api";
  *  currentPickup  — null | { id, status, location, driverInfo, ... }
  *  loading        — bool
  *  error          — string | null
- *
- * Actions
- * ───────
- *  createPickup(locationData, extras?) — POST /api/pickups
- *  cancelPickup(id)                    — POST /api/pickups/:id/cancel
- *  fetchPickup(id)                     — GET  /api/pickups/:id
- *  setPickupFromSocket(data)           — called by Searching.jsx on WS events
- *  resetPickup()                       — clear all state
+ *  estimate       — null | { estimatedPrice, priceBreakdown, distanceKm, ... }
+ *  estimateLoading — bool
+ *  estimateError  — string | null
  */
 const usePickupStore = create((set, get) => ({
     currentPickup: null,
     loading: false,
     error: null,
 
+    // Estimate state
+    estimate: null,
+    estimateLoading: false,
+    estimateError: null,
+
+    /**
+     * Get a price/route estimate BEFORE creating the pickup.
+     * POST /api/pickups/estimate
+     */
+    estimatePickup: async (locationData, extras = {}) => {
+        set({ estimateLoading: true, estimateError: null, estimate: null });
+        try {
+            const body = {
+                latitude: locationData.latitude,
+                longitude: locationData.longitude,
+                category: extras.category || "non-recyclable",
+                level: extras.level || "easy",
+                province: extras.province || null,
+                area: extras.area || null,
+            };
+            const res = await api.post("/pickups/estimate", body);
+            set({ estimate: res.data, estimateLoading: false });
+            return { success: true, data: res.data };
+        } catch (err) {
+            const message = err.response?.data?.message || err.message || "Failed to get estimate";
+            set({ estimateLoading: false, estimateError: message });
+            return { success: false, error: message };
+        }
+    },
+
+    clearEstimate: () => set({ estimate: null, estimateError: null, estimateLoading: false }),
+
+    /**
+     * Create a pickup request (now includes pricing data from the estimate).
+     * POST /api/pickups
+     */
     createPickup: async (locationData, extras = {}) => {
         set({ loading: true, error: null });
         try {
+            const { estimate } = get();
+
             const body = {
                 latitude: locationData.latitude,
                 longitude: locationData.longitude,
@@ -34,7 +67,14 @@ const usePickupStore = create((set, get) => ({
                 level: extras.level || "easy",
                 wasteUploadId: extras.wasteUploadId || null,
                 province: extras.province || null,
-                district: extras.district || null,
+                area: extras.area || null,
+                // Pricing data from estimate
+                estimatedPrice: estimate?.estimatedPrice || null,
+                priceBreakdown: estimate?.priceBreakdown || null,
+                routeDistanceKm: estimate?.distanceKm || null,
+                routeDurationMinutes: estimate?.durationMinutes || null,
+                routeGeometry: estimate?.routeGeometry || null,
+                depotLocation: estimate?.depotLocation || null,
             };
 
             const res = await api.post("/pickups", body);
@@ -82,7 +122,7 @@ const usePickupStore = create((set, get) => ({
         set({ currentPickup: { ...current, ...data } });
     },
 
-    resetPickup: () => set({ currentPickup: null, loading: false, error: null }),
+    resetPickup: () => set({ currentPickup: null, loading: false, error: null, estimate: null, estimateError: null }),
 }));
 
 export default usePickupStore;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useOrganizationStore from "../stores/useOrganizationStore";
+import LocationPickerMap from "../components/shared/LocationPickerMap";
 
 const ORG_COLORS = [
   "from-blue-500/20 to-blue-600/5",
@@ -19,8 +20,8 @@ const Organizations = () => {
   const [editOrg, setEditOrg] = useState(null);
   const [adminOrg, setAdminOrg] = useState(null);
 
-  const [createForm, setCreateForm] = useState({ name: "", address: "" });
-  const [editForm, setEditForm] = useState({ name: "", address: "" });
+  const [createForm, setCreateForm] = useState({ name: "", latitude: null, longitude: null, address: "" });
+  const [editForm, setEditForm] = useState({ name: "", latitude: null, longitude: null, address: "" });
   const [adminForm, setAdminForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -29,17 +30,29 @@ const Organizations = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault(); setFormError("");
-    if (!createForm.name || !createForm.address) { setFormError("Name and address are required"); return; }
+    if (!createForm.name || !createForm.address) { setFormError("Name and location are required"); return; }
     setSubmitting(true);
-    const result = await createOrganization({ name: createForm.name, location: { address: createForm.address } });
+    const result = await createOrganization({
+      name: createForm.name,
+      location: {
+        address: createForm.address,
+        ...(createForm.latitude && createForm.longitude ? { latitude: createForm.latitude, longitude: createForm.longitude } : {}),
+      },
+    });
     setSubmitting(false);
-    if (result.success) { setShowCreate(false); setCreateForm({ name: "", address: "" }); }
+    if (result.success) { setShowCreate(false); setCreateForm({ name: "", latitude: null, longitude: null, address: "" }); }
     else setFormError(result.error);
   };
 
   const handleEdit = async (e) => {
     e.preventDefault(); setFormError(""); setSubmitting(true);
-    const result = await updateOrganization(editOrg._id, { name: editForm.name, location: { address: editForm.address } });
+    const result = await updateOrganization(editOrg._id, {
+      name: editForm.name,
+      location: {
+        address: editForm.address,
+        ...(editForm.latitude && editForm.longitude ? { latitude: editForm.latitude, longitude: editForm.longitude } : {}),
+      },
+    });
     setSubmitting(false);
     if (result.success) setEditOrg(null);
     else setFormError(result.error);
@@ -141,6 +154,12 @@ const Organizations = () => {
                     <p className="text-xs text-primary/50 truncate">
                       {org.location?.address || "No address"}
                     </p>
+                    {org.location?.latitude && org.location?.longitude && (
+                      <p className="text-[10px] text-emerald-500 flex items-center gap-1 mt-0.5">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        GPS location set
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -188,7 +207,17 @@ const Organizations = () => {
                     View Details
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setEditOrg(org); setEditForm({ name: org.name, address: org.location?.address || "" }); setFormError(""); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditOrg(org);
+                      setEditForm({
+                        name: org.name,
+                        latitude: org.location?.latitude || null,
+                        longitude: org.location?.longitude || null,
+                        address: org.location?.address || "",
+                      });
+                      setFormError("");
+                    }}
                     className="py-2 px-3 text-xs font-semibold text-primary/60 bg-primary/5 rounded-lg hover:bg-primary/10 transition"
                   >
                     Edit
@@ -208,8 +237,8 @@ const Organizations = () => {
 
       {/* ===== Create Organization Modal ===== */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-8 relative">
             <button onClick={() => setShowCreate(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center text-primary/60 hover:bg-primary/10 transition">&#x2715;</button>
             <h2 className="text-xl font-bold text-primary mb-6">Create Organization</h2>
             <form onSubmit={handleCreate} className="space-y-4">
@@ -217,10 +246,14 @@ const Organizations = () => {
                 <label className="block text-sm font-medium text-primary/70 mb-1">Organization Name</label>
                 <input type="text" value={createForm.name} onChange={e => setCreateForm({...createForm, name: e.target.value})} placeholder="e.g. EcoWaste Logistics" className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-primary/70 mb-1">Address</label>
-                <input type="text" value={createForm.address} onChange={e => setCreateForm({...createForm, address: e.target.value})} placeholder="e.g. Kathmandu, Nepal" className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent" />
-              </div>
+              <LocationPickerMap
+                label="Depot / Office Location"
+                required
+                placeholder="Search for office location..."
+                height="250px"
+                value={{ latitude: createForm.latitude, longitude: createForm.longitude, address: createForm.address }}
+                onChange={({ latitude, longitude, address }) => setCreateForm({ ...createForm, latitude, longitude, address })}
+              />
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
               <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition disabled:opacity-50">
                 {submitting ? "Creating..." : "Create Organization"}
@@ -232,8 +265,8 @@ const Organizations = () => {
 
       {/* ===== Edit Organization Modal ===== */}
       {editOrg && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-8 relative">
             <button onClick={() => setEditOrg(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center text-primary/60 hover:bg-primary/10 transition">&#x2715;</button>
             <h2 className="text-xl font-bold text-primary mb-6">Edit Organization</h2>
             <form onSubmit={handleEdit} className="space-y-4">
@@ -241,10 +274,14 @@ const Organizations = () => {
                 <label className="block text-sm font-medium text-primary/70 mb-1">Organization Name</label>
                 <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-primary/70 mb-1">Address</label>
-                <input type="text" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent" />
-              </div>
+              <LocationPickerMap
+                label="Depot / Office Location"
+                required
+                placeholder="Search for office location..."
+                height="250px"
+                value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
+                onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
+              />
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
               <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition disabled:opacity-50">
                 {submitting ? "Saving..." : "Save Changes"}

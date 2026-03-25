@@ -23,23 +23,23 @@ const TYPE_BADGES = {
   rural: "bg-emerald-100 text-emerald-700",
 };
 
-function DistrictCard({ district }) {
-  const category = CATEGORY_STYLES[district.wasteCategory] || CATEGORY_STYLES.none;
-  const action = ACTION_STYLES[district.action] || ACTION_STYLES.skip;
-  const typeBadge = TYPE_BADGES[district.districtType] || "bg-gray-100 text-gray-700";
+function AreaCard({ area }) {
+  const category = CATEGORY_STYLES[area.wasteCategory] || CATEGORY_STYLES.none;
+  const action = ACTION_STYLES[area.action] || ACTION_STYLES.skip;
+  const typeBadge = TYPE_BADGES[area.areaType] || "bg-gray-100 text-gray-700";
 
   return (
     <div className={`bg-white rounded-xl shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] hover:shadow-md transition-shadow duration-300 p-5 border border-[#354f52]/10 ${
-      district.action === "skip" ? "opacity-60" : ""
+      area.action === "skip" ? "opacity-60" : ""
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="font-semibold text-[#354f52] font-['Outfit',sans-serif] text-base">
-            {district.district}
+            {area.area}
           </h3>
           <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${typeBadge}`}>
-            {district.districtType}
+            {area.areaType}
           </span>
         </div>
         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${action.bg} ${action.text}`}>
@@ -51,7 +51,7 @@ function DistrictCard({ district }) {
       {/* Predicted Waste */}
       <div className="mb-3">
         <p className="text-2xl font-bold text-[#354f52]">
-          {district.predictedWasteKg?.toLocaleString()} <span className="text-sm font-normal text-[#354f52]/60">kg</span>
+          {area.predictedWasteKg?.toLocaleString()} <span className="text-sm font-normal text-[#354f52]/60">kg</span>
         </p>
         <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${category.bg} ${category.text}`}>
           {category.label}
@@ -59,13 +59,13 @@ function DistrictCard({ district }) {
       </div>
 
       {/* Assigned Trucks */}
-      {district.assignedTrucks && district.assignedTrucks.length > 0 && (
+      {area.assignedTrucks && area.assignedTrucks.length > 0 && (
         <div className="mb-3">
           <p className="text-[10px] uppercase tracking-widest font-bold text-[#354f52]/50 mb-1.5">
             Assigned Trucks
           </p>
           <div className="space-y-1.5">
-            {district.assignedTrucks.map((truck, idx) => (
+            {area.assignedTrucks.map((truck, idx) => (
               <div
                 key={idx}
                 className="flex items-center justify-between text-xs bg-[#f5f1e8] rounded-lg px-2.5 py-1.5"
@@ -85,9 +85,9 @@ function DistrictCard({ district }) {
       )}
 
       {/* Recommendation */}
-      {district.recommendation && (
+      {area.recommendation && (
         <p className="text-xs text-[#354f52]/60 font-['Poppins',sans-serif] leading-relaxed">
-          {district.recommendation}
+          {area.recommendation}
         </p>
       )}
     </div>
@@ -106,28 +106,28 @@ function SchedulePage() {
 
   const schedule = publicSchedule;
 
-  const filteredDistricts = useMemo(() => {
-    if (!schedule?.districts) return [];
+  const filteredAreas = useMemo(() => {
+    if (!schedule?.areas) return [];
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return schedule.districts;
-    return schedule.districts.filter(
+    if (!q) return schedule.areas;
+    return schedule.areas.filter(
       (d) =>
-        d.district?.toLowerCase().includes(q) ||
-        d.districtType?.toLowerCase().includes(q)
+        d.area?.toLowerCase().includes(q) ||
+        d.areaType?.toLowerCase().includes(q)
     );
   }, [schedule, searchQuery]);
 
-  // Group districts by city (extract from district name or use as-is)
-  const groupedDistricts = useMemo(() => {
+  // Group areas by type (commercial, residential, suburban, rural)
+  const groupedAreas = useMemo(() => {
     const groups = {};
-    filteredDistricts.forEach((d) => {
-      // Try to use city from assignedTrucks or fallback to "Kathmandu Valley"
-      const city = d.city || "Kathmandu Valley";
-      if (!groups[city]) groups[city] = [];
-      groups[city].push(d);
+    filteredAreas.forEach((d) => {
+      const type = d.areaType || "Other";
+      const label = type.charAt(0).toUpperCase() + type.slice(1);
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(d);
     });
     return groups;
-  }, [filteredDistricts]);
+  }, [filteredAreas]);
 
   const todayStr = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -137,7 +137,7 @@ function SchedulePage() {
   });
 
   const totalWaste = schedule?.totalPredictedWasteKg || 0;
-  const dispatchedCount = schedule?.districts?.filter(d => d.action === "dispatch").length || 0;
+  const dispatchedCount = schedule?.areas?.filter(d => d.action === "dispatch").length || 0;
 
   const handleBack = () => navigate("/customer-dashboard");
 
@@ -213,7 +213,7 @@ function SchedulePage() {
                 </div>
                 <div className="bg-white rounded-xl border border-[#354f52]/10 p-5 text-center">
                   <p className="text-3xl font-bold text-[#296200]">{dispatchedCount}</p>
-                  <p className="text-xs text-[#354f52]/50 mt-1 font-['Poppins',sans-serif] uppercase tracking-wider">Districts Dispatched</p>
+                  <p className="text-xs text-[#354f52]/50 mt-1 font-['Poppins',sans-serif] uppercase tracking-wider">Areas Dispatched</p>
                 </div>
               </div>
             </div>
@@ -225,7 +225,7 @@ function SchedulePage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by district name or type..."
+                  placeholder="Search by area name or type..."
                   className="flex-1 px-6 sm:px-8 py-4 sm:py-5 bg-[#84a98c] text-white placeholder:text-white/80 font-['Poppins',sans-serif] text-base sm:text-lg focus:outline-none"
                 />
                 <div className="bg-[#354f52] px-6 sm:px-10 py-4 sm:py-5 flex items-center">
@@ -235,48 +235,48 @@ function SchedulePage() {
                 </div>
               </div>
 
-              {searchQuery && filteredDistricts.length === 0 && (
+              {searchQuery && filteredAreas.length === 0 && (
                 <p className="text-center text-[#354f52] font-['Poppins',sans-serif] text-sm mt-3">
-                  No districts match your search. Try a different name.
+                  No areas match your search. Try a different name.
                 </p>
               )}
             </div>
 
-            {/* Districts */}
+            {/* Collection Areas */}
             <div className="max-w-6xl mx-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-['Poppins',sans-serif] font-semibold text-xl sm:text-2xl text-[#354f52]">
                   Collection Areas
                 </h3>
                 <span className="text-sm text-[#354f52]/60 font-['Poppins',sans-serif]">
-                  {filteredDistricts.length} district{filteredDistricts.length !== 1 ? "s" : ""}
+                  {filteredAreas.length} area{filteredAreas.length !== 1 ? "s" : ""}
                 </span>
               </div>
 
-              {filteredDistricts.length === 0 ? (
+              {filteredAreas.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-4">
                   <div className="text-6xl">📍</div>
-                  <p className="text-[#354f52] font-['Poppins',sans-serif] text-lg font-medium">No districts found</p>
+                  <p className="text-[#354f52] font-['Poppins',sans-serif] text-lg font-medium">No areas found</p>
                   <p className="text-[#354f52]/60 text-sm">Try searching for a different area</p>
                 </div>
               ) : (
                 <div className="space-y-10">
-                  {Object.entries(groupedDistricts).map(([city, cityDistricts]) => (
-                    <div key={city}>
-                      {/* City heading */}
+                  {Object.entries(groupedAreas).map(([type, typeAreas]) => (
+                    <div key={type}>
+                      {/* Type heading */}
                       <div className="flex items-center gap-3 mb-4">
                         <div className="h-px flex-1 bg-[#354f52]/10" />
                         <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#354f52]/10">
-                          <span className="text-xs font-bold text-[#354f52] uppercase tracking-wider">{city}</span>
-                          <span className="text-xs text-[#354f52]/50">{cityDistricts.length} area{cityDistricts.length !== 1 ? "s" : ""}</span>
+                          <span className="text-xs font-bold text-[#354f52] uppercase tracking-wider">{type}</span>
+                          <span className="text-xs text-[#354f52]/50">{typeAreas.length} area{typeAreas.length !== 1 ? "s" : ""}</span>
                         </div>
                         <div className="h-px flex-1 bg-[#354f52]/10" />
                       </div>
 
-                      {/* District cards grid */}
+                      {/* Area cards grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {cityDistricts.map((district) => (
-                          <DistrictCard key={district.district} district={district} />
+                        {typeAreas.map((areaItem) => (
+                          <AreaCard key={areaItem.area} area={areaItem} />
                         ))}
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import useAuthStore from "../../stores/useAuthStore";
-import DistrictPredictionCard from "./DistrictPredictionCard";
+import AreaPredictionCard from "./AreaPredictionCard";
 
 const MLScheduleDashboard = () => {
   const {
@@ -78,14 +78,14 @@ const MLScheduleDashboard = () => {
   const s = displaySchedule?.summary;
 
   // Separate dispatched and skipped areas
-  const dispatchedAreas = displaySchedule?.districts?.filter(d => d.action === "dispatch") || [];
-  const skippedAreas = displaySchedule?.districts?.filter(d => d.action === "skip") || [];
-  const reducedAreas = displaySchedule?.districts?.filter(d => d.action === "reduced") || [];
+  const dispatchedAreas = displaySchedule?.areas?.filter(d => d.action === "dispatch") || [];
+  const skippedAreas = displaySchedule?.areas?.filter(d => d.action === "skip") || [];
+  const reducedAreas = displaySchedule?.areas?.filter(d => d.action === "reduced") || [];
 
   // Preview schedule areas (for future date generation)
-  const previewDispatched = previewSchedule?.districts?.filter(d => d.action === "dispatch") || [];
-  const previewSkipped = previewSchedule?.districts?.filter(d => d.action === "skip") || [];
-  const previewReduced = previewSchedule?.districts?.filter(d => d.action === "reduced") || [];
+  const previewDispatched = previewSchedule?.areas?.filter(d => d.action === "dispatch") || [];
+  const previewSkipped = previewSchedule?.areas?.filter(d => d.action === "skip") || [];
+  const previewReduced = previewSchedule?.areas?.filter(d => d.action === "reduced") || [];
   const ps = previewSchedule?.summary;
 
   return (
@@ -206,10 +206,10 @@ const MLScheduleDashboard = () => {
                 Dispatched ({dispatchedAreas.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {dispatchedAreas.map((district) => (
-                  <DistrictPredictionCard
-                    key={district.district}
-                    district={district}
+                {dispatchedAreas.map((areaItem) => (
+                  <AreaPredictionCard
+                    key={areaItem.area}
+                    area={areaItem}
                     scheduleId={displaySchedule._id}
                   />
                 ))}
@@ -225,10 +225,10 @@ const MLScheduleDashboard = () => {
                 Reduced Coverage ({reducedAreas.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {reducedAreas.map((district) => (
-                  <DistrictPredictionCard
-                    key={district.district}
-                    district={district}
+                {reducedAreas.map((areaItem) => (
+                  <AreaPredictionCard
+                    key={areaItem.area}
+                    area={areaItem}
                     scheduleId={displaySchedule._id}
                   />
                 ))}
@@ -244,10 +244,10 @@ const MLScheduleDashboard = () => {
                 Skipped - No Coverage ({skippedAreas.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {skippedAreas.map((district) => (
-                  <DistrictPredictionCard
-                    key={district.district}
-                    district={district}
+                {skippedAreas.map((areaItem) => (
+                  <AreaPredictionCard
+                    key={areaItem.area}
+                    area={areaItem}
                     scheduleId={displaySchedule._id}
                   />
                 ))}
@@ -264,7 +264,7 @@ const MLScheduleDashboard = () => {
             <span className="font-semibold">Latest schedule:</span>{" "}
             {new Date(schedules[0].date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             {" — "}
-            {schedules[0].districts?.length || 0} areas, {schedules[0].totalPredictedWasteKg?.toLocaleString() || 0} kg predicted
+            {schedules[0].areas?.length || 0} areas, {schedules[0].totalPredictedWasteKg?.toLocaleString() || 0} kg predicted
           </p>
         </div>
       )}
@@ -409,9 +409,9 @@ const MLScheduleDashboard = () => {
                       <p className="text-xs font-semibold text-primary/60 mb-2">Dispatched ({previewDispatched.length})</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {previewDispatched.map((d) => (
-                          <div key={d.district} className="rounded-xl border border-primary/10 p-3 text-xs">
+                          <div key={d.area} className="rounded-xl border border-primary/10 p-3 text-xs">
                             <div className="flex justify-between">
-                              <span className="font-semibold text-primary">{d.district}</span>
+                              <span className="font-semibold text-primary">{d.area}</span>
                               <span className="text-primary/50">{d.predictedWasteKg?.toLocaleString()} kg</span>
                             </div>
                           </div>
@@ -425,8 +425,8 @@ const MLScheduleDashboard = () => {
                       <p className="text-xs font-semibold text-red-600/70 mb-2">Skipped ({previewSkipped.length})</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {previewSkipped.map((d) => (
-                          <div key={d.district} className="rounded-xl border border-red-200 bg-red-50/50 p-3 text-xs">
-                            <span className="font-semibold text-red-700">{d.district}</span>
+                          <div key={d.area} className="rounded-xl border border-red-200 bg-red-50/50 p-3 text-xs">
+                            <span className="font-semibold text-red-700">{d.area}</span>
                             <span className="text-red-500 ml-2">{d.predictedWasteKg?.toLocaleString()} kg</span>
                           </div>
                         ))}

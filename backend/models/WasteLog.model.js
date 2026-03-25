@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const wasteLogSchema = new mongoose.Schema({
-  district: {
+  area: {
     type: String,
     required: true,
     trim: true
@@ -45,7 +45,7 @@ wasteLogSchema.pre("save", function (next) {
   next();
 });
 
-wasteLogSchema.index({ district: 1, date: 1 });
+wasteLogSchema.index({ area: 1, date: 1 });
 wasteLogSchema.index({ mlScheduleId: 1 });
 
 const WasteLog = mongoose.model("WasteLog", wasteLogSchema);

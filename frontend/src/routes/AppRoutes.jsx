@@ -34,13 +34,16 @@ import Organizations from "../pages/Organizations";
 import OrgDetail from "../pages/OrgDetail";
 import DriverDetail from "../pages/DriverDetail";
 import Admins from "../pages/Admins";
-import Districts from "../pages/Districts";
+import Areas from "../pages/Areas";
 import Notifications from "../pages/Notifications";
 import Reports from "../pages/Reports";
 import PickupStats from "../pages/PickupStats";
 import History from "../pages/History";
+import PricingConfig from "../pages/PricingConfig";
 import PickupStatusToast from "../components/users/PickupStatusToast";
 import DriverStatusToast from "../components/Driver/DriverStatusToast";
+import DriverNavbar from "../components/Driver/DriverNavbar";
+import DriverNotifications from "../components/Driver/DriverNotifications";
 import useAuthStore from "../stores/useAuthStore";
 
 const AdminRedirect = () => {
@@ -55,10 +58,11 @@ const AppRoutes = () => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
   const isAdminRoute = location.pathname.startsWith("/admin-dashboard");
+  const isDriverRoute = isAuthenticated && user?.role === "driver";
 
   return (
     <>
-      {!isAdminRoute && <Header />}
+      {!isAdminRoute && !isDriverRoute && <Header />}
 
       <Routes>
         {/* Public Routes - admins get redirected to dashboard */}
@@ -192,6 +196,14 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/driver-notifications"
+          element={
+            <ProtectedRoute allowedRoles={['driver']}>
+              <DriverNotifications />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Protected Admin Routes (super_admin and admin) */}
         <Route
@@ -209,12 +221,12 @@ const AppRoutes = () => {
           <Route path="drivers" element={<Drivers />} />
           <Route path="drivers/:driverId" element={<DriverDetail />} />
           <Route path="admins" element={<Admins />} />
-          <Route path="districts" element={<Districts />} />
-          <Route path="areas" element={<Districts />} />
+          <Route path="areas" element={<Areas />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="ml-schedule" element={<MLScheduleDashboard />} />
           <Route path="ml-schedule/history" element={<MLScheduleHistory />} />
           <Route path="history" element={<History />} />
+          <Route path="pricing" element={<PricingConfig />} />
           <Route path="pickup-stats" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <PickupStats />
@@ -231,12 +243,13 @@ const AppRoutes = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {!isAdminRoute && <Footer />}
+      {!isAdminRoute && !isDriverRoute && <Footer />}
 
       {/* Persistent status toast for customers */}
       {isAuthenticated && user?.role === "customer_admin" && <PickupStatusToast />}
       
-      {/* Persistent status toast for drivers */}
+      {/* Persistent driver navbar + status toast */}
+      {isAuthenticated && user?.role === "driver" && <DriverNavbar />}
       {isAuthenticated && user?.role === "driver" && <DriverStatusToast />}
     </>
   );

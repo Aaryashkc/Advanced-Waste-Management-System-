@@ -24,7 +24,7 @@ ChartJS.register(
 
 const REASON_COLORS = {
   "No trucks with assigned drivers available": "#ef4444",
-  "Insufficient truck capacity for this district": "#f97316",
+  "Insufficient truck capacity for this area": "#f97316",
   "No truck/driver available": "#dc2626",
   "Skipped by ML model": "#9ca3af",
 };
@@ -78,12 +78,12 @@ const Reports = () => {
   const trendDates = wasteTrend.map((t) => t.date);
   const trendValues = wasteTrend.map((t) => t.totalWasteKg);
 
-  const districtBreakdown = analytics.districtBreakdown || [];
+  const areaBreakdown = analytics.areaBreakdown || [];
   const categoryDist = analytics.categoryDistribution || [];
   const scheduleStats = analytics.scheduleStats || [];
   const actionDist = analytics.actionDistribution || [];
 
-  const incompleteDistricts = analytics.incompleteDistricts || [];
+  const incompleteAreas = analytics.incompleteAreas || [];
   const reasonBreakdown = analytics.reasonBreakdown || [];
   const driverlessTruckStats = analytics.driverlessTruckStats || [];
 
@@ -101,13 +101,13 @@ const Reports = () => {
     }],
   }), [trendDates, trendValues]);
 
-  const districtChartData = useMemo(() => ({
-    labels: districtBreakdown.map((d) => d.district),
+  const areaChartData = useMemo(() => ({
+    labels: areaBreakdown.map((d) => d.area),
     datasets: [{
-      label: "Avg Waste (kg)", data: districtBreakdown.map((d) => d.avgWasteKg),
+      label: "Avg Waste (kg)", data: areaBreakdown.map((d) => d.avgWasteKg),
       backgroundColor: "rgba(53, 79, 82, 0.7)", borderRadius: 6,
     }],
-  }), [districtBreakdown]);
+  }), [areaBreakdown]);
 
   const categoryChartData = useMemo(() => ({
     labels: categoryDist.map((c) => c.category),
@@ -189,7 +189,7 @@ const Reports = () => {
 
   const tabs = [
     { id: "overview", label: "Overview", icon: <BarChart3 className="w-4 h-4" /> },
-    { id: "incomplete", label: "Incomplete Districts", icon: <AlertTriangle className="w-4 h-4" />, count: incompleteDistricts.length },
+    { id: "incomplete", label: "Incomplete Areas", icon: <AlertTriangle className="w-4 h-4" />, count: incompleteAreas.length },
     { id: "resources", label: "Resource Issues", icon: <Truck className="w-4 h-4" />, count: driverlessTruckStats.length },
   ];
 
@@ -259,8 +259,8 @@ const Reports = () => {
               <h3 className="mt-1 text-2xl font-bold text-primary">{(modelInfo.r2Score * 100).toFixed(1)}%</h3>
             </div>
             <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-5 bg-red-50/50">
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-600/80">Incomplete Districts</p>
-              <h3 className="mt-1 text-2xl font-bold text-red-600">{incompleteDistricts.length}</h3>
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-600/80">Incomplete Areas</p>
+              <h3 className="mt-1 text-2xl font-bold text-red-600">{incompleteAreas.length}</h3>
               <span className="text-xs text-red-500">Needs attention</span>
             </div>
           </div>
@@ -275,10 +275,10 @@ const Reports = () => {
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-primary/10 shadow-sm p-6">
-              <h3 className="text-base font-bold text-primary mb-1">District Waste Comparison</h3>
-              <p className="text-sm text-primary/50 mb-4">Average predicted waste by district</p>
+              <h3 className="text-base font-bold text-primary mb-1">Area Waste Comparison</h3>
+              <p className="text-sm text-primary/50 mb-4">Average predicted waste by area</p>
               <div className="h-72 w-full">
-                {districtBreakdown.length > 0 ? <Bar data={districtChartData} options={{ ...commonOptions, indexAxis: "y", plugins: { ...commonOptions.plugins, legend: { display: false } } }} /> : <p className="text-primary/40 flex items-center justify-center h-full text-sm">No data</p>}
+                {areaBreakdown.length > 0 ? <Bar data={areaChartData} options={{ ...commonOptions, indexAxis: "y", plugins: { ...commonOptions.plugins, legend: { display: false } } }} /> : <p className="text-primary/40 flex items-center justify-center h-full text-sm">No data</p>}
               </div>
             </div>
           </div>
@@ -335,18 +335,18 @@ const Reports = () => {
         </div>
       )}
 
-      {/* INCOMPLETE DISTRICTS TAB */}
+      {/* INCOMPLETE AREAS TAB */}
       {activeTab === "incomplete" && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl border border-primary/10 shadow-sm p-6">
               <h3 className="text-base font-bold text-primary mb-1">Skip Reasons Breakdown</h3>
-              <p className="text-sm text-primary/50 mb-4">Why districts were not served</p>
+              <p className="text-sm text-primary/50 mb-4">Why areas were not served</p>
               <div className="h-64 w-full flex justify-center">
                 {reasonBreakdown.length > 0 ? (
                   <Doughnut data={reasonChartData} options={doughnutBaseOptions} />
                 ) : (
-                  <p className="text-green-600 flex items-center h-full text-sm font-medium">All districts served!</p>
+                  <p className="text-green-600 flex items-center h-full text-sm font-medium">All areas served!</p>
                 )}
               </div>
             </div>
@@ -354,8 +354,8 @@ const Reports = () => {
               <h3 className="text-base font-bold text-primary mb-1">Summary</h3>
               <div className="space-y-4 mt-4">
                 <div className="p-4 rounded-xl bg-red-50 border border-red-200">
-                  <p className="text-sm font-bold text-red-700">{incompleteDistricts.length} Districts Not Served</p>
-                  <p className="text-xs text-red-600/70 mt-1">These districts were skipped due to resource shortages.</p>
+                  <p className="text-sm font-bold text-red-700">{incompleteAreas.length} Areas Not Served</p>
+                  <p className="text-xs text-red-600/70 mt-1">These areas were skipped due to resource shortages.</p>
                 </div>
                 {reasonBreakdown.map((r, i) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-primary/2">
@@ -367,18 +367,18 @@ const Reports = () => {
             </div>
           </div>
 
-          {/* Incomplete Districts Table */}
+          {/* Incomplete Areas Table */}
           <div className="bg-white rounded-2xl border border-primary/10 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-primary/10">
-              <h3 className="text-base font-bold text-primary">Incomplete Districts Log</h3>
-              <p className="text-sm text-primary/50">Districts that were not served and require action</p>
+              <h3 className="text-base font-bold text-primary">Incomplete Areas Log</h3>
+              <p className="text-sm text-primary/50">Areas that were not served and require action</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-primary/8 bg-primary/3">
                     <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Date</th>
-                    <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">District</th>
+                    <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Area</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Type</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Predicted Waste</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Category</th>
@@ -387,21 +387,21 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {incompleteDistricts.length === 0 ? (
+                  {incompleteAreas.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-5 py-12 text-center text-green-600 text-sm font-medium">
-                        All districts have been served.
+                        All areas have been served.
                       </td>
                     </tr>
                   ) : (
-                    incompleteDistricts.map((d, i) => (
+                    incompleteAreas.map((d, i) => (
                       <tr key={i} className="border-b border-primary/5 hover:bg-primary/2 transition-colors">
                         <td className="px-5 py-3 text-sm text-primary/60">{d.date}</td>
-                        <td className="px-5 py-3 font-semibold text-primary text-sm">{d.district}</td>
+                        <td className="px-5 py-3 font-semibold text-primary text-sm">{d.area}</td>
                         <td className="px-5 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                            { commercial: "bg-blue-100 text-blue-700", residential: "bg-purple-100 text-purple-700", suburban: "bg-teal-100 text-teal-700", rural: "bg-emerald-100 text-emerald-700" }[d.districtType] || "bg-gray-100 text-gray-700"
-                          }`}>{d.districtType}</span>
+                            { commercial: "bg-blue-100 text-blue-700", residential: "bg-purple-100 text-purple-700", suburban: "bg-teal-100 text-teal-700", rural: "bg-emerald-100 text-emerald-700" }[d.areaType] || "bg-gray-100 text-gray-700"
+                          }`}>{d.areaType}</span>
                         </td>
                         <td className="px-5 py-3 text-sm font-medium text-primary">{d.predictedWasteKg?.toLocaleString()} kg</td>
                         <td className="px-5 py-3">
@@ -450,14 +450,14 @@ const Reports = () => {
             <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 bg-amber-50/30">
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-600/80">Skipped (No Resources)</p>
               <h3 className="mt-2 text-3xl font-bold text-amber-600">
-                {incompleteDistricts.filter(d => d.reason?.includes("No truck") || d.reason?.includes("driver")).length}
+                {incompleteAreas.filter(d => d.reason?.includes("No truck") || d.reason?.includes("driver")).length}
               </h3>
               <p className="text-xs text-amber-500 mt-1">Missing trucks or drivers</p>
             </div>
             <div className="bg-white rounded-2xl border border-blue-200 shadow-sm p-5 bg-blue-50/30">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600/80">Skipped (ML Decision)</p>
               <h3 className="mt-2 text-3xl font-bold text-blue-600">
-                {incompleteDistricts.filter(d => d.reason === "Skipped by ML model").length}
+                {incompleteAreas.filter(d => d.reason === "Skipped by ML model").length}
               </h3>
               <p className="text-xs text-blue-500 mt-1">Low waste predicted</p>
             </div>
@@ -476,16 +476,16 @@ const Reports = () => {
                   </div>
                 </div>
               )}
-              {incompleteDistricts.filter(d => d.reason?.includes("capacity")).length > 0 && (
+              {incompleteAreas.filter(d => d.reason?.includes("capacity")).length > 0 && (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
                   <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-amber-700">Add More Trucks</p>
-                    <p className="text-xs text-amber-600/70 mt-1">Some districts were skipped due to insufficient truck capacity.</p>
+                    <p className="text-xs text-amber-600/70 mt-1">Some areas were skipped due to insufficient truck capacity.</p>
                   </div>
                 </div>
               )}
-              {incompleteDistricts.length > 0 && (
+              {incompleteAreas.length > 0 && (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
                   <BarChart3 className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                   <div>

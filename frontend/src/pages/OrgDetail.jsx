@@ -19,7 +19,7 @@ const TABS = [
   { id: "overview", label: "Overview", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
   { id: "trucks", label: "Trucks", icon: "M8 17h8M8 17v-4m8 4v-4m-8 0h8m-8 0H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-3" },
   { id: "drivers", label: "Drivers", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
-  { id: "districts", label: "Districts", icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" },
+  { id: "areas", label: "Areas", icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" },
   { id: "admins", label: "Admins", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
 ];
 
@@ -50,11 +50,11 @@ const OrgDetail = () => {
     );
   }
 
-  // Backend sends flat structure: { _id, name, location, admins, trucks, drivers, districts, stats }
+  // Backend sends flat structure: { _id, name, location, admins, trucks, drivers, areas, stats }
   const admins = currentOrg.admins || [];
   const trucks = currentOrg.trucks || [];
   const drivers = currentOrg.drivers || [];
-  const districts = currentOrg.districts || [];
+  const areas = currentOrg.areas || [];
   const stats = currentOrg.stats || {};
   const org = { name: currentOrg.name, location: currentOrg.location, _id: currentOrg._id, createdAt: currentOrg.createdAt };
 
@@ -135,7 +135,7 @@ const OrgDetail = () => {
             <StatCard label="Trucks Ready" value={stats.trucksWithDrivers || 0} color="#10b981" sub="Has assigned driver" />
             <StatCard label="No Driver" value={stats.trucksWithoutDrivers || 0} color="#ef4444" sub="Needs attention" />
             <StatCard label="Total Drivers" value={stats.totalDrivers || 0} color="#8b5cf6" />
-            <StatCard label="Districts" value={stats.totalDistricts || 0} color="#f59e0b" />
+            <StatCard label="Areas" value={stats.totalAreas || 0} color="#f59e0b" />
           </div>
 
           {/* Charts */}
@@ -287,24 +287,24 @@ const OrgDetail = () => {
         </div>
       )}
 
-      {activeTab === "districts" && (
+      {activeTab === "areas" && (
         <div className="space-y-4">
-          {districts.length === 0 ? (
-            <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center text-primary/40">No districts assigned to this organization.</div>
+          {areas.length === 0 ? (
+            <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center text-primary/40">No areas assigned to this organization.</div>
           ) : (
             <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-primary/3 border-b border-primary/10">
-                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">District Name</th>
+                      <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Area Name</th>
                       <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Province</th>
                       <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Type</th>
                       <th className="px-5 py-3 text-xs font-bold text-primary/60 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-primary/5">
-                    {districts.map(d => (
+                    {areas.map(d => (
                       <tr key={d._id} className="hover:bg-primary/2 transition">
                         <td className="px-5 py-4 font-bold text-primary">{d.name}</td>
                         <td className="px-5 py-4 text-sm text-primary/70">{d.province || "N/A"}</td>

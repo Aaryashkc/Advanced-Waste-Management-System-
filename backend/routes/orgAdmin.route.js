@@ -23,7 +23,7 @@ import { getDriverDetail } from "../controllers/superAdmin.controller.js";
 const router = express.Router();
 
 router.use(authMiddleware);
-router.use(roleMiddleware("admin"));
+router.use(roleMiddleware("admin", "super_admin"));
 
 router.get("/admins", getOrgAdmins);
 router.post("/admins", createAdmin);

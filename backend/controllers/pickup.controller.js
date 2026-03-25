@@ -6,6 +6,10 @@ import Truck from "../models/Truck.model.js";
 import User from "../models/User.model.js";
 import { getIO } from "../socket/socketServer.js";
 import { findBestDrivers } from "../services/driverMatcher.js";
+import { getRoute } from "../services/openRouteService.js";
+import { calculatePrice } from "../services/pricingEngine.js";
+import Area from "../models/Area.model.js";
+import Organization from "../models/Organization.model.js";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -16,7 +20,7 @@ function pickupPayload(doc) {
     wasteUploadId: doc.wasteUploadId,
     location: doc.location,
     province: doc.province,
-    district: doc.district,
+    area: doc.area,
     category: doc.category,
     level: doc.level,
     status: doc.status,
@@ -31,6 +35,12 @@ function pickupPayload(doc) {
     cancelledAt: doc.cancelledAt,
     cancelledBy: doc.cancelledBy,
     cancelReason: doc.cancelReason,
+    estimatedPrice: doc.estimatedPrice,
+    currency: doc.currency,
+    priceBreakdown: doc.priceBreakdown,
+    routeDistanceKm: doc.routeDistanceKm,
+    routeDurationMinutes: doc.routeDurationMinutes,
+    depotLocation: doc.depotLocation,
     responseTimeMs: doc.responseTimeMs,
     taskDurationMs: doc.taskDurationMs,
     expiresAt: doc.expiresAt,
@@ -59,6 +69,113 @@ function emitSafe(fn) {
   try { fn(getIO()); } catch (_) { /* socket may not be initialized */ }
 }
 
+// ── POST /api/pickups/estimate ─────────────────────────────────────────────
+
+/**
+ * Returns a price estimate + route BEFORE the customer confirms the pickup.
+ * Looks up the area → org → depot, calculates road route via ORS, and prices it.
+ */
+export const estimatePickup = async (req, res) => {
+  try {
+    const { latitude, longitude, category, level, area } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({ message: "latitude and longitude are required" });
+    }
+
+    // 1. Resolve area → organization
+    //    Strategy: if area name is given, match by name.
+    //    Otherwise, find the nearest area by GPS coordinates.
+    let areaDoc = null;
+
+    if (area) {
+      areaDoc = await Area.findOne({ name: area, isActive: true });
+    }
+
+    if (!areaDoc) {
+      // Find nearest area by coordinates (haversine approximation via sorting)
+      const allAreas = await Area.find({
+        isActive: true,
+        "coordinates.latitude": { $exists: true, $ne: null },
+        "coordinates.longitude": { $exists: true, $ne: null },
+        orgId: { $ne: null },
+      }).lean();
+
+      if (allAreas.length === 0) {
+        return res.status(404).json({ message: "No service areas with coordinates are configured yet" });
+      }
+
+      // Calculate distance to each area and pick the closest
+      const custLat = Number(latitude);
+      const custLng = Number(longitude);
+      const toRad = (deg) => (deg * Math.PI) / 180;
+
+      let minDist = Infinity;
+      for (const a of allAreas) {
+        const dLat = toRad(a.coordinates.latitude - custLat);
+        const dLng = toRad(a.coordinates.longitude - custLng);
+        const sinLat = Math.sin(dLat / 2);
+        const sinLng = Math.sin(dLng / 2);
+        const h = sinLat * sinLat + Math.cos(toRad(custLat)) * Math.cos(toRad(a.coordinates.latitude)) * sinLng * sinLng;
+        const dist = 2 * 6371 * Math.asin(Math.sqrt(h)); // km
+        if (dist < minDist) {
+          minDist = dist;
+          areaDoc = a;
+        }
+      }
+    }
+
+    if (!areaDoc) {
+      return res.status(404).json({ message: "No service area found near your location" });
+    }
+    if (!areaDoc.orgId) {
+      return res.status(400).json({ message: `No organization is assigned to area "${areaDoc.name}" yet` });
+    }
+
+    const org = await Organization.findById(areaDoc.orgId);
+    if (!org) {
+      return res.status(404).json({ message: "Organization not found for this area" });
+    }
+    if (!org.location?.latitude || !org.location?.longitude) {
+      return res.status(400).json({ message: `Organization "${org.name}" has no depot coordinates configured` });
+    }
+
+    // 2. Get route from depot → customer location
+    const depot = { latitude: org.location.latitude, longitude: org.location.longitude };
+    const customer = { latitude: Number(latitude), longitude: Number(longitude) };
+    const route = await getRoute(depot, customer);
+
+    // 3. Calculate price
+    const pricing = await calculatePrice({
+      category: category || "non-recyclable",
+      level: level || "easy",
+      distanceKm: route.distanceKm,
+    });
+
+    return res.status(200).json({
+      success: true,
+      estimatedPrice: pricing.estimatedPrice,
+      priceBreakdown: pricing.priceBreakdown,
+      currency: pricing.currency,
+      distanceKm: route.distanceKm,
+      durationMinutes: route.durationMinutes,
+      routeGeometry: route.geometry,
+      fallback: route.fallback || false,
+      depotLocation: {
+        latitude: depot.latitude,
+        longitude: depot.longitude,
+        address: org.location.address || null,
+      },
+      orgId: org._id,
+      orgName: org.name,
+      areaName: areaDoc.name,
+    });
+  } catch (err) {
+    console.error("estimatePickup error:", err);
+    return res.status(500).json({ message: "Failed to estimate pickup", error: err.message });
+  }
+};
+
 // ── POST /api/pickups ──────────────────────────────────────────────────────
 
 /**
@@ -68,7 +185,10 @@ function emitSafe(fn) {
  */
 export const createPickup = async (req, res) => {
   try {
-    const { latitude, longitude, address, category, level, wasteUploadId, province, district } = req.body;
+    const {
+      latitude, longitude, address, category, level, wasteUploadId, province, area,
+      estimatedPrice, priceBreakdown, routeDistanceKm, routeDurationMinutes, routeGeometry, depotLocation,
+    } = req.body;
 
     if (!latitude || !longitude) {
       return res.status(400).json({ message: "latitude and longitude are required" });
@@ -76,13 +196,14 @@ export const createPickup = async (req, res) => {
 
     const customer = req.user;
 
-    // Run the knapsack matching algorithm
+    // Run the driver-matching algorithm (now area-aware)
     const matched = await findBestDrivers({
       latitude: Number(latitude),
       longitude: Number(longitude),
       category: category || "non-recyclable",
       level: level || "easy",
       orgId: customer.orgId,
+      area: area || null,
     });
 
     const matchedUserIds = matched.map((m) => m.userId);
@@ -93,10 +214,16 @@ export const createPickup = async (req, res) => {
       wasteUploadId: wasteUploadId || null,
       location: { latitude, longitude, address: address || null },
       province: province || null,
-      district: district || null,
+      area: area || null,
       category: category || "non-recyclable",
       level: level || "easy",
       matchedDriverIds: matchedUserIds,
+      estimatedPrice: estimatedPrice || null,
+      priceBreakdown: priceBreakdown || null,
+      routeDistanceKm: routeDistanceKm || null,
+      routeDurationMinutes: routeDurationMinutes || null,
+      routeGeometry: routeGeometry || null,
+      depotLocation: depotLocation || null,
       statusHistory: [
         {
           from: null,
@@ -113,7 +240,7 @@ export const createPickup = async (req, res) => {
       category: pickup.category,
       level: pickup.level,
       province: pickup.province,
-      district: pickup.district,
+      area: pickup.area,
     });
 
     // Audit: MATCHED or BROADCAST event
@@ -217,6 +344,32 @@ export const getActivePickup = async (req, res) => {
   } catch (err) {
     console.error("getActivePickup error:", err);
     return res.status(500).json({ message: "Failed to fetch active pickup", error: err.message });
+  }
+};
+
+// ── GET /api/pickups/my-history ────────────────────────────────────────────
+
+/**
+ * Driver fetches their own pickup history (accepted, completed, cancelled).
+ */
+export const getMyPickupHistory = async (req, res) => {
+  try {
+    const { _id, role } = req.user;
+    if (role !== "driver") return res.status(403).json({ message: "Access denied" });
+
+    const pickups = await PickupRequest.find({
+      driverId: _id,
+    })
+      .sort({ updatedAt: -1 })
+      .limit(50)
+      .lean();
+
+    return res.status(200).json({
+      pickups: pickups.map((doc) => pickupPayload(doc)),
+    });
+  } catch (err) {
+    console.error("getMyPickupHistory error:", err);
+    return res.status(500).json({ message: "Failed to fetch pickup history", error: err.message });
   }
 };
 
@@ -723,12 +876,12 @@ export const getPickupAnalytics = async (req, res) => {
     // 9. Completion rate
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    // 10. District breakdown
-    const districtBreakdown = await PickupRequest.aggregate([
-      { $match: { ...orgMatch, district: { $ne: null } } },
+    // 10. Area breakdown (within an org) — used by admin view
+    const areaBreakdown = await PickupRequest.aggregate([
+      { $match: { ...orgMatch, area: { $ne: null } } },
       {
         $group: {
-          _id: "$district",
+          _id: "$area",
           total: { $sum: 1 },
           completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
         },
@@ -736,6 +889,41 @@ export const getPickupAnalytics = async (req, res) => {
       { $sort: { total: -1 } },
       { $limit: 15 },
     ]);
+
+    // 11. Organization breakdown (cross-org) — used by super_admin view
+    const orgBreakdown = role === "super_admin"
+      ? await PickupRequest.aggregate([
+          { $match: { orgId: { $ne: null } } },
+          {
+            $group: {
+              _id: "$orgId",
+              total: { $sum: 1 },
+              completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+            },
+          },
+          { $sort: { total: -1 } },
+          { $limit: 15 },
+          {
+            $lookup: {
+              from: "organizations",
+              localField: "_id",
+              foreignField: "_id",
+              as: "org",
+              pipeline: [{ $project: { name: 1 } }],
+            },
+          },
+          { $unwind: { path: "$org", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              orgId: "$_id",
+              orgName: "$org.name",
+              total: 1,
+              completed: 1,
+              _id: 0,
+            },
+          },
+        ])
+      : [];
 
     res.status(200).json({
       success: true,
@@ -753,11 +941,12 @@ export const getPickupAnalytics = async (req, res) => {
           avgTaskDurationMs: Math.round(r.avgTaskDurationMs || 0),
           count: r.count,
         })),
-        districtBreakdown: districtBreakdown.map((d) => ({
-          district: d._id,
+        areaBreakdown: areaBreakdown.map((d) => ({
+          area: d._id,
           total: d.total,
           completed: d.completed,
         })),
+        orgBreakdown,
       },
     });
   } catch (err) {
@@ -809,7 +998,7 @@ export const getAllPickups = async (req, res) => {
       orgId: p.orgId?._id || null,
       location: p.location,
       province: p.province,
-      district: p.district,
+      area: p.area,
       category: p.category,
       level: p.level,
       status: p.status,

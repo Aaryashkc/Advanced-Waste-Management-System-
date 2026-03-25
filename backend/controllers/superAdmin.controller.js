@@ -60,7 +60,7 @@ export const getAllOrganizations = async (req, res) => {
 
 /**
  * Get a single organization with full details:
- * admins, trucks (with assigned drivers), drivers, districts
+ * admins, trucks (with assigned drivers), drivers, areas
  * GET /api/super-admin/organizations/:orgId
  */
 export const getOrganizationById = async (req, res) => {
@@ -102,9 +102,9 @@ export const getOrganizationById = async (req, res) => {
       };
     });
 
-    // Get districts for this org
-    const District = (await import("../models/District.model.js")).default;
-    const districts = await District.find({ orgId: org._id, isActive: true }).lean();
+    // Get areas for this org
+    const Area = (await import("../models/Area.model.js")).default;
+    const areas = await Area.find({ orgId: org._id, isActive: true }).lean();
 
     // Build driver map for trucks
     const driverByTruck = {};
@@ -144,7 +144,7 @@ export const getOrganizationById = async (req, res) => {
         admins: org.admins,
         trucks: trucksFormatted,
         drivers: driversWithUser,
-        districts,
+        areas,
         stats: {
           totalAdmins: org.admins?.length || 0,
           totalTrucks,
@@ -153,7 +153,7 @@ export const getOrganizationById = async (req, res) => {
           availableDrivers,
           trucksWithDrivers,
           trucksWithoutDrivers,
-          totalDistricts: districts.length,
+          totalAreas: areas.length,
           totalCapacity,
         },
       },
@@ -752,9 +752,12 @@ export const getDriverDetail = async (req, res) => {
     const { driverId } = req.params;
 
     const driver = await Driver.findById(driverId)
-      .populate("userId", "name email phone role")
+      .populate({
+        path: "userId",
+        select: "name email phone role orgId",
+        populate: { path: "orgId", select: "name location" },
+      })
       .populate("assignedTruckId")
-      .populate("orgId", "name location")
       .lean();
 
     if (!driver) {
@@ -804,7 +807,7 @@ export const getDriverDetail = async (req, res) => {
       category: p.category,
       level: p.level,
       province: p.province,
-      district: p.district,
+      area: p.area,
       location: p.location,
       createdAt: p.createdAt,
       assignedAt: p.assignedAt,
@@ -818,9 +821,8 @@ export const getDriverDetail = async (req, res) => {
           name: driver.userId?.name,
           email: driver.userId?.email,
           phone: driver.userId?.phone,
-          licenseNumber: driver.licenseNumber,
           isAvailable: driver.isAvailable,
-          organization: driver.orgId,
+          organization: driver.userId?.orgId || null,
           truck: driver.assignedTruckId ? {
             _id: driver.assignedTruckId._id,
             licensePlate: driver.assignedTruckId.licensePlate,

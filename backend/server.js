@@ -16,9 +16,10 @@ import pickupRoutes from "./routes/pickup.route.js";
 import contactRoutes from "./routes/contact.route.js";
 import internalMessageRoutes from "./routes/internalMessage.route.js";
 import mlScheduleRoutes from "./routes/mlSchedule.route.js";
-import districtRoutes from "./routes/district.route.js";
+import areaRoutes from "./routes/area.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 import historyRoutes from "./routes/history.route.js";
+import pricingConfigRoutes from "./routes/pricingConfig.route.js";
 import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
 import { autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
 import { initSocket } from "./socket/socketServer.js";
@@ -61,9 +62,10 @@ app.use("/api/pickups", pickupRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/internal-messages", internalMessageRoutes);
 app.use("/api/ml-schedule", mlScheduleRoutes);
-app.use("/api/districts", districtRoutes);
+app.use("/api/areas", areaRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/history", historyRoutes);
+app.use("/api/pricing-config", pricingConfigRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -135,5 +137,13 @@ server.listen(PORT, () => {
         .then((r) => console.log(`ML auto-schedule: ${r.message}`))
         .catch((e) => console.error("ML auto-schedule error:", e));
     });
+
+    // Generate today's schedule on startup (if not already generated)
+    // Delay slightly to ensure DB connection is ready
+    setTimeout(() => {
+      autoGenerateMLSchedule()
+        .then((r) => console.log(`ML startup schedule: ${r.message}`))
+        .catch((e) => console.error("ML startup schedule error:", e));
+    }, 5000);
   }
 });

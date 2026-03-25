@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  predictDistrict,
+  predictArea,
   generateSchedule,
   getMLSchedules,
   getMLScheduleById,
@@ -9,7 +9,7 @@ import {
   getMLAnalytics,
   getDriverMLAssignments,
   getPublicMLSchedule,
-  redispatchDistrict,
+  redispatchArea,
 } from "../controllers/mlSchedule.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
@@ -32,11 +32,11 @@ router.get("/health", roleMiddleware("admin", "super_admin"), getMLHealth);
 router.get("/analytics", roleMiddleware("super_admin"), getMLAnalytics);
 
 // Admin/Super-admin endpoints
-router.post("/predict", roleMiddleware("admin", "super_admin"), predictDistrict);
+router.post("/predict", roleMiddleware("admin", "super_admin"), predictArea);
 router.post("/generate", roleMiddleware("admin", "super_admin"), generateSchedule);
 router.get("/", roleMiddleware("admin", "super_admin"), getMLSchedules);
 router.get("/:id", roleMiddleware("admin", "super_admin"), getMLScheduleById);
 router.post("/:id/confirm", roleMiddleware("admin", "super_admin"), confirmSchedule);
-router.post("/:id/redispatch", roleMiddleware("admin", "super_admin"), redispatchDistrict);
+router.post("/:id/redispatch", roleMiddleware("admin", "super_admin"), redispatchArea);
 
 export default router;

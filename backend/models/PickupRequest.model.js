@@ -48,9 +48,9 @@ const pickupRequestSchema = new mongoose.Schema(
       address: { type: String, default: null },
     },
 
-    // Customer-selected province and district
+    // Customer-selected province and area (within the org/municipality)
     province: { type: String, default: null },
-    district: { type: String, default: null },
+    area: { type: String, default: null },
 
     // Copied from the waste image upload
     category: {
@@ -126,6 +126,24 @@ const pickupRequestSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       default: () => new Date(Date.now() + 10 * 60 * 1000),
+    },
+
+    // ── Pricing & route data (set from estimate before creation) ────────
+    estimatedPrice: { type: Number, default: null },
+    currency: { type: String, default: "NPR" },
+    priceBreakdown: {
+      categoryBase: { type: Number, default: null },
+      levelMultiplier: { type: Number, default: null },
+      distanceCharge: { type: Number, default: null },
+      total: { type: Number, default: null },
+    },
+    routeDistanceKm: { type: Number, default: null },
+    routeDurationMinutes: { type: Number, default: null },
+    routeGeometry: { type: [[Number]], default: null },
+    depotLocation: {
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+      address: { type: String, default: null },
     },
 
     // Response time metrics (computed on acceptance)

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ["general", "driverless_truck", "no_driver", "no_truck", "schedule_failed", "redispatch_needed"],
+    enum: ["general", "driverless_truck", "no_driver", "no_truck", "schedule_failed", "redispatch_needed", "schedule_confirmed"],
     default: "general",
   },
   title: { type: String, required: true },
@@ -18,7 +18,7 @@ const notificationSchema = new mongoose.Schema({
     ref: "User",
     default: null,
   },
-  targetRoles: [{ type: String, enum: ["admin", "super_admin"] }],
+  targetRoles: [{ type: String, enum: ["admin", "super_admin", "driver"] }],
   orgId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Organization",
@@ -33,9 +33,14 @@ const notificationSchema = new mongoose.Schema({
       orgName: String,
       capacity: Number,
     }],
-    districtName: { type: String },
+    areaName: { type: String },
     date: { type: String },
     reason: { type: String },
+  },
+  targetUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
   },
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 }, { timestamps: true });

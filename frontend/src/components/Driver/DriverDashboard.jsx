@@ -1,5 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  Truck, MapPin, Package, Calendar, Bell, ChevronRight,
+  Wifi, WifiOff, Clock, Route, AlertTriangle, User,
+} from "lucide-react";
 import { getSocket } from "../../utils/socket";
 import useAuthStore from "../../stores/useAuthStore";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
@@ -13,12 +17,10 @@ export default function DriverDashboard() {
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [pendingPickups, setPendingPickups] = useState([]);
-  const [showScheduleToast, setShowScheduleToast] = useState(true);
   const [socketConnected, setSocketConnected] = useState(false);
   const [newPickupFlash, setNewPickupFlash] = useState(false);
   const flashTimeoutRef = useRef(null);
 
-  // ── Fetch driver profile with truck + org ─────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -33,42 +35,27 @@ export default function DriverDashboard() {
     fetchDriverAssignments();
   }, []);
 
-  // ── Fetch pending pickups on mount (catch any missed during disconnect) ──
   const fetchPendingPickups = useCallback(async () => {
     try {
       const res = await api.get("/pickups/pending");
-      if (res.data.pickups) {
-        setPendingPickups(res.data.pickups);
-      }
-    } catch (err) {
-      // Not critical — socket will handle live updates
-    }
+      if (res.data.pickups) setPendingPickups(res.data.pickups);
+    } catch (_) {}
   }, []);
 
-  useEffect(() => {
-    fetchPendingPickups();
-  }, [fetchPendingPickups]);
+  useEffect(() => { fetchPendingPickups(); }, [fetchPendingPickups]);
 
-  // ── Socket: listen for pickup events ──────────────────────────────────
   useEffect(() => {
     const socket = getSocket();
 
-    const onConnect = () => {
-      setSocketConnected(true);
-      // Re-fetch pending pickups on reconnect to catch missed events
-      fetchPendingPickups();
-    };
+    const onConnect = () => { setSocketConnected(true); fetchPendingPickups(); };
     const onDisconnect = () => setSocketConnected(false);
 
     const onCreated = (pickup) => {
       if (!profile || !profile.truck) return;
-
       setPendingPickups((prev) => {
         if (prev.some((p) => p.id === pickup.id || p._id === pickup._id)) return prev;
         return [pickup, ...prev];
       });
-
-      // Flash visual indicator for new pickup
       setNewPickupFlash(true);
       if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
       flashTimeoutRef.current = setTimeout(() => setNewPickupFlash(false), 3000);
@@ -84,14 +71,16 @@ export default function DriverDashboard() {
       setPendingPickups((prev) => prev.filter((p) => (p.id || p._id) !== pickupId));
     };
 
-    // Track connection state
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     setSocketConnected(socket.connected);
-
     socket.on("pickup:created", onCreated);
     socket.on("pickup:accepted", onAccepted);
     socket.on("pickup:cancelled", onCancelled);
+
+    const onScheduleConfirmed = () => fetchDriverAssignments();
+    socket.on("schedule:confirmed", onScheduleConfirmed);
+    socket.on("schedule:updated", onScheduleConfirmed);
 
     return () => {
       socket.off("connect", onConnect);
@@ -99,414 +88,291 @@ export default function DriverDashboard() {
       socket.off("pickup:created", onCreated);
       socket.off("pickup:accepted", onAccepted);
       socket.off("pickup:cancelled", onCancelled);
+      socket.off("schedule:confirmed", onScheduleConfirmed);
+      socket.off("schedule:updated", onScheduleConfirmed);
       if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
     };
-  }, [profile, fetchPendingPickups]);
+  }, [profile, fetchPendingPickups, fetchDriverAssignments]);
 
   const handleViewRequest = (pickupId) => {
     navigate("/accept-task", { state: { pickupId } });
   };
 
   const truck = profile?.truck;
-  const org = profile?.organization;
+  const greeting = getGreeting();
+  const firstName = (user?.name || "Driver").split(" ")[0];
 
-  // ── Helpers ────────────────────────────────────────────────────────────
-  const dutyBadge = (duty) => {
-    if (duty === "light duty") return { label: "Light Duty", cls: "bg-blue-100 text-blue-700" };
-    if (duty === "medium duty") return { label: "Medium Duty", cls: "bg-amber-100 text-amber-700" };
-    if (duty === "heavy duty") return { label: "Heavy Duty", cls: "bg-red-100 text-red-700" };
-    return { label: duty || "—", cls: "bg-gray-100 text-gray-600" };
+  return (
+    <div className="min-h-screen bg-[#f5f3ee] pb-24">
+      <div className="max-w-7xl mx-auto">
+
+        {/* Header */}
+        <div className="bg-gradient-to-br from-[#354f52] to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white/60 text-sm font-medium">{greeting}</p>
+              <h1 className="text-2xl font-bold text-white mt-0.5">{firstName}</h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                socketConnected
+                  ? "bg-emerald-500/20 text-emerald-300"
+                  : "bg-red-500/20 text-red-300"
+              }`}>
+                {socketConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
+                {socketConnected ? "Live" : "Offline"}
+              </div>
+              <Link
+                to="/profile"
+                className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/25 transition"
+              >
+                <User size={18} />
+              </Link>
+            </div>
+          </div>
+
+          {/* Stat Cards - inside header */}
+          <div className="grid grid-cols-3 gap-3 mt-6">
+            <StatCard
+              icon={<Package size={16} />}
+              value={pendingPickups.length}
+              label="Requests"
+              color="amber"
+              pulse={newPickupFlash}
+            />
+            <StatCard
+              icon={<Calendar size={16} />}
+              value={driverAssignments.length}
+              label="Areas Today"
+              color="blue"
+            />
+            <StatCard
+              icon={<Truck size={16} />}
+              value={truck ? truck.licensePlate : "--"}
+              label={truck ? `${truck.capacity}kg` : "No Truck"}
+              color="teal"
+              small={!!truck}
+            />
+          </div>
+        </div>
+
+        {/* Connection Lost Warning */}
+        {!socketConnected && (
+          <div className="mx-5 sm:mx-8 mt-4 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+            <AlertTriangle size={18} className="text-red-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Connection Lost</p>
+              <p className="text-xs text-red-500/70">New pickup requests may be delayed.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="px-5 sm:px-8 pt-6 space-y-6">
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-4 gap-3">
+            <ActionTile
+              to="/accept-task"
+              icon={<Package size={20} />}
+              label="Requests"
+              color="bg-amber-50 text-amber-600"
+              iconBg="bg-amber-100"
+              badge={pendingPickups.length}
+            />
+            <ActionTile
+              to="/driver-ml-assignments"
+              icon={<Calendar size={20} />}
+              label="Schedule"
+              color="bg-blue-50 text-blue-600"
+              iconBg="bg-blue-100"
+              badge={driverAssignments.length}
+            />
+            <ActionTile
+              to="/driver-notifications"
+              icon={<Bell size={20} />}
+              label="Alerts"
+              color="bg-violet-50 text-violet-600"
+              iconBg="bg-violet-100"
+            />
+            <ActionTile
+              to="/profile"
+              icon={<User size={20} />}
+              label="Profile"
+              color="bg-teal-50 text-teal-600"
+              iconBg="bg-teal-100"
+            />
+          </div>
+
+          {/* Live Pickup Requests */}
+          {pendingPickups.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+                  </span>
+                  <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
+                    Pending Requests
+                  </h2>
+                </div>
+                <Link to="/accept-task" className="text-xs font-semibold text-primary/50 flex items-center gap-1 hover:text-primary transition">
+                  View All <ChevronRight size={14} />
+                </Link>
+              </div>
+              <div className="space-y-2.5">
+                {pendingPickups.slice(0, 3).map((pickup) => (
+                  <button
+                    key={pickup.id || pickup._id}
+                    onClick={() => handleViewRequest(pickup.id || pickup._id)}
+                    className={`w-full text-left bg-white rounded-2xl border-l-4 shadow-sm p-4 flex items-center gap-4 hover:shadow-md active:scale-[0.98] transition-all ${
+                      newPickupFlash ? "border-l-red-500" : "border-l-amber-500"
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                      <MapPin size={18} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-primary truncate">
+                        {pickup.location?.address || `${pickup.location?.latitude?.toFixed(3)}, ${pickup.location?.longitude?.toFixed(3)}`}
+                      </p>
+                      <p className="text-xs text-primary/50 mt-0.5">
+                        {pickup.category} -- {pickup.level} -- {pickup.customerName || "Customer"}
+                      </p>
+                    </div>
+                    <ChevronRight size={16} className="text-primary/30 shrink-0" />
+                  </button>
+                ))}
+                {pendingPickups.length > 3 && (
+                  <p className="text-center text-xs text-primary/40 pt-1">
+                    +{pendingPickups.length - 3} more
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Today's Schedule Summary */}
+          {driverAssignments.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
+                  Today's Assignments
+                </h2>
+                <Link to="/driver-ml-assignments" className="text-xs font-semibold text-primary/50 flex items-center gap-1 hover:text-primary transition">
+                  Full Schedule <ChevronRight size={14} />
+                </Link>
+              </div>
+              <div className="space-y-2.5">
+                {driverAssignments.slice(0, 3).map((a, i) => {
+                  const waste = getWasteStyle(a.wasteCategory);
+                  return (
+                    <Link
+                      key={i}
+                      to="/driver-ml-assignments"
+                      className="flex items-center gap-4 bg-white rounded-2xl shadow-sm p-4 hover:shadow-md active:scale-[0.98] transition-all"
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${waste.bg}`}>
+                        <Route size={18} className={waste.icon} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-primary truncate">{a.area}</p>
+                          {a.wasteCategory && (
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${waste.badge}`}>
+                              {a.wasteCategory}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-primary/50 mt-0.5">
+                          {a.areaType} -- {a.predictedWasteKg?.toLocaleString()} kg expected
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-lg font-bold text-primary">{a.predictedWasteKg?.toLocaleString()}</p>
+                        <p className="text-[10px] text-primary/40">kg</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Empty State */}
+          {pendingPickups.length === 0 && driverAssignments.length === 0 && !profileLoading && (
+            <div className="bg-white rounded-2xl border border-primary/8 p-8 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4">
+                <Clock size={24} className="text-primary/30" />
+              </div>
+              <h3 className="text-base font-semibold text-primary/70 mb-1">All clear</h3>
+              <p className="text-sm text-primary/40 max-w-xs mx-auto">
+                No pending requests or schedules right now. New pickups will appear here in real-time.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -- Stat Card ------------------------------------------------------------ */
+function StatCard({ icon, value, label, color, pulse = false, small = false }) {
+  const colors = {
+    amber: "bg-amber-500/20 border-amber-400/20",
+    blue:  "bg-blue-500/20 border-blue-400/20",
+    teal:  "bg-teal-500/20 border-teal-400/20",
+  };
+  const textColors = {
+    amber: "text-amber-200",
+    blue:  "text-blue-200",
+    teal:  "text-teal-200",
   };
 
   return (
-    <div className="app-bg min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className={`rounded-2xl border p-3.5 ${colors[color]} ${pulse ? "ring-2 ring-white/30 animate-pulse" : ""}`}>
+      <div className={`mb-1.5 ${textColors[color]}`}>{icon}</div>
+      <p className={`font-bold text-white ${small ? "text-xs" : "text-lg"}`}>{value}</p>
+      <p className="text-[10px] text-white/50 font-medium uppercase tracking-wider mt-0.5">{label}</p>
+    </div>
+  );
+}
 
-        {/* ─── Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4 mb-8 sm:mb-10">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary">
-              Driver Dashboard
-            </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-primary/70">
-              <span className="inline-flex items-center gap-2">
-                <TruckIcon />
-                <span className="font-semibold text-primary">
-                  {user?.name || "Driver"}
-                </span>
-              </span>
-              {org && (
-                <>
-                  <span className="text-primary/25">•</span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="text-base">🏢</span>
-                    <span>{org.name}</span>
-                  </span>
-                </>
-              )}
-              <span className="text-primary/25">•</span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${socketConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-                {socketConnected ? "Live" : "Reconnecting..."}
-              </span>
-            </div>
-          </div>
-
-          <Link
-            to="/profile"
-            className="w-11 h-11 rounded-full border border-primary/30 bg-white flex items-center justify-center hover:shadow-sm active:scale-95 transition"
-            aria-label="Profile"
-          >
-            <UserIcon />
-          </Link>
-        </div>
-
-        {/* ─── Live Pickup Requests Banner ─────────────────────────────── */}
-        {pendingPickups.length > 0 && (
-          <div className={`mb-8 rounded-2xl p-5 sm:p-6 transition-all duration-300 ${
-            newPickupFlash
-              ? "bg-red-50 border-2 border-red-300 shadow-lg shadow-red-100"
-              : "bg-amber-50 border border-amber-200"
-          }`}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-semibold text-amber-800 flex items-center gap-2">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
-                </span>
-                {pendingPickups.length} New Pickup Request{pendingPickups.length > 1 ? "s" : ""}
-              </p>
-              <div className="flex items-center gap-2">
-                {newPickupFlash && (
-                  <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full animate-pulse">
-                    NEW!
-                  </span>
-                )}
-                <span className="text-xs text-amber-600 font-medium uppercase tracking-wide">Live</span>
-              </div>
-            </div>
-
-            <div className="space-y-2.5">
-              {pendingPickups.map((pickup) => (
-                <div
-                  key={pickup.id || pickup._id}
-                  className="flex items-center justify-between bg-white rounded-xl border border-amber-200 px-5 py-3.5"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-primary truncate">
-                      {pickup.location?.address || `${pickup.location?.latitude?.toFixed(3)}, ${pickup.location?.longitude?.toFixed(3)}`}
-                    </p>
-                    <p className="text-xs text-primary/55 mt-1">
-                      {pickup.category} · {pickup.level} · {pickup.customerName || "Customer"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleViewRequest(pickup.id || pickup._id)}
-                    className="ml-4 shrink-0 bg-primary text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition"
-                  >
-                    View
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ─── ML Schedule Assignment Toast ──────────────────────────── */}
-        {showScheduleToast && driverAssignments.length > 0 && (
-          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-2xl p-5 sm:p-6 relative">
-            <button
-              onClick={() => setShowScheduleToast(false)}
-              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 hover:bg-blue-200 transition text-sm"
-            >
-              &#x2715;
-            </button>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500" />
-              </span>
-              <p className="font-bold text-blue-800 text-lg">Today's Schedule</p>
-              <span className="text-xs text-blue-600 font-medium uppercase tracking-wide bg-blue-100 px-2 py-0.5 rounded-full">Active</span>
-            </div>
-            <p className="text-sm text-blue-700 mb-4">You have been assigned to the following areas for waste collection today.</p>
-
-            <div className="space-y-2.5">
-              {driverAssignments.map((assignment, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between bg-white rounded-xl border border-blue-200 px-5 py-3.5"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-primary">{assignment.district}</p>
-                    <p className="text-xs text-primary/55 mt-1">
-                      {assignment.districtType} &middot; {assignment.predictedWasteKg?.toLocaleString()} kg predicted
-                      {assignment.wasteCategory && <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        assignment.wasteCategory === "critical" ? "bg-red-100 text-red-700" :
-                        assignment.wasteCategory === "high" ? "bg-orange-100 text-orange-700" :
-                        assignment.wasteCategory === "medium" ? "bg-amber-100 text-amber-700" :
-                        "bg-green-100 text-green-700"
-                      }`}>{assignment.wasteCategory}</span>}
-                    </p>
-                  </div>
-                  <Link
-                    to="/driver-ml-assignments"
-                    className="ml-4 shrink-0 bg-blue-600 text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-blue-700 active:scale-95 transition"
-                  >
-                    View Route
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ─── Connection Lost Warning ──────────────────────────────── */}
-        {!socketConnected && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-red-700">Connection Lost</p>
-              <p className="text-xs text-red-600/80">Attempting to reconnect. New pickup requests may be delayed.</p>
-            </div>
-          </div>
-        )}
-
-        {/* ─── Main Grid ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-
-          {/* Left column — 2/3 width */}
-          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-
-            {/* ── Driver Profile Card ─────────────────────────────────── */}
-            <Card>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">Driver Profile</p>
-                  <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-primary">
-                    {profile?.name || user?.name || "Driver"}
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                  <span className="text-xs font-semibold text-green-700">Available</span>
-                </div>
-              </div>
-
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <MiniStat icon="📧" label="Email" value={profile?.email || user?.email || "—"} />
-                <MiniStat icon="📞" label="Phone" value={profile?.phone || user?.phone || "—"} />
-                <MiniStat icon="🏢" label="Organization" value={org?.name || "Unassigned"} />
-              </div>
-            </Card>
-
-            {/* ── Assigned Truck Card ─────────────────────────────────── */}
-            <Card>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">Assigned Truck</p>
-                  <h3 className="mt-2 text-xl sm:text-2xl font-bold text-primary">
-                    {truck ? truck.licensePlate : "No Truck Assigned"}
-                  </h3>
-                </div>
-                {truck && (
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${truck.isAvailable ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-amber-50 border border-amber-200 text-amber-700"}`}>
-                    <span className={`w-2 h-2 rounded-full ${truck.isAvailable ? "bg-emerald-500" : "bg-amber-500"}`} />
-                    {truck.isAvailable ? "Available" : "In Use"}
-                  </div>
-                )}
-              </div>
-
-              {profileLoading ? (
-                <div className="mt-6 flex items-center justify-center py-8">
-                  <div className="w-7 h-7 border-3 border-primary/15 border-t-accent rounded-full animate-spin" />
-                </div>
-              ) : truck ? (
-                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
-                    <p className="text-xs text-primary/55 mb-1.5">Capacity</p>
-                    <p className="text-lg font-bold text-primary">
-                      {truck.capacity?.toLocaleString()}<span className="text-xs font-medium text-primary/60 ml-0.5">kg</span>
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
-                    <p className="text-xs text-primary/55 mb-1.5">Duty Class</p>
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${dutyBadge(truck.dutyType).cls}`}>
-                      {dutyBadge(truck.dutyType).label}
-                    </span>
-                  </div>
-                  <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
-                    <p className="text-xs text-primary/55 mb-1.5">License Plate</p>
-                    <p className="font-bold text-primary tracking-wide">{truck.licensePlate}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-6 rounded-2xl border-2 border-dashed border-primary/15 bg-[#f5f1e8]/50 px-6 py-10 text-center">
-                  <p className="text-3xl mb-2">🚛</p>
-                  <p className="text-sm font-medium text-primary/60">No truck assigned yet</p>
-                  <p className="text-xs text-primary/40 mt-1">Contact your admin to get assigned</p>
-                </div>
-              )}
-            </Card>
-
-            {/* ── Live Status Card ────────────────────────────────────── */}
-            <Card>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">Real-time Requests</p>
-                  <h3 className="mt-2 text-xl font-bold text-primary">
-                    {pendingPickups.length > 0
-                      ? `${pendingPickups.length} pending`
-                      : "No pending requests"}
-                  </h3>
-                </div>
-                <span
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold ${pendingPickups.length > 0
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-primary/8 text-primary/70"
-                    }`}
-                >
-                  {pendingPickups.length > 0 ? "Active" : "Quiet"}
-                </span>
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <InfoTile label="Live requests" value={`${pendingPickups.length}`} />
-                <InfoTile label="Socket" value={socketConnected ? "Connected" : "Disconnected"} highlight={!socketConnected} />
-                <InfoTile label="Status" value="Active" />
-                <InfoTile label="Priority" value="Normal" />
-              </div>
-            </Card>
-          </div>
-
-          {/* Right column — 1/3 width */}
-          <div className="space-y-6 lg:space-y-8">
-
-            {/* ── Actions Card ────────────────────────────────────────── */}
-            <Card>
-              <h3 className="text-lg font-bold text-primary mb-5">Quick Actions</h3>
-              <div className="space-y-3">
-                <Link
-                  to="/accept-task"
-                  className="w-full relative bg-[#213a3d] text-white py-4 px-6 rounded-2xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-md border-2 border-primary/20 flex items-center justify-center gap-2"
-                >
-                  <span>View Requests</span>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  {pendingPickups.length > 0 && (
-                    <span className="absolute -top-2 -right-2 min-w-5 h-5 rounded-full bg-red-500 ring-4 ring-white animate-pulse flex items-center justify-center text-white text-[10px] font-bold px-1">
-                      {pendingPickups.length}
-                    </span>
-                  )}
-                </Link>
-                <Link
-                  to="/driver-ml-assignments"
-                  className="w-full relative bg-blue-600 text-white py-4 px-6 rounded-2xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-md flex items-center justify-center gap-2"
-                >
-                  <span>Scheduling (Daily)</span>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  {driverAssignments.length > 0 && (
-                    <span className="absolute -top-2 -right-2 min-w-5 h-5 rounded-full bg-blue-800 ring-4 ring-white flex items-center justify-center text-white text-[10px] font-bold px-1">
-                      {driverAssignments.length}
-                    </span>
-                  )}
-                </Link>
-              </div>
-            </Card>
-
-            {/* ── System Status Card ──────────────────────────────────── */}
-            <Card>
-              <h3 className="text-lg font-bold text-primary mb-5">System Status</h3>
-              <div className="space-y-3">
-                <StatusRow label="GPS" value="Connected" ok />
-                <StatusRow label="Network" value="Good" ok />
-                <StatusRow label="Socket" value={socketConnected ? "Live" : "Offline"} ok={socketConnected} />
-                <StatusRow label="Shift" value="Active" ok />
-              </div>
-              <button className="mt-6 w-full py-3.5 rounded-2xl bg-accent text-white font-semibold hover:opacity-95 active:scale-[0.99] transition text-sm">
-                Start Shift
-              </button>
-            </Card>
-
-            {/* ── Organization Card ───────────────────────────────────── */}
-            {org && (
-              <Card>
-                <h3 className="text-lg font-bold text-primary mb-5">Organization</h3>
-                <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-5 text-center">
-                  <span className="text-3xl mb-3 block">🏢</span>
-                  <p className="text-lg font-bold text-primary">{org.name}</p>
-                  <p className="text-xs text-primary/50 mt-1 uppercase tracking-wider font-medium">Active Member</p>
-                </div>
-              </Card>
-            )}
-          </div>
-        </div>
+/* -- Action Tile ---------------------------------------------------------- */
+function ActionTile({ to, icon, label, color, iconBg, badge = 0 }) {
+  return (
+    <Link
+      to={to}
+      className={`relative flex flex-col items-center gap-2 py-4 px-2 rounded-2xl bg-white shadow-sm border border-primary/6 hover:shadow-md active:scale-[0.96] transition-all`}
+    >
+      <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center ${color}`}>
+        {icon}
       </div>
-    </div>
+      <span className="text-[11px] font-semibold text-primary/70">{label}</span>
+      {badge > 0 && (
+        <span className="absolute top-2 right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center text-white text-[9px] font-bold px-1">
+          {badge}
+        </span>
+      )}
+    </Link>
   );
 }
 
-/* ── UI helpers ────────────────────────────────────────────────────────────── */
-
-function Card({ children }) {
-  return (
-    <div className="bg-white rounded-3xl border border-primary/12 shadow-sm p-6 sm:p-8">
-      {children}
-    </div>
-  );
+function getWasteStyle(category) {
+  const map = {
+    critical: { bg: "bg-red-50",     icon: "text-red-600",     badge: "bg-red-100 text-red-700" },
+    high:     { bg: "bg-orange-50",   icon: "text-orange-600",  badge: "bg-orange-100 text-orange-700" },
+    medium:   { bg: "bg-amber-50",    icon: "text-amber-600",   badge: "bg-amber-100 text-amber-700" },
+    low:      { bg: "bg-emerald-50",  icon: "text-emerald-600", badge: "bg-emerald-100 text-emerald-700" },
+  };
+  return map[category] || { bg: "bg-gray-50", icon: "text-gray-500", badge: "bg-gray-100 text-gray-600" };
 }
 
-function MiniStat({ icon, label, value }) {
-  return (
-    <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <span className="text-sm">{icon}</span>
-        <p className="text-xs text-primary/55 font-medium">{label}</p>
-      </div>
-      <p className="font-semibold text-primary truncate text-sm">{value}</p>
-    </div>
-  );
-}
-
-function InfoTile({ label, value, highlight = false }) {
-  return (
-    <div className={`rounded-2xl border p-4 ${highlight ? "border-red-200 bg-red-50" : "border-primary/10 bg-white"}`}>
-      <p className="text-xs text-primary/55 mb-1.5">{label}</p>
-      <p className={`font-semibold text-sm ${highlight ? "text-red-600" : "text-primary"}`}>{value}</p>
-    </div>
-  );
-}
-
-function StatusRow({ label, value, ok = true }) {
-  return (
-    <div className="flex items-center justify-between rounded-2xl border border-primary/10 bg-[#f5f1e8] px-4 py-3.5">
-      <span className="text-sm text-primary/65 flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${ok ? "bg-green-500" : "bg-red-500"}`} />
-        {label}
-      </span>
-      <span className={`text-sm font-semibold ${ok ? "text-primary" : "text-red-600"}`}>{value}</span>
-    </div>
-  );
-}
-
-function TruckIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M3 7h11v10H3V7Zm11 4h4l3 3v3h-7v-6Z" stroke="currentColor" strokeWidth="2" className="text-red-400" />
-      <circle cx="7" cy="19" r="2" fill="currentColor" className="text-primary" />
-      <circle cx="18" cy="19" r="2" fill="currentColor" className="text-primary" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20 21a8 8 0 1 0-16 0" stroke="currentColor" strokeWidth="2" className="text-primary" />
-      <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="2" className="text-primary" />
-    </svg>
-  );
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
 }

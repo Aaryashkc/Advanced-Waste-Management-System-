@@ -96,16 +96,16 @@ const MLScheduleHistory = () => {
           )}
         </div>
 
-        {/* District breakdown */}
+        {/* Area breakdown */}
         <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden">
           <div className="px-5 py-3 border-b border-primary/10">
-            <h3 className="font-semibold text-primary">District Breakdown</h3>
+            <h3 className="font-semibold text-primary">Area Breakdown</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left">
-                  <th className="px-5 py-3 text-xs font-semibold text-primary/50 uppercase">District</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-primary/50 uppercase">Area</th>
                   <th className="px-5 py-3 text-xs font-semibold text-primary/50 uppercase">Type</th>
                   <th className="px-5 py-3 text-xs font-semibold text-primary/50 uppercase">Predicted</th>
                   <th className="px-5 py-3 text-xs font-semibold text-primary/50 uppercase">Category</th>
@@ -114,16 +114,16 @@ const MLScheduleHistory = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/5">
-                {currentSchedule.districts?.map((d) => {
+                {currentSchedule.areas?.map((d) => {
                   const catBadge = STATUS_BADGES[d.wasteCategory] ||
                     { bg: "bg-gray-100", text: "text-gray-700" };
                   return (
-                    <tr key={d.district} className={d.action === "skip" ? "opacity-50" : ""}>
+                    <tr key={d.area} className={d.action === "skip" ? "opacity-50" : ""}>
                       <td className="px-5 py-3 font-medium text-primary">
-                        {d.district}
+                        {d.area}
                         {d.isHoliday && <span className="ml-1.5">🎉</span>}
                       </td>
-                      <td className="px-5 py-3 text-primary/60">{d.districtType}</td>
+                      <td className="px-5 py-3 text-primary/60">{d.areaType}</td>
                       <td className="px-5 py-3 font-semibold text-primary">
                         {d.predictedWasteKg?.toLocaleString()} kg
                       </td>
@@ -238,7 +238,7 @@ const MLScheduleHistory = () => {
                         {s.totalPredictedWasteKg?.toLocaleString()} kg
                       </td>
                       <td className="px-5 py-3 text-primary/70">
-                        {s.summary?.dispatched || 0} / {s.summary?.totalDistricts || 10}
+                        {s.summary?.dispatched || 0} / {s.summary?.totalAreas || 10}
                       </td>
                       <td className="px-5 py-3 text-primary/70">
                         {s.summary?.totalTrucksAssigned || 0}

@@ -47,6 +47,7 @@ const Topbar = ({ onMenuToggle }) => {
     socket.on("notification:new", incrementCount);
     socket.on("new_contact_message", incrementCount);
     socket.on("update_unread_count", (count) => setUnreadCount(count));
+    socket.on("notification:counts", () => fetchTotalUnread());
 
     // Periodically sync unread count (every 60 seconds)
     const interval = setInterval(fetchTotalUnread, 60000);
@@ -55,6 +56,7 @@ const Topbar = ({ onMenuToggle }) => {
       socket.off("notification:new", incrementCount);
       socket.off("new_contact_message", incrementCount);
       socket.off("update_unread_count");
+      socket.off("notification:counts");
       clearInterval(interval);
     };
   }, [fetchTotalUnread]);

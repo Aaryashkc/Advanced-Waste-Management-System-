@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import District from "../backend/models/District.model.js";
+import Area from "../backend/models/Area.model.js";
 import Organization from "../backend/models/Organization.model.js";
 
 dotenv.config();
@@ -46,7 +46,7 @@ const ORG_KEYWORD_MAP = {
   ],
 };
 
-const DISTRICTS = [
+const AREAS = [
   // Kathmandu (8 areas)
   { name: "Kathmandu-Core",  type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.7172, longitude: 85.3240 } },
   { name: "Baneshwor",       type: "commercial",  province: "Bagmati", coordinates: { latitude: 27.6915, longitude: 85.3420 } },
@@ -73,7 +73,7 @@ const DISTRICTS = [
 ];
 
 // ─── Main ────────────────────────────────────────────────────────────────────
-async function seedDistricts() {
+async function seedAreas() {
   const MONGO_URI = process.env.MONGO_URL;
 
   if (!MONGO_URI) {
@@ -95,7 +95,7 @@ async function seedDistricts() {
 
     if (orgs.length === 0) {
       console.log(`  ${warn} ${c.yellow}No organizations found in the database.${c.reset}`);
-      console.log(`    Districts will be seeded ${c.bold}without${c.reset} org links.`);
+      console.log(`    Areas will be seeded ${c.bold}without${c.reset} org links.`);
       console.log(`    Create organizations first, then re-run this script to link them.\n`);
     } else {
       console.log(`  Found ${c.bold}${orgs.length}${c.reset} organization(s):\n`);
@@ -104,29 +104,29 @@ async function seedDistricts() {
       }
     }
 
-    // ── Step 3: Auto-map districts to orgs via keyword matching ───────────
+    // ── Step 3: Auto-map areas to orgs via keyword matching ────────────────
     heading("Keyword Matching");
 
-    const districtOrgMap = {};   // districtName -> orgId
-    const districtOrgName = {};  // districtName -> orgName (for display)
+    const areaOrgMap = {};   // areaName -> orgId
+    const areaOrgName = {};  // areaName -> orgName (for display)
     let unmatchedKeywords = [];
 
-    for (const [keyword, districtNames] of Object.entries(ORG_KEYWORD_MAP)) {
+    for (const [keyword, areaNames] of Object.entries(ORG_KEYWORD_MAP)) {
       const matchedOrg = orgs.find((o) =>
         o.name.toLowerCase().includes(keyword)
       );
 
       if (matchedOrg) {
         console.log(`  ${ok} ${c.bold}"${keyword}"${c.reset} ${arrow} matched org ${c.green}${matchedOrg.name}${c.reset}`);
-        console.log(`    ${c.dim}Districts: ${districtNames.join(", ")}${c.reset}`);
-        for (const dn of districtNames) {
-          districtOrgMap[dn] = matchedOrg._id;
-          districtOrgName[dn] = matchedOrg.name;
+        console.log(`    ${c.dim}Areas: ${areaNames.join(", ")}${c.reset}`);
+        for (const an of areaNames) {
+          areaOrgMap[an] = matchedOrg._id;
+          areaOrgName[an] = matchedOrg.name;
         }
       } else {
         unmatchedKeywords.push(keyword);
         console.log(`  ${warn} ${c.yellow}No org matched keyword "${keyword}"${c.reset}`);
-        console.log(`    ${c.dim}Districts ${districtNames.join(", ")} will have no org link.${c.reset}`);
+        console.log(`    ${c.dim}Areas ${areaNames.join(", ")} will have no org link.${c.reset}`);
       }
     }
 
@@ -137,16 +137,16 @@ async function seedDistricts() {
     const typeW = 13;
     const orgW  = 22;
     const header =
-      `  ${"District".padEnd(nameW)} ${"Type".padEnd(typeW)} ${"Organization".padEnd(orgW)}`;
+      `  ${"Area".padEnd(nameW)} ${"Type".padEnd(typeW)} ${"Organization".padEnd(orgW)}`;
     console.log(`${c.bold}${header}${c.reset}`);
     console.log(`  ${"─".repeat(nameW)} ${"─".repeat(typeW)} ${"─".repeat(orgW)}`);
 
     let linkedCount = 0;
     let unlinkedCount = 0;
 
-    const districtsToInsert = DISTRICTS.map((d) => {
-      const orgId = districtOrgMap[d.name] || null;
-      const orgLabel = districtOrgName[d.name] || null;
+    const areasToInsert = AREAS.map((d) => {
+      const orgId = areaOrgMap[d.name] || null;
+      const orgLabel = areaOrgName[d.name] || null;
 
       if (orgId) linkedCount++;
       else unlinkedCount++;
@@ -164,7 +164,7 @@ async function seedDistricts() {
     });
 
     console.log();
-    console.log(`  ${c.bold}Total:${c.reset} ${DISTRICTS.length} districts`);
+    console.log(`  ${c.bold}Total:${c.reset} ${AREAS.length} areas`);
     console.log(`    ${ok} ${linkedCount} linked to an organization`);
     if (unlinkedCount > 0) {
       console.log(`    ${warn} ${c.yellow}${unlinkedCount} without an organization${c.reset}`);
@@ -173,28 +173,28 @@ async function seedDistricts() {
     // ── Step 5: Clear existing and insert ────────────────────────────────
     heading("Inserting");
 
-    const existingCount = await District.countDocuments();
+    const existingCount = await Area.countDocuments();
     if (existingCount > 0) {
-      console.log(`  ${bullet} Removing ${existingCount} existing district(s)...`);
-      await District.deleteMany({});
+      console.log(`  ${bullet} Removing ${existingCount} existing area(s)...`);
+      await Area.deleteMany({});
       console.log(`  ${ok} Cleared.`);
     }
 
-    const inserted = await District.insertMany(districtsToInsert);
-    console.log(`  ${ok} Inserted ${c.bold}${inserted.length}${c.reset} districts.`);
+    const inserted = await Area.insertMany(areasToInsert);
+    console.log(`  ${ok} Inserted ${c.bold}${inserted.length}${c.reset} areas.`);
 
     // ── Step 6: Final report ─────────────────────────────────────────────
     heading("Done");
 
     if (unlinkedCount > 0 && unmatchedKeywords.length > 0) {
       console.log(
-        `  ${warn} ${c.yellow}Some districts are unlinked because no org matched: ${unmatchedKeywords.join(", ")}${c.reset}`
+        `  ${warn} ${c.yellow}Some areas are unlinked because no org matched: ${unmatchedKeywords.join(", ")}${c.reset}`
       );
       console.log(
         `    Create the missing organization(s) and re-run this script.`
       );
     } else if (unlinkedCount === 0) {
-      console.log(`  ${ok} ${c.green}All districts are linked to an organization.${c.reset}`);
+      console.log(`  ${ok} ${c.green}All areas are linked to an organization.${c.reset}`);
     }
 
     console.log(`\n  ${c.green}${c.bold}Seeding complete.${c.reset}\n`);
@@ -202,7 +202,7 @@ async function seedDistricts() {
   } catch (error) {
     console.error(`\n  ${fail} ${c.red}Seeding failed:${c.reset}`, error.message);
     if (error.code === 11000) {
-      console.error(`    ${c.dim}Hint: A district with a duplicate name may already exist.${c.reset}`);
+      console.error(`    ${c.dim}Hint: An area with a duplicate name may already exist.${c.reset}`);
     }
     process.exit(1);
   } finally {
@@ -210,4 +210,4 @@ async function seedDistricts() {
   }
 }
 
-seedDistricts();
+seedAreas();

@@ -1,5 +1,6 @@
 import Driver from "../models/Driver.model.js";
 import Truck from "../models/Truck.model.js";
+import Area from "../models/Area.model.js";
 
 // ── Configuration ──────────────────────────────────────────────────────────────
 const WEIGHTS = {
@@ -11,6 +12,13 @@ const WEIGHTS = {
 const MAX_RADIUS_KM = 30;       // drivers further than this get proximityScore = 0
 const MIN_SCORE_THRESHOLD = 0.3; // drivers below this are excluded
 const MAX_MATCHED_DRIVERS = 5;   // send to at most N best drivers
+
+// Minimum truck capacity (kg) required for each waste level
+const MIN_CAPACITY = {
+    easy: 0,
+    medium: 1000,
+    hard: 3500,
+};
 
 // ── Haversine distance (km) ────────────────────────────────────────────────────
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -70,15 +78,28 @@ function levelScore(wasteLevel, dutyType) {
 /**
  * Find the best-matching available drivers for a pickup request.
  *
- * @param {Object} pickup - { latitude, longitude, category, level, orgId? }
+ * Filters:
+ *  1. Area → Org: only drivers whose truck belongs to the area's organization
+ *  2. Capacity: truck must meet minimum capacity for the waste level
+ *  3. Category: truck type must be compatible with waste category
+ *
+ * @param {Object} pickup - { latitude, longitude, category, level, orgId?, area? }
  * @returns {Promise<Array<{ userId: string, score: number }>>}
  */
 export async function findBestDrivers(pickup) {
-    const { latitude, longitude, category, level, orgId } = pickup;
+    const { latitude, longitude, category, level, orgId, area } = pickup;
 
-    // 1. Fetch available drivers (optionally scoped by org)
-    const driverFilter = { isAvailable: true };
-    const drivers = await Driver.find(driverFilter).populate(
+    // 1. Resolve the target organization from the area
+    let targetOrgId = orgId || null;
+    if (area) {
+        const areaDoc = await Area.findOne({ name: area, isActive: true }).lean();
+        if (areaDoc?.orgId) {
+            targetOrgId = areaDoc.orgId.toString();
+        }
+    }
+
+    // 2. Fetch available drivers with their truck details
+    const drivers = await Driver.find({ isAvailable: true }).populate(
         "assignedTruckId",
         "truckType capacity dutyType orgId"
     );
@@ -88,9 +109,23 @@ export async function findBestDrivers(pickup) {
         return [];
     }
 
-    // 2. Score each driver
+    // 3. Filter and score each driver
+    const minCap = MIN_CAPACITY[level] ?? 0;
+
     const scored = drivers
-        .filter((d) => d.assignedTruckId) // must have a truck
+        .filter((d) => {
+            if (!d.assignedTruckId) return false; // must have a truck
+
+            const truck = d.assignedTruckId;
+
+            // Area→Org filter: only allow trucks from the target organization
+            if (targetOrgId && truck.orgId?.toString() !== targetOrgId) return false;
+
+            // Capacity hard filter: truck must handle the load
+            if (truck.capacity < minCap) return false;
+
+            return true;
+        })
         .map((d) => {
             const truck = d.assignedTruckId;
 
@@ -103,9 +138,7 @@ export async function findBestDrivers(pickup) {
             const cScore = categoryScore(category, truck.truckType);
             const lScore = levelScore(level, truck.dutyType);
 
-            // If the category score is strictly 0 (e.g., recyclable waste to NON_BIO truck,
-            // or non-recyclable waste to BIO truck), the truck is fundamentally incompatible.
-            // We set total score to 0 so it's filtered out entirely by MIN_SCORE_THRESHOLD.
+            // If the category score is strictly 0, the truck is fundamentally incompatible.
             let total = 0;
             if (cScore > 0) {
                 total =
@@ -122,14 +155,14 @@ export async function findBestDrivers(pickup) {
             };
         });
 
-    // 3. Filter by threshold, sort descending, cap at MAX
+    // 4. Filter by threshold, sort descending, cap at MAX
     const matched = scored
         .filter((s) => s.score >= MIN_SCORE_THRESHOLD)
         .sort((a, b) => b.score - a.score)
         .slice(0, MAX_MATCHED_DRIVERS);
 
     console.log(
-        `[DriverMatcher] ${scored.length} drivers scored → ${matched.length} matched (threshold=${MIN_SCORE_THRESHOLD})`
+        `[DriverMatcher] ${scored.length} eligible drivers scored → ${matched.length} matched (threshold=${MIN_SCORE_THRESHOLD}, targetOrg=${targetOrgId || "any"})`
     );
     matched.forEach((m) =>
         console.log(

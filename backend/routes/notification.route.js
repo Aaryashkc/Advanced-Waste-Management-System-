@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 
 router.use(authMiddleware);
-router.use(roleMiddleware("admin", "super_admin"));
+router.use(roleMiddleware("admin", "super_admin", "driver"));
 
 router.get("/unread-count", getUnreadCount);
 router.get("/", getNotifications);

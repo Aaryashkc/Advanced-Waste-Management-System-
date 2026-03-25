@@ -1,12 +1,12 @@
-import District from "../models/District.model.js";
+import Area from "../models/Area.model.js";
 import Organization from "../models/Organization.model.js";
 
 /**
- * Get all districts
- * GET /api/districts
- * Super admin: all districts. Admin: only districts matching their orgId.
+ * Get all areas
+ * GET /api/areas
+ * Super admin: all areas. Admin: only areas matching their orgId.
  */
-export const getDistricts = async (req, res) => {
+export const getAreas = async (req, res) => {
   try {
     const filter = { isActive: true };
 
@@ -20,66 +20,66 @@ export const getDistricts = async (req, res) => {
       filter.orgId = req.query.orgId;
     }
 
-    const districts = await District.find(filter)
+    const areas = await Area.find(filter)
       .populate("orgId", "name")
       .sort({ name: 1 })
       .lean();
 
     res.status(200).json({
       success: true,
-      data: districts,
-      count: districts.length,
+      data: areas,
+      count: areas.length,
     });
   } catch (error) {
-    console.error("Get districts error:", error);
+    console.error("Get areas error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch districts",
+      message: "Failed to fetch areas",
       error: error.message,
     });
   }
 };
 
 /**
- * Get single district by ID
- * GET /api/districts/:id
+ * Get single area by ID
+ * GET /api/areas/:id
  */
-export const getDistrictById = async (req, res) => {
+export const getAreaById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const district = await District.findById(id)
+    const area = await Area.findById(id)
       .populate("orgId", "name");
 
-    if (!district) {
+    if (!area) {
       return res.status(404).json({
         success: false,
-        message: "District not found",
+        message: "Area not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: district,
+      data: area,
     });
   } catch (error) {
-    console.error("Get district by ID error:", error);
+    console.error("Get area by ID error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch district",
+      message: "Failed to fetch area",
       error: error.message,
     });
   }
 };
 
 /**
- * Create district (super_admin only)
- * POST /api/districts
+ * Create area (super_admin only)
+ * POST /api/areas
  * Body: { name, type, coordinates, orgId }
  */
-export const createDistrict = async (req, res) => {
+export const createArea = async (req, res) => {
   try {
-    const { name, type, province, coordinates, orgId } = req.body;
+    const { name, type, province, coordinates, orgId, address } = req.body;
 
     if (!name || !type || !province) {
       return res.status(400).json({
@@ -99,101 +99,102 @@ export const createDistrict = async (req, res) => {
       }
     }
 
-    const district = new District({
+    const area = new Area({
       name,
       type,
       province,
       coordinates: coordinates || {},
+      address: address || "",
       orgId: orgId || null,
     });
 
-    await district.save();
+    await area.save();
 
-    const populatedDistrict = await District.findById(district._id)
+    const populatedArea = await Area.findById(area._id)
       .populate("orgId", "name");
 
     res.status(201).json({
       success: true,
-      message: "District created successfully",
-      data: populatedDistrict,
+      message: "Area created successfully",
+      data: populatedArea,
     });
   } catch (error) {
-    console.error("Create district error:", error);
+    console.error("Create area error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to create district",
+      message: "Failed to create area",
       error: error.message,
     });
   }
 };
 
 /**
- * Update district (super_admin only)
- * PUT /api/districts/:id
+ * Update area (super_admin only)
+ * PUT /api/areas/:id
  */
-export const updateDistrict = async (req, res) => {
+export const updateArea = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    const district = await District.findByIdAndUpdate(
+    const area = await Area.findByIdAndUpdate(
       id,
       { ...updates, updatedAt: Date.now() },
       { new: true, runValidators: true }
     ).populate("orgId", "name");
 
-    if (!district) {
+    if (!area) {
       return res.status(404).json({
         success: false,
-        message: "District not found",
+        message: "Area not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "District updated successfully",
-      data: district,
+      message: "Area updated successfully",
+      data: area,
     });
   } catch (error) {
-    console.error("Update district error:", error);
+    console.error("Update area error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update district",
+      message: "Failed to update area",
       error: error.message,
     });
   }
 };
 
 /**
- * Soft delete district (set isActive: false) (super_admin only)
- * DELETE /api/districts/:id
+ * Soft delete area (set isActive: false) (super_admin only)
+ * DELETE /api/areas/:id
  */
-export const deleteDistrict = async (req, res) => {
+export const deleteArea = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const district = await District.findByIdAndUpdate(
+    const area = await Area.findByIdAndUpdate(
       id,
       { isActive: false, updatedAt: Date.now() },
       { new: true }
     );
 
-    if (!district) {
+    if (!area) {
       return res.status(404).json({
         success: false,
-        message: "District not found",
+        message: "Area not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "District deleted successfully",
+      message: "Area deleted successfully",
     });
   } catch (error) {
-    console.error("Delete district error:", error);
+    console.error("Delete area error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to delete district",
+      message: "Failed to delete area",
       error: error.message,
     });
   }

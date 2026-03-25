@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const districtSchema = new mongoose.Schema({
+const areaSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
@@ -29,6 +29,10 @@ const districtSchema = new mongoose.Schema({
     latitude: { type: Number },
     longitude: { type: Number }
   },
+  address: {
+    type: String,
+    default: ""
+  },
   orgId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Organization",
@@ -48,16 +52,16 @@ const districtSchema = new mongoose.Schema({
   }
 });
 
-districtSchema.pre("save", function (next) {
+areaSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
   next();
 });
 
-districtSchema.index({ name: 1 });
-districtSchema.index({ type: 1 });
-districtSchema.index({ orgId: 1 });
-districtSchema.index({ province: 1 });
+areaSchema.index({ name: 1 });
+areaSchema.index({ type: 1 });
+areaSchema.index({ orgId: 1 });
+areaSchema.index({ province: 1 });
 
-const District = mongoose.model("District", districtSchema);
+const Area = mongoose.model("Area", areaSchema);
 
-export default District;
+export default Area;

@@ -83,7 +83,7 @@ export const getPickupHistory = async (req, res) => {
       organization: p.orgId?.name || "N/A",
       location: p.location,
       province: p.province,
-      district: p.district,
+      area: p.area,
       category: p.category,
       level: p.level,
       status: p.status,

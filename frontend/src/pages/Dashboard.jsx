@@ -46,27 +46,27 @@ const Dashboard = () => {
     });
   }, [schedules, todayStr]);
 
-  // Use correct backend field names: districts[], predictedWasteKg, totalPredictedWasteKg
-  const top5Districts = useMemo(() => {
-    if (!todaySchedule?.districts) return [];
-    return [...todaySchedule.districts]
+  // Use correct backend field names: areas[], predictedWasteKg, totalPredictedWasteKg
+  const top5Areas = useMemo(() => {
+    if (!todaySchedule?.areas) return [];
+    return [...todaySchedule.areas]
       .sort((a, b) => (b.predictedWasteKg || 0) - (a.predictedWasteKg || 0))
       .slice(0, 5);
   }, [todaySchedule]);
 
   const top5ChartData = useMemo(
     () => ({
-      labels: top5Districts.map((d) => d.district || "Unknown"),
+      labels: top5Areas.map((d) => d.area || "Unknown"),
       datasets: [
         {
           label: "Predicted Waste (kg)",
-          data: top5Districts.map((d) => d.predictedWasteKg || 0),
+          data: top5Areas.map((d) => d.predictedWasteKg || 0),
           backgroundColor: "#354f52",
           borderRadius: 6,
         },
       ],
     }),
-    [top5Districts]
+    [top5Areas]
   );
 
   const top5ChartOptions = {
@@ -141,7 +141,7 @@ const Dashboard = () => {
   // ML Insights derived from today's schedule (using correct backend field names)
   const mlInsights = useMemo(() => {
     if (!todaySchedule) return null;
-    const ds = todaySchedule.districts || [];
+    const ds = todaySchedule.areas || [];
     const dispatched = ds.filter((d) => d.action === "dispatch");
     const skipped = ds.filter((d) => d.action === "skip");
     const reduced = ds.filter((d) => d.action === "reduced");
@@ -149,12 +149,12 @@ const Dashboard = () => {
     const highWaste = ds.filter((d) => (d.predictedWasteKg || 0) > 500);
 
     return {
-      totalDistricts: ds.length,
+      totalAreas: ds.length,
       dispatched: dispatched.length,
       skipped: skipped.length,
       reduced: reduced.length,
       totalWaste,
-      highWasteDistricts: highWaste.length,
+      highWasteAreas: highWaste.length,
       coverageRate: ds.length > 0 ? ((dispatched.length / ds.length) * 100).toFixed(0) : 0,
       avgWaste: ds.length > 0 ? Math.round(totalWaste / ds.length) : 0,
     };
@@ -229,10 +229,10 @@ const Dashboard = () => {
               </div>
               <div className="rounded-xl bg-amber-50/60 border border-amber-200/40 px-3.5 py-3 text-center">
                 <p className="text-lg font-bold text-amber-700">{mlInsights.avgWaste}</p>
-                <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Avg kg/District</p>
+                <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Avg kg/Area</p>
               </div>
               <div className="rounded-xl bg-red-50/60 border border-red-200/40 px-3.5 py-3 text-center">
-                <p className="text-lg font-bold text-red-600">{mlInsights.highWasteDistricts}</p>
+                <p className="text-lg font-bold text-red-600">{mlInsights.highWasteAreas}</p>
                 <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">High Waste Areas</p>
               </div>
             </div>
@@ -273,25 +273,25 @@ const Dashboard = () => {
                       Low coverage
                     </span>
                   )}
-                  {mlInsights.highWasteDistricts > 0 && (
+                  {mlInsights.highWasteAreas > 0 && (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 border border-violet-200/60 text-xs font-medium text-violet-700">
                       <BrainCircuit className="w-3.5 h-3.5" />
-                      {mlInsights.highWasteDistricts} high-waste
+                      {mlInsights.highWasteAreas} high-waste
                     </span>
                   )}
                 </div>
               </div>
-              {/* Top 5 districts chart */}
+              {/* Top 5 areas chart */}
               <div>
                 <p className="text-xs font-medium text-primary/50 uppercase tracking-wide mb-2">
-                  Top 5 Districts by Predicted Waste
+                  Top 5 Areas by Predicted Waste
                 </p>
                 <div className="h-36">
-                  {top5Districts.length > 0 ? (
+                  {top5Areas.length > 0 ? (
                     <Bar data={top5ChartData} options={top5ChartOptions} />
                   ) : (
                     <p className="text-sm text-primary/40 text-center py-6">
-                      No district data
+                      No area data
                     </p>
                   )}
                 </div>
