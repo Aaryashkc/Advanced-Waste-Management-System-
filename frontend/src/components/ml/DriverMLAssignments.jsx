@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Weight, Truck, Calendar, RefreshCw,
-  CheckCircle, Clock, AlertTriangle, Loader2, Route,
+  CheckCircle, Clock, AlertTriangle, Loader2, Route, CheckCheck,
 } from "lucide-react";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 
@@ -15,17 +15,29 @@ const WASTE_COLORS = {
 };
 
 const STATUS_CONFIG = {
-  confirmed: { bg: "bg-emerald-500", text: "text-white", Icon: CheckCircle, label: "Confirmed" },
-  draft:     { bg: "bg-amber-500",   text: "text-white", Icon: Clock,       label: "Draft" },
-  pending:   { bg: "bg-blue-500",    text: "text-white", Icon: Clock,       label: "Pending" },
+  confirmed:  { bg: "bg-emerald-500", text: "text-white", Icon: CheckCircle, label: "Confirmed" },
+  completed:  { bg: "bg-blue-500",    text: "text-white", Icon: CheckCheck,  label: "Completed" },
+  draft:      { bg: "bg-amber-500",   text: "text-white", Icon: Clock,       label: "Draft" },
+  pending:    { bg: "bg-blue-500",    text: "text-white", Icon: Clock,       label: "Pending" },
 };
 
 const DriverMLAssignments = () => {
   const navigate = useNavigate();
-  const { driverScheduleData, loading, error, fetchDriverAssignments } = useMLScheduleStore();
+  const { driverScheduleData, loading, error, fetchDriverAssignments, completeAssignment } = useMLScheduleStore();
   const [activeDay, setActiveDay] = useState("today");
+  const [completing, setCompleting] = useState(null); // area name being completed
+  const [confirmArea, setConfirmArea] = useState(null); // area to confirm completion
+  const [toast, setToast] = useState(null);
 
   useEffect(() => { fetchDriverAssignments(); }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const todayData = driverScheduleData?.today;
   const tomorrowData = driverScheduleData?.tomorrow;
@@ -42,11 +54,23 @@ const DriverMLAssignments = () => {
 
   const statusCfg = STATUS_CONFIG[currentData?.status] || STATUS_CONFIG.pending;
 
+  const handleComplete = async (area) => {
+    setConfirmArea(null);
+    setCompleting(area);
+    const result = await completeAssignment(currentData.scheduleId, area);
+    setCompleting(null);
+    if (result) {
+      setToast({ type: "success", message: result.message || `${area} marked as completed!` });
+    } else {
+      setToast({ type: "error", message: "Failed to mark as completed" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f5f3ee] pb-24">
       <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#354f52] to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
+      <div className="bg-linear-to-br from-primary to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
         <button onClick={() => navigate("/driver-dashboard")} className="flex items-center gap-2 text-white/70 hover:text-white mb-4 transition">
           <ArrowLeft size={18} /> Back
         </button>
@@ -77,7 +101,7 @@ const DriverMLAssignments = () => {
               onClick={() => setActiveDay(d.key)}
               className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
                 activeDay === d.key
-                  ? "bg-[#354f52] text-white shadow-md"
+                  ? "bg-primary text-white shadow-md"
                   : "text-primary/50 hover:text-primary/70 hover:bg-primary/5"
               }`}
             >
@@ -103,7 +127,7 @@ const DriverMLAssignments = () => {
         )}
 
         {/* Loading */}
-        {loading && (
+        {loading && !completing && (
           <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-sm">
             <Loader2 size={28} className="animate-spin text-primary/40" />
             <p className="text-sm text-primary/50 mt-3">Loading schedule...</p>
@@ -138,20 +162,42 @@ const DriverMLAssignments = () => {
           <div className="space-y-3">
             {assignments.map((a, idx) => {
               const waste = WASTE_COLORS[a.wasteCategory] || WASTE_COLORS.none;
+              const isCompleted = a.completionStatus === "completed";
+              const isCompleting = completing === a.area;
+              const isConfirmedSchedule = currentData?.status === "confirmed" || currentData?.status === "completed";
+
               return (
                 <div
                   key={idx}
-                  className="bg-white rounded-2xl shadow-sm border border-primary/8 overflow-hidden"
+                  className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${
+                    isCompleted ? "border-emerald-300 bg-emerald-50/30" : "border-primary/8"
+                  }`}
                 >
+                  {/* Completed Banner */}
+                  {isCompleted && (
+                    <div className="bg-emerald-500 px-5 py-2 flex items-center gap-2 text-white">
+                      <CheckCheck size={14} />
+                      <span className="text-xs font-bold uppercase tracking-wider">Completed</span>
+                      {a.completedAt && (
+                        <span className="text-xs text-white/70 ml-auto">
+                          {new Date(a.completedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Card Header */}
                   <div className="p-5 pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl ${waste.bg} flex items-center justify-center shrink-0`}>
-                          <MapPin size={18} className={waste.text} />
+                        <div className={`w-10 h-10 rounded-xl ${isCompleted ? "bg-emerald-100" : waste.bg} flex items-center justify-center shrink-0`}>
+                          {isCompleted
+                            ? <CheckCircle size={18} className="text-emerald-600" />
+                            : <MapPin size={18} className={waste.text} />
+                          }
                         </div>
                         <div>
-                          <h3 className="text-base font-bold text-primary">{a.area}</h3>
+                          <h3 className={`text-base font-bold ${isCompleted ? "text-emerald-800" : "text-primary"}`}>{a.area}</h3>
                           <p className="text-xs text-primary/40 capitalize">
                             {a.areaType} area{a.orgName ? ` -- ${a.orgName}` : ""}
                           </p>
@@ -205,18 +251,49 @@ const DriverMLAssignments = () => {
                     </div>
                   )}
 
-                  {/* Status Footer */}
-                  <div className={`px-5 py-3 text-xs font-semibold flex items-center gap-2 ${
-                    a.action === "dispatch"
-                      ? "bg-emerald-50 text-emerald-700 border-t border-emerald-100"
-                      : a.action === "reduced"
-                      ? "bg-amber-50 text-amber-700 border-t border-amber-100"
-                      : "bg-gray-50 text-gray-500 border-t border-gray-100"
-                  }`}>
-                    {a.action === "dispatch" ? <><Route size={12} /> Dispatched - You are assigned</> :
-                     a.action === "reduced" ? <><AlertTriangle size={12} /> Reduced coverage</> :
-                     <><Clock size={12} /> Pending assignment</>}
-                  </div>
+                  {/* Action Footer */}
+                  {isCompleted ? (
+                    <div className="px-5 py-3 bg-emerald-50 border-t border-emerald-200 text-xs font-semibold text-emerald-700 flex items-center gap-2">
+                      <CheckCheck size={12} /> Collection completed
+                    </div>
+                  ) : (
+                    <div className={`border-t ${
+                      a.action === "dispatch"
+                        ? "border-emerald-100"
+                        : a.action === "reduced"
+                        ? "border-amber-100"
+                        : "border-gray-100"
+                    }`}>
+                      <div className={`px-5 py-3 text-xs font-semibold flex items-center gap-2 ${
+                        a.action === "dispatch"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : a.action === "reduced"
+                          ? "bg-amber-50 text-amber-700"
+                          : "bg-gray-50 text-gray-500"
+                      }`}>
+                        {a.action === "dispatch" ? <><Route size={12} /> Dispatched - You are assigned</> :
+                         a.action === "reduced" ? <><AlertTriangle size={12} /> Reduced coverage</> :
+                         <><Clock size={12} /> Pending assignment</>}
+                      </div>
+
+                      {/* Mark Complete Button — only for confirmed schedules */}
+                      {isConfirmedSchedule && (a.action === "dispatch" || a.action === "reduced") && (
+                        <div className="px-5 py-3 bg-white">
+                          <button
+                            onClick={() => setConfirmArea(a.area)}
+                            disabled={isCompleting}
+                            className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#2d4a4e] active:scale-[0.98] transition-all disabled:opacity-50"
+                          >
+                            {isCompleting ? (
+                              <><Loader2 size={16} className="animate-spin" /> Marking...</>
+                            ) : (
+                              <><CheckCircle size={16} /> Mark as Completed</>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -245,6 +322,55 @@ const DriverMLAssignments = () => {
         )}
       </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmArea && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-6">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in slide-in-from-bottom-4">
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle size={28} className="text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-bold text-primary mb-2">Confirm Completion</h3>
+              <p className="text-sm text-primary/60">
+                Mark <span className="font-semibold text-primary">{confirmArea}</span> collection as completed?
+              </p>
+            </div>
+            <div className="flex gap-3 p-4 pt-0">
+              <button
+                onClick={() => setConfirmArea(null)}
+                className="flex-1 py-3 rounded-xl border border-primary/15 text-sm font-semibold text-primary/60 hover:bg-primary/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleComplete(confirmArea)}
+                className="flex-1 py-3 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition"
+              >
+                Yes, Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-sm w-full px-4`}>
+          <div className={`rounded-2xl shadow-lg px-5 py-4 flex items-center gap-3 ${
+            toast.type === "success"
+              ? "bg-emerald-500 text-white"
+              : "bg-red-500 text-white"
+          }`}>
+            {toast.type === "success"
+              ? <CheckCheck size={20} />
+              : <AlertTriangle size={20} />
+            }
+            <p className="text-sm font-medium flex-1">{toast.message}</p>
+            <button onClick={() => setToast(null)} className="text-white/70 hover:text-white text-lg leading-none">&times;</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

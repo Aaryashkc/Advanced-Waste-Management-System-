@@ -1206,6 +1206,8 @@ export const getDriverMLAssignments = async (req, res) => {
               holidayName: areaEntry.holidayName,
               recommendation: areaEntry.recommendation,
               orgName: areaEntry.orgName || null,
+              completionStatus: truck.completionStatus || "pending",
+              completedAt: truck.completedAt || null,
               truck: {
                 truckId: truck.truckId,
                 licensePlate: truck.licensePlate,

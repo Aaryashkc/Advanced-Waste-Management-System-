@@ -44,6 +44,7 @@ import PickupStatusToast from "../components/users/PickupStatusToast";
 import DriverStatusToast from "../components/Driver/DriverStatusToast";
 import DriverNavbar from "../components/Driver/DriverNavbar";
 import DriverNotifications from "../components/Driver/DriverNotifications";
+import ScheduleToast from "../components/ml/ScheduleToast";
 import useAuthStore from "../stores/useAuthStore";
 
 const AdminRedirect = () => {
@@ -251,6 +252,9 @@ const AppRoutes = () => {
       {/* Persistent driver navbar + status toast */}
       {isAuthenticated && user?.role === "driver" && <DriverNavbar />}
       {isAuthenticated && user?.role === "driver" && <DriverStatusToast />}
+
+      {/* Schedule toast — works for drivers, admins, and super_admins */}
+      {isAuthenticated && <ScheduleToast />}
     </>
   );
 };

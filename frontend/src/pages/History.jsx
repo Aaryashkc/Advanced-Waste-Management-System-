@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/useAuthStore";
+import useMLScheduleStore from "../stores/useMLScheduleStore";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -39,6 +40,7 @@ const LEVEL_COLORS = {
 
 const TABS = [
   { id: "pickups", label: "Pickup History" },
+  { id: "completions", label: "Schedule Completions" },
   { id: "customers", label: "Customer Stats" },
   { id: "drivers", label: "Driver Stats" },
 ];
@@ -78,6 +80,9 @@ const History = () => {
   // Driver history state
   const [drivers, setDrivers] = useState([]);
   const [driverTotals, setDriverTotals] = useState({});
+
+  // ML Schedule completions
+  const { completions, fetchCompletions, loading: mlLoading } = useMLScheduleStore();
 
   // Search
   const [searchTerm, setSearchTerm] = useState("");
@@ -146,6 +151,12 @@ const History = () => {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  }, [activeTab]);
+
+  // Fetch ML schedule completions
+  useEffect(() => {
+    if (activeTab !== "completions") return;
+    fetchCompletions();
   }, [activeTab]);
 
   // Fetch audit trail for a pickup
@@ -807,6 +818,102 @@ const History = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══════ SCHEDULE COMPLETIONS TAB ═══════ */}
+      {activeTab === "completions" && (
+        <>
+          {/* Summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-emerald-50 rounded-2xl border border-primary/10 p-5 text-center">
+              <p className="text-3xl font-bold text-emerald-600">{completions.length}</p>
+              <p className="text-xs text-primary/50 font-medium mt-1">Total Completions</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-primary/10 p-5 text-center">
+              <p className="text-3xl font-bold text-primary">
+                {[...new Set(completions.map(c => c.area))].length}
+              </p>
+              <p className="text-xs text-primary/50 font-medium mt-1">Unique Areas</p>
+            </div>
+            <div className="bg-blue-50 rounded-2xl border border-primary/10 p-5 text-center">
+              <p className="text-3xl font-bold text-blue-600">
+                {[...new Set(completions.map(c => c.date))].length}
+              </p>
+              <p className="text-xs text-primary/50 font-medium mt-1">Days with Completions</p>
+            </div>
+            <div className="bg-purple-50 rounded-2xl border border-primary/10 p-5 text-center">
+              <p className="text-3xl font-bold text-purple-600">
+                {completions.reduce((sum, c) => sum + (c.predictedWasteKg || 0), 0).toLocaleString()}
+              </p>
+              <p className="text-xs text-primary/50 font-medium mt-1">Total Waste (kg)</p>
+            </div>
+          </div>
+
+          {/* Loading */}
+          {mlLoading && (
+            <div className="flex items-center justify-center py-16 bg-white rounded-2xl">
+              <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!mlLoading && completions.length === 0 && (
+            <div className="text-center py-16 bg-white rounded-2xl border border-primary/10">
+              <p className="text-lg font-semibold text-primary/70 mb-1">No completions yet</p>
+              <p className="text-sm text-primary/40">Completed schedule assignments will appear here.</p>
+            </div>
+          )}
+
+          {/* Completions Table */}
+          {!mlLoading && completions.length > 0 && (
+            <div className="bg-white rounded-2xl border border-primary/10 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-primary/8 bg-primary/3">
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Date</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Area</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Type</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Waste</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Category</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Driver</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Truck</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Completed At</th>
+                      {isSuperAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-primary/50 uppercase">Org</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {completions.map((c, i) => (
+                      <tr key={i} className="border-b border-primary/5 hover:bg-primary/2 transition-colors">
+                        <td className="px-5 py-3 text-sm text-primary/60">{c.date}</td>
+                        <td className="px-5 py-3 font-semibold text-primary text-sm">{c.area}</td>
+                        <td className="px-5 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            { commercial: "bg-blue-100 text-blue-700", residential: "bg-purple-100 text-purple-700", suburban: "bg-teal-100 text-teal-700", rural: "bg-emerald-100 text-emerald-700" }[c.areaType] || "bg-gray-100 text-gray-700"
+                          }`}>{c.areaType}</span>
+                        </td>
+                        <td className="px-5 py-3 text-sm font-medium text-primary">{c.predictedWasteKg?.toLocaleString()} kg</td>
+                        <td className="px-5 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                            { none: "bg-gray-100 text-gray-600", low: "bg-green-100 text-green-700", medium: "bg-amber-100 text-amber-700", high: "bg-orange-100 text-orange-700", critical: "bg-red-100 text-red-700" }[c.wasteCategory] || "bg-gray-100 text-gray-600"
+                          }`}>{c.wasteCategory}</span>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-primary/70">{c.driverName}</td>
+                        <td className="px-5 py-3 text-sm text-primary/70">{c.truck?.licensePlate}</td>
+                        <td className="px-5 py-3 text-xs text-primary/50">
+                          {c.completedAt ? new Date(c.completedAt).toLocaleString("en-US", {
+                            month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+                          }) : "--"}
+                        </td>
+                        {isSuperAdmin && <td className="px-5 py-3 text-xs text-primary/50">{c.orgName || "--"}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
