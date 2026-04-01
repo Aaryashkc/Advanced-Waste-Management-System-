@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, CalendarDays, Recycle } from 'lucide-react';
 import { authAPI } from '../../utils/api';
 import useAuthStore from '../../stores/useAuthStore';
 import { getDashboardRoute } from '../../utils/roleRouting';
@@ -66,21 +67,11 @@ function CustomerLoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center px-4 py-10">
-      {/* Greenery background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80')`,
-        }}
-      />
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/60" />
-
+    <div className="min-h-screen relative flex items-center justify-center px-4 py-10 bg-white">
       {/* Split card */}
-      <div className="relative z-10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[480px]">
+      <div className="relative z-10 w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[540px] border border-gray-100">
         {/* Left — Welcome panel */}
-        <div className="relative md:w-1/2 flex flex-col justify-center px-10 py-12 md:py-16 overflow-hidden">
+        <div className="relative md:w-1/2 flex flex-col justify-center px-12 py-14 md:py-20 overflow-hidden">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
@@ -89,29 +80,27 @@ function CustomerLoginPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-br from-[#354f52]/90 to-[#2f3e46]/85" />
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <Recycle className="w-6 h-6 text-white" />
               </div>
-              <span className="font-['Outfit',sans-serif] font-bold text-xl text-white tracking-tight">SafaBin</span>
+              <span className="font-bold text-2xl text-white tracking-tight">SafaBin</span>
             </div>
-            <h1 className="font-['Outfit',sans-serif] font-bold text-3xl md:text-4xl text-white leading-tight mb-4">
+            <h1 className="font-bold text-4xl md:text-5xl text-white leading-tight mb-5">
               Welcome back
             </h1>
-            <p className="font-['Poppins',sans-serif] text-white/70 text-sm md:text-base leading-relaxed mb-8">
+            <p className="text-white/70 text-base md:text-lg leading-relaxed mb-10">
               Sign in to manage your waste pickups, track schedules, and keep your community clean.
             </p>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[
-                { icon: '📍', text: 'Real-time pickup tracking' },
-                { icon: '📅', text: 'Smart scheduling' },
-                { icon: '♻️', text: 'Eco-friendly waste management' },
+                { icon: <MapPin className="w-5 h-5 text-white/90" />, text: 'Real-time pickup tracking' },
+                { icon: <CalendarDays className="w-5 h-5 text-white/90" />, text: 'Smart scheduling' },
+                { icon: <Recycle className="w-5 h-5 text-white/90" />, text: 'Eco-friendly waste management' },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
-                  <span className="text-lg">{icon}</span>
-                  <span className="font-['Poppins',sans-serif] text-white/80 text-sm">{text}</span>
+                  {icon}
+                  <span className="text-white/80 text-base">{text}</span>
                 </div>
               ))}
             </div>
@@ -119,18 +108,18 @@ function CustomerLoginPage() {
         </div>
 
         {/* Right — Form panel */}
-        <div className="md:w-1/2 bg-white flex flex-col justify-center px-8 sm:px-12 py-12 md:py-16">
-          <h2 className="font-['Outfit',sans-serif] font-bold text-2xl text-primary mb-1">Sign in</h2>
-          <p className="font-['Poppins',sans-serif] text-primary/50 text-sm mb-8">
+        <div className="md:w-1/2 bg-white flex flex-col justify-center px-10 sm:px-14 py-14 md:py-20">
+          <h2 className="font-bold text-3xl text-primary mb-2">Sign in</h2>
+          <p className="text-primary/50 text-base mb-10">
             Enter your email to receive a verification code
           </p>
 
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Email */}
             <div>
               <label
                 htmlFor="email"
-                className="block font-['Poppins',sans-serif] text-sm font-medium text-primary/80 mb-2"
+                className="block text-base font-medium text-primary/80 mb-2"
               >
                 Email address
               </label>
@@ -144,14 +133,14 @@ function CustomerLoginPage() {
                 disabled={isLoading}
                 aria-invalid={error ? 'true' : 'false'}
                 aria-describedby={error ? 'login-error' : undefined}
-                className={`w-full h-12 rounded-xl border px-4 font-['Poppins',sans-serif] text-sm text-primary
+                className={`w-full h-13 rounded-xl border px-4 text-base text-primary
                   bg-accent/40 placeholder:text-primary/30 transition-all
                   ${error ? 'border-red-400' : 'border-primary/10 hover:border-primary/25'}
                   focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white
                   disabled:opacity-50 disabled:cursor-not-allowed`}
               />
               {error && (
-                <p id="login-error" className="text-red-500 text-xs mt-1.5 font-['Poppins',sans-serif]" role="alert">
+                <p id="login-error" className="text-red-500 text-sm mt-1.5" role="alert">
                   {error}
                 </p>
               )}
@@ -163,7 +152,7 @@ function CustomerLoginPage() {
             <button
               onClick={handleLogin}
               disabled={isLoading}
-              className="w-full h-12 bg-primary text-white font-['Inter',sans-serif] font-semibold text-sm rounded-xl
+              className="w-full h-13 bg-primary text-white font-semibold text-base rounded-xl
                 hover:bg-[#2a3f41] active:scale-[0.98] transition-all shadow-lg shadow-primary/20
                 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
                 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
@@ -174,12 +163,12 @@ function CustomerLoginPage() {
             {/* Divider */}
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-primary/10" />
-              <span className="font-['Poppins',sans-serif] text-xs text-primary/40">or</span>
+              <span className="text-sm text-primary/40">or</span>
               <div className="flex-1 h-px bg-primary/10" />
             </div>
 
             {/* Sign up link */}
-            <p className="text-center font-['Poppins',sans-serif] text-sm text-primary/60">
+            <p className="text-center text-base text-primary/60">
               Don't have an account?{' '}
               <Link
                 to="/signup"

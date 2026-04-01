@@ -72,35 +72,39 @@ export function Header() {
               SafaBin
             </Link>
 
-            {/* Desktop nav */}
-            <div className="hidden md:flex items-center gap-6">
+            {/* Desktop nav — center links */}
+            <nav className="hidden md:flex items-center gap-1 lg:gap-2">
               <a
                 href="#features"
-                className="text-white/70 hover:text-white text-sm font-medium  transition-colors"
+                className="px-3 lg:px-4 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
                 Features
               </a>
               <a
                 href="#services"
-                className="text-white/70 hover:text-white text-sm font-medium  transition-colors"
+                className="px-3 lg:px-4 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
                 Services
               </a>
               <a
                 href="#faq"
-                className="text-white/70 hover:text-white text-sm font-medium  transition-colors"
+                className="px-3 lg:px-4 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
                 FAQ
               </a>
+            </nav>
+
+            {/* Desktop nav — right actions */}
+            <div className="hidden md:flex items-center gap-4">
               <Link
                 to="/signup"
-                className="text-white/70 hover:text-white text-sm font-medium  transition-colors"
+                className="text-white/70 hover:text-white text-sm font-medium transition-colors"
               >
                 Sign Up
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-primary  hover:bg-accent transition-colors"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-primary hover:bg-accent transition-colors"
               >
                 Log In
                 <ArrowRight size={16} />

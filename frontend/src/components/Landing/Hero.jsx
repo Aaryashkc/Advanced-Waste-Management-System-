@@ -27,17 +27,17 @@ export function Hero() {
       <div className="absolute inset-0 bg-black/60" />
 
       {/* Content */}
-      <div className="relative z-10 w-full px-6 md:px-16 lg:px-24">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-16 lg:px-24 pt-20">
         <div className="max-w-3xl">
-          <h1 className="font-['Outfit'] font-bold text-white text-4xl md:text-5xl lg:text-6xl leading-[1.1] tracking-tight">
+          <h1 className="font-bold text-white text-5xl md:text-6xl lg:text-7xl leading-[1.1] tracking-tight">
             Manage waste collection with precision and ease
           </h1>
-          <p className="mt-6 text-white/70 text-lg md:text-xl font-['Outfit'] leading-relaxed max-w-xl">
+          <p className="mt-6 text-white/70 text-xl md:text-2xl leading-relaxed max-w-xl">
             Safabin streamlines your entire waste management operation. Track routes, assign drivers, and respond to requests in real time.
           </p>
           <div className="mt-10">
             <Link to={getStartedLink}>
-              <button className="bg-white text-primary px-8 py-4 rounded-full font-['Inter'] font-medium text-base flex items-center gap-3 transition-colors cursor-pointer hover:bg-accent">
+              <button className="bg-white text-primary px-8 py-4 rounded-full font-medium text-lg flex items-center gap-3 transition-colors cursor-pointer hover:bg-accent">
                 {getStartedLabel}
                 <ArrowRight className="w-4 h-4" />
               </button>
