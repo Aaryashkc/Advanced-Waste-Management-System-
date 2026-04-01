@@ -17,12 +17,18 @@ const useMLScheduleStore = create((set, get) => ({
     fetchPublicSchedule: async () => {
         set({ loading: true, error: null });
         try {
+            console.log('Fetching public schedule...');
             const response = await api.get("/ml-schedule/public");
-            set({ publicSchedule: response.data.data, loading: false });
+            console.log('Public schedule response:', response.data);
+            const data = response.data?.data || response.data;
+            set({ publicSchedule: data, loading: false });
         } catch (error) {
+            console.error("Failed to fetch public schedule:", error);
+            const errorMessage = error.response?.data?.message || error.message || "Failed to fetch schedule";
             set({
-                error: error.response?.data?.message || "Failed to fetch schedule",
+                error: errorMessage,
                 loading: false,
+                publicSchedule: null
             });
         }
     },

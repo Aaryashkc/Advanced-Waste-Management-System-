@@ -1,28 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 
 function FAQItem({ question, answer, isOpen, onToggle }) {
   return (
-    <div className="bg-white border border-black">
+    <div className="border-b border-primary/10">
       <button
         onClick={onToggle}
-        className="w-full px-6 py-5 flex items-center justify-between gap-6 text-left hover:bg-gray-50 transition-colors"
+        className="w-full py-6 flex items-center justify-between gap-6 text-left cursor-pointer"
       >
-        <span className="font-['Roboto'] font-bold text-lg text-black flex-1">
+        <span className="font-['Outfit'] font-medium text-lg text-primary">
           {question}
         </span>
-        <X
-          className={`w-6 h-6 shrink-0 transition-transform ${
-            isOpen ? 'rotate-0' : 'rotate-45'
-          }`}
-        />
+        {isOpen ? (
+          <Minus className="w-5 h-5 text-primary/40 shrink-0" />
+        ) : (
+          <Plus className="w-5 h-5 text-primary/40 shrink-0" />
+        )}
       </button>
 
       {isOpen && (
-        <div className="px-6 pb-6">
-          <p className="font-['Roboto'] text-base text-black leading-relaxed">
+        <div className="pb-6">
+          <p className="font-['Outfit'] text-base text-primary/60 leading-relaxed">
             {answer}
           </p>
         </div>
@@ -36,45 +36,45 @@ export function FAQ() {
 
   const faqs = [
     {
-      question: 'How do routes assign?',
+      question: 'How are routes assigned?',
       answer:
-        'Routes are assigned automatically each morning based on your collection schedule. The system distributes pickups evenly across available drivers and trucks. No manual work needed.',
+        'Routes are assigned automatically each morning based on your collection schedule. The system distributes pickups evenly across available drivers and trucks.',
     },
     {
-      question: 'Can drivers update status?',
+      question: 'Can drivers update their status in real time?',
       answer:
         'Yes. Drivers update pickup status in real time through the dashboard. You see changes immediately and can respond if something changes.',
     },
     {
-      question: 'What waste types work?',
+      question: 'What waste types are supported?',
       answer:
-        'The system handles all standard waste categories. Citizens specify type and volume when submitting requests. You organize pickups accordingly.',
+        'The system handles all standard waste categories. Citizens specify type and volume when submitting requests, and you organize pickups accordingly.',
     },
     {
-      question: 'How fast are requests?',
+      question: 'How fast are on-demand requests fulfilled?',
       answer:
         'On-demand requests are dispatched within hours depending on truck availability. The dashboard shows estimated arrival time to the requester.',
     },
     {
-      question: 'Can I manage multiple trucks?',
+      question: 'Can I manage multiple trucks and drivers?',
       answer:
         'The organizations panel lets you manage your entire fleet. Assign drivers, track trucks, and organize routes all from one place.',
     },
   ];
 
   return (
-    <section className="bg-white w-full py-16 md:py-24 px-8 md:px-16 lg:px-24">
+    <section className="bg-white w-full py-20 md:py-28 px-6 md:px-16 lg:px-24">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12 space-y-6">
-          <h2 className="font-['Outfit'] font-bold text-black text-4xl md:text-5xl">
-            FAQ
+        <div className="text-center mb-16">
+          <h2 className="font-['Outfit'] font-bold text-primary text-3xl md:text-4xl mb-4">
+            Frequently Asked Questions
           </h2>
-          <p className="font-['Outfit'] text-black text-lg">
-            Find answers to common questions about the dashboard
+          <p className="font-['Outfit'] text-primary/60 text-lg">
+            Find answers to common questions about the platform
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div>
           {faqs.map((faq, index) => (
             <FAQItem
               key={index}

@@ -1,130 +1,76 @@
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+
 export function Features() {
-    const imgPlaceholderImage = 'https://images.unsplash.com/photo-1561069157-218187260215?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-    const imgPlaceholderImage1 = 'https://images.unsplash.com/photo-1561069157-218187260215?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-    const imgPlaceholderImage2 = 'https://images.unsplash.com/photo-1561069157-218187260215?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-    const imgPlaceholderImage3 = 'https://images.unsplash.com/photo-1561069157-218187260215?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-    const imgPlaceholderImage4 = 'https://images.unsplash.com/photo-1561069157-218187260215?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+  const features = [
+    {
+      label: 'Routes',
+      title: 'Routine waste collection',
+      description: 'Automated route assignment and daily schedules for your fleet.',
+    },
+    {
+      label: 'Requests',
+      title: 'On-demand pickups',
+      description: 'Request trucks by waste type and volume instantly.',
+    },
+    {
+      label: 'Manage',
+      title: 'Organizations panel',
+      description: 'Control drivers, trucks, and route assignments from one place.',
+    },
+    {
+      label: 'Tasks',
+      title: 'Driver tasks',
+      description: 'Assigned pickups with real-time status updates.',
+    },
+    {
+      label: 'Submissions',
+      title: 'User requests',
+      description: 'Track all waste pickup requests from citizens.',
+    },
+    {
+      label: 'Analytics',
+      title: 'Performance insights',
+      description: 'Monitor collection efficiency and optimize operations.',
+    },
+  ];
 
   return (
-    <section className="bg-white w-full py-16 md:py-24 px-8 md:px-16 lg:px-24">
-      <div className="max-w-360 mx-auto">
-        <div className="text-center mb-12 space-y-4">
-          <h2 className="font-['Outfit'] font-bold text-primarytext-4xl md:text-5xl">
+    <section className="bg-white w-full py-20 md:py-28 px-6 md:px-16 lg:px-24">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-16">
+          <h2 className="font-['Outfit'] font-bold text-primary text-3xl md:text-4xl mb-4">
             Six tools built for waste
           </h2>
-          <p className="text-[#296200] text-xl font-['Outfit']">
+          <p className="text-primary/60 text-lg font-['Outfit']">
             Everything you need to run operations efficiently
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Large feature card - spans 2 rows on desktop */}
-          <div className="lg:col-span-2 lg:row-span-2 border border-primarybg-[#f5f1e8] rounded-lg overflow-hidden flex flex-col">
-            <div className="p-8 flex-1">
-              <span className="text-primaryfont-['Roboto'] font-semibold text-sm mb-2 block">
-                Routes
-              </span>
-              <h3 className="text-primaryfont-['Roboto'] font-bold text-3xl md:text-4xl mb-4">
-                Routine waste collection
-              </h3>
-              <p className="text-primaryfont-['Roboto'] text-base mb-6">
-                Automated route assignment and daily schedules
-              </p>
-              <div className="flex gap-4 items-center">
-                <button className="border border-primarypx-6 py-3 rounded-[20px] text-primaryfont-['Roboto'] hover:bg-primaryhover:text-white transition-all">
-                  View
-                </button>
-                <button className="flex items-center gap-2 text-primaryfont-['Roboto'] hover:opacity-70 transition-opacity">
-                  Arrow <ChevronRight className="w-5 h-5" />
+          {features.map((feature, index) => (
+            <div
+              key={index}
+              className="bg-accent/50 rounded-2xl p-8 flex flex-col justify-between min-h-[220px]"
+            >
+              <div>
+                <span className="text-primary/50 font-['Outfit'] text-sm font-medium tracking-wide uppercase">
+                  {feature.label}
+                </span>
+                <h3 className="text-primary font-['Outfit'] font-semibold text-xl mt-3 mb-3">
+                  {feature.title}
+                </h3>
+                <p className="text-primary/60 font-['Outfit'] text-base leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+              <div className="mt-6">
+                <button className="text-primary font-['Outfit'] text-sm font-medium flex items-center gap-2 hover:gap-3 transition-all">
+                  Learn more
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-            <div className="h-90 overflow-hidden">
-              <img src={imgPlaceholderImage} alt="Routine waste collection" className="w-full h-full object-cover" />
-            </div>
-          </div>
-
-          {/* Small feature cards */}
-          <div className="border border-primarybg-[#f5f1e8] rounded-lg overflow-hidden flex flex-col">
-            <div className="p-6 flex-1">
-              <span className="text-primaryfont-['Roboto'] font-semibold text-sm mb-2 block">
-                Requests
-              </span>
-              <h3 className="text-primaryfont-['Roboto'] font-bold text-2xl mb-2">
-                On-demand pickups
-              </h3>
-              <p className="text-primaryfont-['Roboto'] text-sm mb-4">
-                Request trucks by waste type and volume
-              </p>
-              <button className="flex items-center gap-2 text-primaryfont-['Roboto'] hover:opacity-70 transition-opacity">
-                Arrow <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="h-42.75 overflow-hidden">
-              <img src={imgPlaceholderImage1} alt="On-demand pickups" className="w-full h-full object-cover" />
-            </div>
-          </div>
-
-          <div className="border border-primarybg-[#f5f1e8] rounded-lg overflow-hidden flex flex-col">
-            <div className="p-6 flex-1">
-              <span className="text-primaryfont-['Roboto'] font-semibold text-sm mb-2 block">
-                Manage
-              </span>
-              <h3 className="text-primaryfont-['Roboto'] font-bold text-2xl mb-2">
-                Organizations panel
-              </h3>
-              <p className="text-primaryfont-['Roboto'] text-sm mb-4">
-                Control drivers, trucks, and route assignments
-              </p>
-              <button className="flex items-center gap-2 text-primaryfont-['Roboto'] hover:opacity-70 transition-opacity">
-                Arrow <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="h-42.75 overflow-hidden">
-              <img src={imgPlaceholderImage2} alt="Organizations panel" className="w-full h-full object-cover" />
-            </div>
-          </div>
-
-          <div className="border border-primarybg-[#f5f1e8] rounded-lg overflow-hidden flex flex-col">
-            <div className="p-6 flex-1">
-              <span className="text-primaryfont-['Roboto'] font-semibold text-sm mb-2 block">
-                Tasks
-              </span>
-              <h3 className="text-primaryfont-['Roboto'] font-bold text-2xl mb-2">
-                Driver tasks
-              </h3>
-              <p className="text-primaryfont-['Roboto'] text-sm mb-4">
-                Assigned pickups with real-time status updates
-              </p>
-              <button className="flex items-center gap-2 text-primaryfont-['Roboto'] hover:opacity-70 transition-opacity">
-                Arrow <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="h-42.75 overflow-hidden">
-              <img src={imgPlaceholderImage3} alt="Driver tasks" className="w-full h-full object-cover" />
-            </div>
-          </div>
-
-          <div className="border border-primarybg-[#f5f1e8] rounded-lg overflow-hidden flex flex-col">
-            <div className="p-6 flex-1">
-              <span className="text-primaryfont-['Roboto'] font-semibold text-sm mb-2 block">
-                Submissions
-              </span>
-              <h3 className="text-primaryfont-['Roboto'] font-bold text-2xl mb-2">
-                User requests
-              </h3>
-              <p className="text-primaryfont-['Roboto'] text-sm mb-4">
-                Track all waste pickup requests from citizens
-              </p>
-              <button className="flex items-center gap-2 text-primaryfont-['Roboto'] hover:opacity-70 transition-opacity">
-                Arrow <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="h-42.75 overflow-hidden">
-              <img src={imgPlaceholderImage4} alt="User requests" className="w-full h-full object-cover" />
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

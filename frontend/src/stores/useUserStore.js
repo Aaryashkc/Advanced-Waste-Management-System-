@@ -1,0 +1,58 @@
+import { create } from "zustand";
+import api from "../utils/api";
+
+const useUserStore = create((set, get) => ({
+  users: [],
+  stats: null,
+  pagination: null,
+  isLoading: false,
+  error: null,
+
+  fetchUsers: async (params = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const query = new URLSearchParams();
+      if (params.search) query.set("search", params.search);
+      if (params.role) query.set("role", params.role);
+      if (params.status) query.set("status", params.status);
+      if (params.page) query.set("page", params.page);
+      if (params.limit) query.set("limit", params.limit);
+
+      const res = await api.get(`/super-admin/users?${query.toString()}`);
+      set({
+        users: res.data.users,
+        stats: res.data.stats,
+        pagination: res.data.pagination,
+        isLoading: false,
+      });
+    } catch (err) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || "Failed to fetch users",
+      });
+    }
+  },
+
+  updateUser: async (userId, data) => {
+    try {
+      const res = await api.put(`/super-admin/users/${userId}`, data);
+      if (res.data.success) {
+        // Update user in local state
+        set((state) => ({
+          users: state.users.map((u) =>
+            u.id === userId ? { ...u, ...res.data.user } : u
+          ),
+        }));
+        return { success: true };
+      }
+      return { success: false, error: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || "Failed to update user",
+      };
+    }
+  },
+}));
+
+export default useUserStore;

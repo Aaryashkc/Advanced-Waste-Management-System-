@@ -10,12 +10,12 @@ import { CTASection } from '../components/Landing/CTASection'
 const HomePage = () => {
   const pageRef = useRef(null)
   const sections = [
-    { Component: Hero, className: 'lp-block-hero' },
-    { Component: AboutSection, className: 'lp-soft-panel' },
-    { Component: Features, className: 'lp-soft-panel' },
-    { Component: Services, className: 'lp-soft-panel' },
-    { Component: FAQ, className: 'lp-soft-panel' },
-    { Component: CTASection, className: 'lp-block-cta' },
+    { Component: Hero },
+    { Component: AboutSection },
+    { Component: Features },
+    { Component: Services },
+    { Component: FAQ },
+    { Component: CTASection },
   ]
 
   useEffect(() => {
@@ -43,14 +43,12 @@ const HomePage = () => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add('lp-in-view')
-          } else {
-            entry.target.classList.remove('lp-in-view')
           }
         })
       },
       {
         threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px',
+        rootMargin: '0px 0px -40px 0px',
       }
     )
 
@@ -63,11 +61,8 @@ const HomePage = () => {
 
   return (
     <div ref={pageRef} className="landing-page-shell">
-      {sections.map(({ Component, className }, index) => (
-        <div
-          key={Component.name}
-          className={`lp-block lp-reveal ${className}`}
-        >
+      {sections.map(({ Component }, index) => (
+        <div key={Component.name} className="lp-reveal">
           <Component />
         </div>
       ))}

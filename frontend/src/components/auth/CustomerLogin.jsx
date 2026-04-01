@@ -3,6 +3,30 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../utils/api';
 import useAuthStore from '../../stores/useAuthStore';
 import { getDashboardRoute } from '../../utils/roleRouting';
+import OTPModal from './OTPModal';
+
+function TruckLoader() {
+  return (
+    <div className="flex items-center justify-center py-1">
+      <div className="relative w-40 h-6 overflow-hidden">
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-white/20" />
+        <svg
+          className="absolute bottom-0.5 animate-[truckMove_2s_ease-in-out_infinite] w-7 h-4"
+          viewBox="0 0 32 20"
+          fill="none"
+        >
+          <rect x="8" y="4" width="16" height="10" rx="2" fill="#354f52" />
+          <rect x="24" y="6" width="7" height="8" rx="1.5" fill="#354f52" />
+          <rect x="25.5" y="7.5" width="4" height="3.5" rx="0.75" fill="#f5f1e8" />
+          <circle cx="13" cy="16" r="2.5" fill="#354f52" />
+          <circle cx="13" cy="16" r="1" fill="#f5f1e8" />
+          <circle cx="27" cy="16" r="2.5" fill="#354f52" />
+          <circle cx="27" cy="16" r="1" fill="#f5f1e8" />
+        </svg>
+      </div>
+    </div>
+  );
+}
 
 function CustomerLoginPage() {
   const navigate = useNavigate();
@@ -10,181 +34,170 @@ function CustomerLoginPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      const dashboardRoute = getDashboardRoute(user.role);
-      navigate(dashboardRoute, { replace: true });
+      navigate(getDashboardRoute(user.role), { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleLogin = async () => {
     setError('');
-
-    if (!email.trim()) {
-      setError('Please enter your email address');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
+    if (!email.trim()) { setError('Please enter your email address'); return; }
+    if (!validateEmail(email)) { setError('Please enter a valid email address'); return; }
 
     setIsLoading(true);
     try {
-      // Request OTP from backend
       await authAPI.requestOTP(email);
-
-      // Store email in sessionStorage for OTP verification page
       sessionStorage.setItem('otpEmail', email);
-
-      // Navigate to OTP verification page
-      navigate('/otp-verification');
+      setShowOTP(true);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to send OTP. Please try again.';
-      setError(errorMessage);
+      setError(err.response?.data?.message || 'Failed to send verification code. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignUp = () => {
-    navigate('/signup');
-  };
-
-  const handleDriverSignUp = () => {
-    console.log('Navigate to driver sign up page');
-  };
-
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !isLoading) {
-      handleLogin();
-    }
+    if (e.key === 'Enter' && !isLoading) handleLogin();
   };
 
   return (
-    <div className="bg-[#f5f1e8] min-h-screen flex flex-col">
+    <div className="min-h-screen relative flex items-center justify-center px-4 py-10">
+      {/* Greenery background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80')`,
+        }}
+      />
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/60" />
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="w-full max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-
-            {/* Left Side - Form */}
-            <div className="w-full max-w-xl mx-auto lg:mx-0">
-              {/* Welcome Heading */}
-              <h2 className="font-['Outfit',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-primary mb-8 sm:mb-12">
-                <span className="block leading-tight mb-2">
-                  Hello <span className="text-[#296200]">User</span>
-                </span>
-                <span className="block leading-tight">
-                  Welcome <span className="text-[#296200]">Back</span>
-                </span>
-              </h2>
-
-              {/* Login Form */}
-              <div className="space-y-6">
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block font-['Poppins',sans-serif] text-lg sm:text-xl text-primary mb-3"
-                  >
-                    Enter your email to continue
-                  </label>
-
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setError('');
-                    }}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Enter your email here....."
-                    disabled={isLoading}
-                    aria-invalid={error ? 'true' : 'false'}
-                    aria-describedby={error ? 'email-error' : undefined}
-                    className={`w-full sm:w-80 border ${error ? 'border-red-500' : 'border-black'} border-solid h-12 sm:h-14 rounded-xl px-4 sm:px-5 font-['Poppins',sans-serif] text-sm sm:text-base text-primary placeholder:text-[#757575] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
-                  />
-
-                  {error && (
-                    <p id="email-error" className="text-red-500 text-sm mt-2 font-['Poppins',sans-serif]" role="alert">
-                      {error}
-                    </p>
-                  )}
-                </div>
-
-                {/* Login Button */}
-                <button
-                  onClick={handleLogin}
-                  disabled={isLoading}
-                  className="bg-primary flex gap-3 h-12 sm:h-14 items-center justify-center px-8 sm:px-10 rounded-2xl hover:bg-[#2a3f41] transition-all active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md"
-                  aria-label="Log in to your account"
-                >
-                  <span className="font-['Inter',sans-serif] font-medium text-[#f5f1e8] text-lg sm:text-xl">
-                    {isLoading ? 'Logging in...' : 'Log In'}
-                  </span>
-                  {!isLoading && (
-                    <svg className="rotate-90 w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 22 22" aria-hidden="true">
-                      <path
-                        d="M11 16.5V5.5M11 5.5L5.5 11M11 5.5L16.5 11"
-                        stroke="#F5F1E8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="1.5"
-                      />
-                    </svg>
-                  )}
-                </button>
-
-                {/* Sign Up Links */}
-                <div className="space-y-3 pt-4">
-                  <p className="font-['Poppins',sans-serif] text-sm sm:text-base text-black-100">
-                    Don't have an account?{' '}
-                    <button
-                      onClick={handleSignUp}
-                      className="font-['Poppins',sans-serif] font-semibold text-[#007300] hover:text-[#005500] underline focus:outline-none focus:ring-2 focus:ring-[#007300] rounded-sm"
-                    >
-                      Sign up
-                    </button>
-                  </p>
-
-
-                </div>
+      {/* Split card */}
+      <div className="relative z-10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[480px]">
+        {/* Left — Welcome panel */}
+        <div className="relative md:w-1/2 flex flex-col justify-center px-10 py-12 md:py-16 overflow-hidden">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=800&q=80')`,
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#354f52]/90 to-[#2f3e46]/85" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
               </div>
+              <span className="font-['Outfit',sans-serif] font-bold text-xl text-white tracking-tight">SafaBin</span>
             </div>
-
-            {/* Right Side - Hero Image */}
-            <div className="hidden lg:block">
-              <div
-                className="relative w-full aspect-4/5 max-w-md xl:max-w-lg mx-auto"
-                role="img"
-                aria-label="Waste management worker in orange uniform"
-              >
-                <img
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover rounded-2xl shadow-2xl"
-                  src="https://images.unsplash.com/photo-1581087098160-aa099753eed1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3YXN0ZSUyMG1hbmFnZW1lbnQlMjB3b3JrZXIlMjBvcmFuZ2UlMjB1bmlmb3JtfGVufDF8fHx8MTc2OTg3NjA1OXww&ixlib=rb-4.1.0&q=80&w=1080"
-                  loading="lazy"
-                />
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 border-[#84a98c] border-8 sm:border-12 lg:border-16 rounded-2xl pointer-events-none"
-                />
-              </div>
+            <h1 className="font-['Outfit',sans-serif] font-bold text-3xl md:text-4xl text-white leading-tight mb-4">
+              Welcome back
+            </h1>
+            <p className="font-['Poppins',sans-serif] text-white/70 text-sm md:text-base leading-relaxed mb-8">
+              Sign in to manage your waste pickups, track schedules, and keep your community clean.
+            </p>
+            <div className="space-y-3">
+              {[
+                { icon: '📍', text: 'Real-time pickup tracking' },
+                { icon: '📅', text: 'Smart scheduling' },
+                { icon: '♻️', text: 'Eco-friendly waste management' },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <span className="text-lg">{icon}</span>
+                  <span className="font-['Poppins',sans-serif] text-white/80 text-sm">{text}</span>
+                </div>
+              ))}
             </div>
-
           </div>
         </div>
-      </main>
+
+        {/* Right — Form panel */}
+        <div className="md:w-1/2 bg-white flex flex-col justify-center px-8 sm:px-12 py-12 md:py-16">
+          <h2 className="font-['Outfit',sans-serif] font-bold text-2xl text-primary mb-1">Sign in</h2>
+          <p className="font-['Poppins',sans-serif] text-primary/50 text-sm mb-8">
+            Enter your email to receive a verification code
+          </p>
+
+          <div className="space-y-5">
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block font-['Poppins',sans-serif] text-sm font-medium text-primary/80 mb-2"
+              >
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                onKeyDown={handleKeyPress}
+                placeholder="you@example.com"
+                disabled={isLoading}
+                aria-invalid={error ? 'true' : 'false'}
+                aria-describedby={error ? 'login-error' : undefined}
+                className={`w-full h-12 rounded-xl border px-4 font-['Poppins',sans-serif] text-sm text-primary
+                  bg-accent/40 placeholder:text-primary/30 transition-all
+                  ${error ? 'border-red-400' : 'border-primary/10 hover:border-primary/25'}
+                  focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white
+                  disabled:opacity-50 disabled:cursor-not-allowed`}
+              />
+              {error && (
+                <p id="login-error" className="text-red-500 text-xs mt-1.5 font-['Poppins',sans-serif]" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            {isLoading && <TruckLoader />}
+
+            {/* Submit */}
+            <button
+              onClick={handleLogin}
+              disabled={isLoading}
+              className="w-full h-12 bg-primary text-white font-['Inter',sans-serif] font-semibold text-sm rounded-xl
+                hover:bg-[#2a3f41] active:scale-[0.98] transition-all shadow-lg shadow-primary/20
+                disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+              {isLoading ? 'Sending code...' : 'Continue with email'}
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-primary/10" />
+              <span className="font-['Poppins',sans-serif] text-xs text-primary/40">or</span>
+              <div className="flex-1 h-px bg-primary/10" />
+            </div>
+
+            {/* Sign up link */}
+            <p className="text-center font-['Poppins',sans-serif] text-sm text-primary/60">
+              Don't have an account?{' '}
+              <Link
+                to="/signup"
+                className="font-semibold text-primary hover:text-[#2a3f41] transition-colors"
+              >
+                Create one
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* OTP Modal */}
+      <OTPModal
+        isOpen={showOTP}
+        onClose={() => setShowOTP(false)}
+        email={email}
+      />
     </div>
   );
 }

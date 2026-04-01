@@ -10,6 +10,7 @@ import {
   cancelPickup,
   updatePickupStatus,
   getActivePickup,
+  getMyPickups,
   getMyPickupHistory,
   getPickupEvents,
   getPickupAnalytics,
@@ -32,6 +33,9 @@ router.post("/estimate", roleMiddleware("customer_admin"), estimatePickup);
 
 // ── Customer: create a pickup request ────────────────────────────────────
 router.post("/", roleMiddleware("customer_admin"), createPickup);
+
+// ── Customer: fetch own pickups + dashboard stats ────────────────────────
+router.get("/my-pickups", roleMiddleware("customer_admin"), getMyPickups);
 
 // ── Driver: fetch all pending requests (initial load) ────────────────────
 router.get("/pending", roleMiddleware("driver"), getPendingPickups);

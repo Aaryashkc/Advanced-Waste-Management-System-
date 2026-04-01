@@ -7,6 +7,7 @@ import {
   Truck,
   Users,
   UserCog,
+  UsersRound,
   MapPin,
   BrainCircuit,
   ClipboardList,
@@ -36,6 +37,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     { name: "Notifications", icon: Bell, path: "/admin-dashboard/notifications" },
     ...(isSuperAdmin
       ? [
+          { name: "Users", icon: UsersRound, path: "/admin-dashboard/users" },
           { name: "Pickup Stats", icon: BarChart3, path: "/admin-dashboard/pickup-stats" },
           { name: "Reports", icon: FileText, path: "/admin-dashboard/reports" },
         ]

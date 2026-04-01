@@ -8,14 +8,13 @@ import { Footer } from "../components/Headers/Footer";
 import CustomerLoginPage from "../components/auth/CustomerLogin";
 import { Header } from "../components/Headers/Header";
 import CustomerSignUpPage from "../components/auth/CustomerSignup";
-import OTPVerificationPage from "../components/auth/OTPVerificationPage";
+// OTP is now handled via modal inside Login/Signup pages
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import Unauthorized from "../pages/Unauthorized";
 import AboutUs from "../pages/AboutUs";
 import OurTeam from "../pages/OurTeam";
 import ContactUs from "../pages/ContactUs";
 import Profile from "../pages/Profile";
-import CustomerLandingPage from "../components/users/CustomerLanding";
 import CustomerDashboard from "../components/users/CustomerDashboard";
 import SchedulePage from "../components/users/SchedulePage";
 import UploadWastePage from "../components/users/UploadWastePage";
@@ -37,6 +36,7 @@ import Admins from "../pages/Admins";
 import Areas from "../pages/Areas";
 import Notifications from "../pages/Notifications";
 import Reports from "../pages/Reports";
+import Users from "../pages/Users";
 import PickupStats from "../pages/PickupStats";
 import History from "../pages/History";
 import PricingConfig from "../pages/PricingConfig";
@@ -46,6 +46,7 @@ import DriverNavbar from "../components/Driver/DriverNavbar";
 import DriverNotifications from "../components/Driver/DriverNotifications";
 import ScheduleToast from "../components/ml/ScheduleToast";
 import useAuthStore from "../stores/useAuthStore";
+import DebugScheduleData from "../components/debug/DebugScheduleData";
 
 const AdminRedirect = () => {
   const { isAuthenticated, user } = useAuthStore();
@@ -75,7 +76,7 @@ const AppRoutes = () => {
             : <CustomerLoginPage />
         } />
         <Route path="/signup" element={<CustomerSignUpPage />} />
-        <Route path="/otp-verification" element={<OTPVerificationPage />} />
+        <Route path="/otp-verification" element={<Navigate to="/login" replace />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* Info Pages (accessible to logged-in customer_admin) */}
@@ -115,14 +116,6 @@ const AppRoutes = () => {
         />
 
         {/* Protected Customer Admin Routes */}
-        <Route
-          path="/customer-landing"
-          element={
-            <ProtectedRoute allowedRoles={['customer_admin']}>
-              <CustomerLandingPage />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="/customer-dashboard"
           element={
@@ -228,6 +221,11 @@ const AppRoutes = () => {
           <Route path="ml-schedule/history" element={<MLScheduleHistory />} />
           <Route path="history" element={<History />} />
           <Route path="pricing" element={<PricingConfig />} />
+          <Route path="users" element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <Users />
+            </ProtectedRoute>
+          } />
           <Route path="pickup-stats" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <PickupStats />
@@ -239,6 +237,9 @@ const AppRoutes = () => {
             </ProtectedRoute>
           } />
         </Route>
+
+        {/* Debug Route - for testing */}
+        <Route path="/debug-schedule" element={<DebugScheduleData />} />
 
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />

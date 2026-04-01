@@ -11,6 +11,7 @@ const useScheduleStore = create((set, get) => ({
     fetchSchedules: async (filters = {}) => {
         set({ loading: true, error: null });
         try {
+            console.log('Fetching schedules with filters:', filters);
             // Build query string from filters
             const params = new URLSearchParams();
             if (filters.city) params.append("city", filters.city);
@@ -18,39 +19,41 @@ const useScheduleStore = create((set, get) => ({
             if (filters.day) params.append("day", filters.day);
 
             const response = await api.get(`/schedule?${params.toString()}`);
-            set({ schedules: response.data.data || [], loading: false });
+            console.log('Schedules response:', response.data);
+            const data = response.data?.data || response.data || [];
+            set({ schedules: data, loading: false });
         } catch (error) {
             console.error("Failed to fetch schedules:", error);
             set({
-                error: error.response?.data?.message || "Failed to fetch schedules",
+                error: error.response?.data?.message || error.message || "Failed to fetch schedules",
                 loading: false
             });
         }
     },
 
     fetchLocations: async () => {
-        // Keep loading true if already loading, else set it? 
-        // Usually separate loading states or global loading. 
-        // Let's use the same loading for simplicity but be careful not to flicker.
-        // If we call these in parallel, we might want to handle it.
-        // For now, simple overrides.
-        // set({ loading: true, error: null }); 
         try {
+            console.log('Fetching locations...');
             const response = await api.get("/location");
-            set({ locations: response.data || [] });
+            console.log('Locations response:', response.data);
+            const data = response.data?.data || response.data || [];
+            set({ locations: data });
         } catch (error) {
             console.error("Failed to fetch locations:", error);
-            set({ error: error.response?.data?.message || "Failed to fetch locations" });
+            set({ error: error.response?.data?.message || error.message || "Failed to fetch locations" });
         }
     },
 
     fetchDrivers: async () => {
         try {
+            console.log('Fetching drivers...');
             const response = await api.get("/driver");
-            set({ drivers: response.data.data || [] });
+            console.log('Drivers response:', response.data);
+            const data = response.data?.data || response.data || [];
+            set({ drivers: data });
         } catch (error) {
             console.error("Failed to fetch drivers:", error);
-            set({ error: error.response?.data?.message || "Failed to fetch drivers" });
+            set({ error: error.response?.data?.message || error.message || "Failed to fetch drivers" });
         }
     },
 
@@ -58,14 +61,17 @@ const useScheduleStore = create((set, get) => ({
     fetchAllData: async () => {
         set({ loading: true, error: null });
         try {
+            console.log('Fetching all schedule data...');
             await Promise.all([
                 get().fetchSchedules(),
                 get().fetchLocations(),
                 get().fetchDrivers()
             ]);
+            console.log('All data fetched successfully');
             set({ loading: false });
         } catch (error) {
-            set({ loading: false, error: "Failed to load initial data" });
+            console.error("Failed to load initial data:", error);
+            set({ loading: false, error: error.message || "Failed to load initial data" });
         }
     }
 }));

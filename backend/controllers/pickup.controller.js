@@ -347,6 +347,65 @@ export const getActivePickup = async (req, res) => {
   }
 };
 
+// ── GET /api/pickups/my-pickups ───────────────────────────────────────────
+
+/**
+ * Customer fetches their own pickups + aggregated stats for dashboard charts.
+ */
+export const getMyPickups = async (req, res) => {
+  try {
+    const { _id, role } = req.user;
+    if (role !== "customer_admin") return res.status(403).json({ message: "Access denied" });
+
+    const pickups = await PickupRequest.find({ customerId: _id })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    // Status counts
+    const statusCounts = {};
+    const categoryCounts = {};
+    const levelCounts = {};
+    const monthlyData = {};
+    let totalSpent = 0;
+
+    pickups.forEach((p) => {
+      statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
+      categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
+      levelCounts[p.level] = (levelCounts[p.level] || 0) + 1;
+      if (p.estimatedPrice && p.status === "COMPLETED") totalSpent += p.estimatedPrice;
+
+      // Monthly aggregation (last 6 months)
+      const d = new Date(p.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!monthlyData[key]) monthlyData[key] = { month: key, created: 0, completed: 0, cancelled: 0 };
+      monthlyData[key].created += 1;
+      if (p.status === "COMPLETED") monthlyData[key].completed += 1;
+      if (p.status === "CANCELLED") monthlyData[key].cancelled += 1;
+    });
+
+    // Sort monthly data and take last 6
+    const monthly = Object.values(monthlyData)
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-6);
+
+    return res.status(200).json({
+      pickups: pickups.slice(0, 20).map(pickupPayload),
+      stats: {
+        total: pickups.length,
+        statusCounts,
+        categoryCounts,
+        levelCounts,
+        totalSpent,
+        monthly,
+      },
+    });
+  } catch (err) {
+    console.error("getMyPickups error:", err);
+    return res.status(500).json({ message: "Failed to fetch pickups", error: err.message });
+  }
+};
+
 // ── GET /api/pickups/my-history ────────────────────────────────────────────
 
 /**

@@ -24,23 +24,31 @@ export const sendOTPEmail = async (email, otpCode) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: process.env.FROM_EMAIL || process.env.SMTP_USER,
+      from: `"Safabin Nepal" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
       to: email,
-      subject: 'Your OTP Code',
+      subject: 'Your OTP Code - Safabin Nepal',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333; text-align: center;">Your OTP Code</h2>
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <p style="font-size: 24px; font-weight: bold; color: #007bff; letter-spacing: 3px; margin: 0;">
-              ${otpCode}
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #354f52; padding: 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Safabin Nepal</h1>
+          </div>
+          <div style="padding: 30px;">
+            <h2 style="color: #354f52; text-align: center;">Your OTP Code</h2>
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #354f52;">
+              <p style="font-size: 28px; font-weight: bold; color: #354f52; letter-spacing: 5px; margin: 0;">
+                ${otpCode}
+              </p>
+            </div>
+            <p style="color: #666; text-align: center;">
+              This code will expire in 10 minutes.
+            </p>
+            <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
+              If you didn't request this code, please ignore this email.
             </p>
           </div>
-          <p style="color: #666; text-align: center;">
-            This code will expire in 10 minutes.
-          </p>
-          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
-            If you didn't request this code, please ignore this email.
-          </p>
+          <div style="background-color: #354f52; padding: 15px; text-align: center;">
+            <p style="color: #ffffff; margin: 0; font-size: 12px;">&copy; Safabin Nepal. All rights reserved.</p>
+          </div>
         </div>
       `
     };

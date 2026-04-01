@@ -25,6 +25,7 @@ import {
   getPickupStats
 } from "../controllers/superAdmin.controller.js";
 import { getAllDrivers } from "../controllers/driver.controller.js";
+import { getAllUsers, updateUser, getUserById } from "../controllers/userManagement.controller.js";
 
 const router = express.Router();
 
@@ -58,6 +59,11 @@ router.get("/pickup-stats", getPickupStats);
 
 // Admin management
 router.delete("/admins/:adminId", deleteAdmin);
+
+// User management (all users)
+router.get("/users", getAllUsers);
+router.get("/users/:userId", getUserById);
+router.put("/users/:userId", updateUser);
 
 // Deletion requests
 router.get("/deletion-requests/pending-count", getPendingDeletionCount);

@@ -14,6 +14,9 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
+    // Log the request for debugging
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    
     // Try to get token from Zustand store first, fallback to localStorage for backward compatibility
     let token = null;
     try {
@@ -33,14 +36,26 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`API Response: ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`);
+    return response;
+  },
   (error) => {
+    console.error('API Response Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+    
     if (error.response?.status === 401) {
       // Token expired or invalid - clear storage
       localStorage.removeItem('auth-storage');

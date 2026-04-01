@@ -7,6 +7,19 @@
   --color-accent: #f5f1e8;
   --color-secondary: #f5f1e8;
   --color-dark-mode: #202128;
+  --animate-truckMove: truckMove 2s ease-in-out infinite;
+  --animate-modalIn: modalIn 200ms ease-out;
+}
+
+@keyframes truckMove {
+  0% { transform: translateX(-8px); }
+  50% { transform: translateX(160px); }
+  100% { transform: translateX(-8px); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 *,
@@ -29,14 +42,13 @@ body {
 .landing-page-shell {
   position: relative;
   overflow: clip;
-  padding: 0.6rem 0 1.4rem;
-  background: linear-gradient(180deg, #f7f4ec 0%, #f5f1e8 100%);
+  background-color: #f5f1e8;
 }
 
 .lp-reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 700ms ease-out, transform 700ms ease-out;
+  transform: translateY(20px);
+  transition: opacity 600ms ease-out, transform 600ms ease-out;
   will-change: opacity, transform;
 }
 
@@ -49,33 +61,15 @@ body {
   position: relative;
 }
 
-.lp-block+.lp-block {
-  margin-top: 0.8rem;
-}
-
-.lp-block+.lp-block::before {
-  content: '';
-  position: absolute;
-  top: -0.35rem;
-  left: 50%;
-  width: min(240px, 48vw);
-  height: 1px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: linear-gradient(90deg,
-      rgba(53, 79, 82, 0),
-      rgba(53, 79, 82, 0.25),
-      rgba(53, 79, 82, 0));
-  pointer-events: none;
+.lp-block + .lp-block {
+  margin-top: 0;
 }
 
 .lp-soft-panel section {
-  border-radius: 16px;
-  border: 1px solid rgba(53, 79, 82, 0.08);
-  box-shadow: 0 10px 24px rgba(53, 79, 82, 0.05);
+  border-radius: 0;
 }
 
 .lp-block-hero section,
 .lp-block-cta section {
-  border-radius: 18px;
+  border-radius: 0;
 }
