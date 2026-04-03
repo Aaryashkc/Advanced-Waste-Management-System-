@@ -155,7 +155,7 @@ const Areas = () => {
                         </span>
                       </td>
                       {isSuperAdmin && <td className="px-5 py-3.5 text-sm text-primary/60">{d.orgId?.name || "--"}</td>}
-                      <td className="px-5 py-3.5 text-sm max-w-[200px]">
+                      <td className="px-5 py-3.5 text-sm max-w-50">
                         {hasCoords ? (
                           <div>
                             {d.address ? (
