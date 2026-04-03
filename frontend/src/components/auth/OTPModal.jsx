@@ -3,35 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
 import { getDashboardRoute } from '../../utils/roleRouting';
 import { authAPI } from '../../utils/api';
-
-function TruckLoader() {
-  return (
-    <div className="flex items-center justify-center py-3">
-      <div className="relative w-48 h-6 overflow-hidden">
-        {/* Road line */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-primary/20" />
-        {/* Truck SVG */}
-        <svg
-          className="absolute bottom-0.5 animate-[truckMove_2s_ease-in-out_infinite] w-8 h-5"
-          viewBox="0 0 32 20"
-          fill="none"
-        >
-          {/* Truck body */}
-          <rect x="8" y="4" width="16" height="10" rx="2" fill="#354f52" />
-          {/* Cabin */}
-          <rect x="24" y="6" width="7" height="8" rx="1.5" fill="#354f52" />
-          {/* Window */}
-          <rect x="25.5" y="7.5" width="4" height="3.5" rx="0.75" fill="#f5f1e8" />
-          {/* Wheels */}
-          <circle cx="13" cy="16" r="2.5" fill="#354f52" />
-          <circle cx="13" cy="16" r="1" fill="#f5f1e8" />
-          <circle cx="27" cy="16" r="2.5" fill="#354f52" />
-          <circle cx="27" cy="16" r="1" fill="#f5f1e8" />
-        </svg>
-      </div>
-    </div>
-  );
-}
+import TruckLoader from '../shared/TruckLoader';
 
 export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
   const navigate = useNavigate();

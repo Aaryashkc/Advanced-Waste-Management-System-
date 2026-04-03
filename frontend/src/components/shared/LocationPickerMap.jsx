@@ -192,7 +192,7 @@ const LocationPickerMap = ({
 
         {/* Search Results Dropdown */}
         {showResults && (
-          <div className="absolute z-[1000] w-full mt-1 bg-white rounded-xl border border-primary/10 shadow-lg max-h-52 overflow-y-auto">
+          <div className="absolute z-1000 w-full mt-1 bg-white rounded-xl border border-primary/10 shadow-lg max-h-52 overflow-y-auto">
             {searchResults.map((r, i) => (
               <button
                 key={i}

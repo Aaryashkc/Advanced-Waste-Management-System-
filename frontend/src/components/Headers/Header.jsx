@@ -1,4 +1,4 @@
-import { ArrowRight, LogOut, Menu, X, User, ChevronDown } from "lucide-react";
+import { ArrowRight, LogOut, Menu, X, User, ChevronDown, Recycle } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import useAuthStore from "../../stores/useAuthStore";
@@ -64,6 +64,9 @@ export function Header() {
       >
         <div className="mx-auto max-w-7xl px-6 md:px-16 lg:px-24">
           <div className="flex h-18 items-center justify-between">
+            <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <Recycle className="w-6 h-6 text-white" />
+            </div>
             <Link
               to="/"
               className="text-white font-extrabold text-2xl tracking-tight "
