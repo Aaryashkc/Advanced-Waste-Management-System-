@@ -47,6 +47,7 @@ import DriverNotifications from "../components/Driver/DriverNotifications";
 import ScheduleToast from "../components/ml/ScheduleToast";
 import useAuthStore from "../stores/useAuthStore";
 import DebugScheduleData from "../components/debug/DebugScheduleData";
+import HelpSupportPage from "../pages/HelpandSupport";
 
 const AdminRedirect = () => {
   const { isAuthenticated, user } = useAuthStore();
@@ -69,41 +70,20 @@ const AppRoutes = () => {
       <Routes>
         {/* Public Routes - admins get redirected to dashboard */}
         <Route path="/" element={<AdminRedirect />} />
-        <Route path="/test-animation" element={<TestAnimationPage />} />
         <Route path="/login" element={
           isAuthenticated && (user?.role === "super_admin" || user?.role === "admin")
             ? <Navigate to="/admin-dashboard" replace />
             : <CustomerLoginPage />
         } />
         <Route path="/signup" element={<CustomerSignUpPage />} />
+        <Route path="/help-support" element={<HelpSupportPage />} />
         <Route path="/otp-verification" element={<Navigate to="/login" replace />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* Info Pages (accessible to logged-in customer_admin) */}
-        <Route
-          path="/about-us"
-          element={
-            <ProtectedRoute allowedRoles={['customer_admin']}>
-              <AboutUs />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/our-team"
-          element={
-            <ProtectedRoute allowedRoles={['customer_admin']}>
-              <OurTeam />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/contact-us"
-          element={
-            <ProtectedRoute allowedRoles={['customer_admin']}>
-              <ContactUs />
-            </ProtectedRoute>
-          }
-        />
+        {/* Info Pages (accessible to everyone) */}
+        <Route path="/about-us" element={<AboutUs />} />
+        <Route path="/our-team" element={<OurTeam />} />
+        <Route path="/contact-us" element={<ContactUs />} />
 
         {/* Profile (all authenticated users) */}
         <Route

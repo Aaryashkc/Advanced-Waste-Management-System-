@@ -16,7 +16,7 @@ function SocialIcon({ Icon, label }) {
 
 export function Footer() {
   return (
-    <footer className="bg-primary w-full py-16 md:py-20">
+    <footer className="relative z-10 bg-primary w-full py-16 md:py-20">
       <div className="mx-auto max-w-360 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12 mb-14 md:mb-16">
           <div className="text-left">

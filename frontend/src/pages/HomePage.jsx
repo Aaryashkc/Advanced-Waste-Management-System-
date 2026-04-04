@@ -10,7 +10,7 @@ import { CTASection } from '../components/Landing/CTASection'
 const HomePage = () => {
   const pageRef = useRef(null)
   const sections = [
-    { Component: Hero },
+    { Component: Hero, isHero: true },
     { Component: AboutSection },
     { Component: Features },
     { Component: Services },
@@ -61,8 +61,8 @@ const HomePage = () => {
 
   return (
     <div ref={pageRef} className="landing-page-shell">
-      {sections.map(({ Component }, index) => (
-        <div key={Component.name} className="lp-reveal">
+      {sections.map(({ Component, isHero }, index) => (
+        <div key={Component.name || index} className={isHero ? "" : "lp-reveal"}>
           <Component />
         </div>
       ))}

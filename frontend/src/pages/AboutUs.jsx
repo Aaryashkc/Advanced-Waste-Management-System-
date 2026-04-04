@@ -202,16 +202,16 @@ const steps = [
 export default function AboutUs() {
   return (
     <div className="bg-secondary min-h-screen font-['Outfit',sans-serif]">
-      {/* ── 1. Hero with background image ── */}
-      <section className="relative w-full min-h-[70vh] flex items-center overflow-hidden">
+      {/* ── 1. Hero with background image & integrated stats ── */}
+      <section className="relative w-full min-h-screen flex items-center overflow-hidden pt-24 pb-12">
         <img
           src={IMAGES.hero}
           alt="Waste management operations"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-linear-to-r from-black/90 via-black/75 to-black/50" />
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-16 lg:px-24 py-28">
-          <div className="max-w-3xl">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center">
+          <div className="max-w-3xl mb-16 md:mb-24 mt-10">
             <Reveal>
               <span className="inline-block text-white/60 text-sm font-semibold tracking-widest uppercase mb-4">
                 About SafaBin
@@ -229,24 +229,23 @@ export default function AboutUs() {
               </p>
             </Reveal>
           </div>
-        </div>
-      </section>
 
-      {/* ── 2. Stats bar ── */}
-      <section className="bg-primary text-white py-12 px-6 md:px-16 lg:px-24">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {stats.map((stat) => (
-            <Reveal key={stat.label} delay={0}>
-              <div>
-                <p className="text-3xl sm:text-4xl font-bold">
-                  <Counter end={stat.value} suffix={stat.suffix} />
-                </p>
-                <p className="text-white/60 text-sm mt-1 font-medium">
-                  {stat.label}
-                </p>
-              </div>
-            </Reveal>
-          ))}
+          <div className="w-full pt-8 border-t border-white/10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:text-left">
+              {stats.map((stat, i) => (
+                <Reveal key={stat.label} delay={i * 100}>
+                  <div>
+                    <p className="text-3xl sm:text-4xl font-bold text-white">
+                      <Counter end={stat.value} suffix={stat.suffix} />
+                    </p>
+                    <p className="text-white/60 text-sm mt-1 font-medium">
+                      {stat.label}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

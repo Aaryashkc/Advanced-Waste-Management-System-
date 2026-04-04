@@ -1,4 +1,4 @@
-import { ArrowRight, LogOut, Menu, X, User, ChevronDown, Recycle } from "lucide-react";
+import { ArrowRight, LogOut, Menu, X, User, ChevronDown } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import useAuthStore from "../../stores/useAuthStore";
@@ -13,7 +13,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const profileRef = useRef(null);
 
-  const transparentHeaderRoutes = new Set(["/", "/about-us", "/contact-us"]);
+  const transparentHeaderRoutes = new Set(["/", "/about-us", "/contact-us", "/help-support", "/login", "/signup", "/our-team"]);
   const isTransparentRoute = transparentHeaderRoutes.has(location.pathname);
 
   // Track scroll position
@@ -65,9 +65,6 @@ export function Header() {
       >
         <div className="mx-auto max-w-7xl px-6 md:px-16 lg:px-24">
           <div className="flex h-18 items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-                <Recycle className="w-6 h-6 text-white" />
-            </div>
             <Link
               to="/"
               className="text-white font-extrabold text-2xl tracking-tight "
@@ -78,24 +75,31 @@ export function Header() {
 
             {/* Desktop nav — center links */}
             <nav className="hidden md:flex items-center gap-1 lg:gap-2">
-              <a
-                href="#features"
+              <Link
+                to="/about-us"
                 className="px-3 lg:px-4 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
-                Features
-              </a>
-              <a
-                href="#services"
+                About Us
+              </Link>
+              <Link
+                to="/our-team"
                 className="px-3 lg:px-4 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
-                Services
-              </a>
-              <a
-                href="#faq"
+                Our Team
+              </Link>
+              <Link
+                to="/help-support"
                 className="px-3 lg:px-4 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white transition-colors"
               >
-                FAQ
-              </a>
+                Help & Support
+              </Link>
+              <Link
+                to="/contact-us"
+                className="px-3 lg:px-4 py-2 rounded-full text-sm font-medium text-white/70 hover:text-white transition-colors"
+              >
+                Contact Us
+              </Link>
+
             </nav>
 
             {/* Desktop nav — right actions */}
@@ -130,27 +134,34 @@ export function Header() {
         {mobileOpen && (
           <div className="md:hidden bg-primary border-t border-white/10">
             <div className="px-6 py-6 space-y-1">
-              <a
-                href="#features"
+              <Link
+                to="/about-us"
                 onClick={() => setMobileOpen(false)}
                 className="block px-4 py-3 rounded-xl text-white/80 text-base  font-medium"
               >
-                Features
-              </a>
-              <a
-                href="#services"
+                About Us
+              </Link>
+              <Link
+                to="/our-team"
                 onClick={() => setMobileOpen(false)}
                 className="block px-4 py-3 rounded-xl text-white/80 text-base  font-medium"
               >
-                Services
-              </a>
-              <a
-                href="#faq"
+                Our Team
+              </Link>
+              <Link
+                to="/contact-us"
                 onClick={() => setMobileOpen(false)}
                 className="block px-4 py-3 rounded-xl text-white/80 text-base  font-medium"
               >
-                FAQ
-              </a>
+                Contact Us
+              </Link>
+              <Link
+                to="/help-support"
+                onClick={() => setMobileOpen(false)}
+                className="block px-4 py-3 rounded-xl text-white/80 text-base  font-medium"
+              >
+                Help & Support
+              </Link>
               <div className="pt-4 border-t border-white/10 mt-4 space-y-3">
                 <Link
                   to="/signup"
@@ -205,10 +216,9 @@ export function Header() {
                 to={path}
                 end={path === navLinks[0]?.path}
                 className={({ isActive }) =>
-                  `px-3 lg:px-4 py-2 rounded-full text-sm font-medium  transition-colors ${
-                    isActive
-                      ? "bg-white/20 text-white"
-                      : "text-white/70 hover:text-white"
+                  `px-3 lg:px-4 py-2 rounded-full text-sm font-medium  transition-colors ${isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/70 hover:text-white"
                   }`
                 }
               >
@@ -237,9 +247,8 @@ export function Header() {
                 </div>
                 <ChevronDown
                   size={14}
-                  className={`text-white/50 transition-transform duration-200 ${
-                    profileOpen ? "rotate-180" : ""
-                  }`}
+                  className={`text-white/50 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
@@ -288,10 +297,9 @@ export function Header() {
                 end={path === navLinks[0]?.path}
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
-                  `block px-4 py-3 rounded-xl text-base font-medium  transition-colors ${
-                    isActive
-                      ? "bg-white/20 text-white"
-                      : "text-white/80"
+                  `block px-4 py-3 rounded-xl text-base font-medium  transition-colors ${isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/80"
                   }`
                 }
               >

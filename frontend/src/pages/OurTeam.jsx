@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import Our_image from "../assets/ourteam.png"
 
 /* ── Viewport observer ── */
 function useInView() {
@@ -27,9 +28,8 @@ function FadeIn({ children, delay = 0, className = '' }) {
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${
-        inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-      } ${className}`}
+      className={`transition-all duration-700 ease-out ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        } ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -45,58 +45,23 @@ const TEAM = [
     bio: 'Passionate about sustainable cities and smart infrastructure.',
     image:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    name: 'Sita Sharma',
-    role: 'CTO',
-    bio: 'Building scalable systems for real-world logistics.',
-    image:
-      'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    name: 'Arjun Thapa',
-    role: 'Lead Engineer',
-    bio: 'Turning route optimization theory into working software.',
-    image:
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    name: 'Priya Karki',
-    role: 'Product Designer',
-    bio: 'Designing tools that dispatchers and drivers actually want to use.',
-    image:
-      'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    name: 'Bikash Rai',
-    role: 'Operations Lead',
-    bio: 'Bridging the gap between field operations and software.',
-    image:
-      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    name: 'Anjali Basnet',
-    role: 'Data Scientist',
-    bio: 'Using data to make collection routes smarter every day.',
-    image:
-      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=600&auto=format&fit=crop',
-  },
+  }
 ];
 
 /* ── Team member card ── */
 function TeamCard({ member }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl bg-primary/5">
+    <div className="group relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 transition-all hover:border-white/20">
       {/* Image container */}
-      <div className="relative aspect-[3/4] overflow-hidden">
+      <div className="relative aspect-[3/4] overflow-hidden bg-black/40">
         <img
           src={member.image}
           alt={member.name}
           className="
             w-full h-full object-cover
             grayscale md:grayscale
-            group-hover:grayscale-0
-            transition-[filter] duration-300 ease-out
+            group-hover:grayscale-0 group-hover:scale-105
+            transition-all duration-500 ease-out
           "
           loading="lazy"
         />
@@ -105,7 +70,7 @@ function TeamCard({ member }) {
         <div
           className="
             absolute inset-0
-            bg-gradient-to-t from-primary/80 via-primary/30 to-transparent
+            bg-gradient-to-t from-black/90 via-black/40 to-transparent
             opacity-0 group-hover:opacity-100
             transition-opacity duration-300 ease-out
             hidden md:flex flex-col justify-end p-6
@@ -126,11 +91,11 @@ function TeamCard({ member }) {
       </div>
 
       {/* Always-visible info — mobile only */}
-      <div className="md:hidden px-4 py-4">
-        <p className="font-['Outfit',sans-serif] font-semibold text-primary text-base">
+      <div className="md:hidden px-4 py-4 backdrop-blur-sm">
+        <p className="font-['Outfit',sans-serif] font-semibold text-white text-base">
           {member.name}
         </p>
-        <p className="font-['Outfit',sans-serif] text-primary/55 text-sm mt-0.5">
+        <p className="font-['Outfit',sans-serif] text-white/70 text-sm mt-0.5">
           {member.role}
         </p>
       </div>
@@ -141,58 +106,70 @@ function TeamCard({ member }) {
 /* ── Page ── */
 export default function OurTeam() {
   return (
-    <div className="bg-secondary min-h-screen font-['Outfit',sans-serif]">
-      {/* Hero */}
-      <section className="py-20 sm:py-28 px-6 md:px-16 lg:px-24 text-center">
-        <FadeIn>
-          <span className="inline-block text-primary/40 text-xs font-semibold tracking-widest uppercase mb-4">
-            Our Team
-          </span>
-        </FadeIn>
-        <FadeIn delay={100}>
-          <h1 className="font-bold text-primary text-4xl sm:text-5xl lg:text-[3.5rem] leading-[1.1] tracking-tight mb-6">
-            The people behind SafaBin
-          </h1>
-        </FadeIn>
-        <FadeIn delay={200}>
-          <p className="text-primary/55 text-lg max-w-2xl mx-auto leading-relaxed">
-            A dedicated team working to make waste management smarter, more
-            efficient, and more sustainable for everyone.
-          </p>
-        </FadeIn>
-      </section>
+    <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+      {/* Dynamic Background */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${Our_image})`,
+        }}
+      />
+      <div className="fixed inset-0 z-0 bg-black/70 backdrop-blur-xs" />
 
-      {/* Team Grid */}
-      <section className="pb-20 sm:pb-28 px-6 md:px-16 lg:px-24">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {TEAM.map((member, i) => (
-            <FadeIn key={member.name} delay={i * 80}>
-              <TeamCard member={member} />
-            </FadeIn>
-          ))}
-        </div>
-      </section>
-
-      {/* Join CTA */}
-      <section className="pb-20 sm:pb-28 px-6 md:px-16 lg:px-24">
-        <FadeIn>
-          <div className="max-w-3xl mx-auto bg-primary rounded-2xl p-8 sm:p-12 text-center">
-            <h2 className="font-bold text-white text-2xl sm:text-3xl mb-4">
-              Want to join our mission?
-            </h2>
-            <p className="text-white/60 mb-6 max-w-lg mx-auto leading-relaxed">
-              We're always looking for passionate people who want to make a
-              difference in their communities.
+      {/* Content */}
+      <div className="relative z-10 pt-24">
+        {/* Hero */}
+        <section className="pb-12 sm:pb-16 px-6 md:px-16 lg:px-24 text-center">
+          <FadeIn>
+            <span className="inline-block text-white/50 text-xs font-semibold tracking-widest uppercase mb-4">
+              Our Team
+            </span>
+          </FadeIn>
+          <FadeIn delay={100}>
+            <h1 className="font-bold text-white text-4xl sm:text-5xl lg:text-[3.5rem] leading-[1.1] tracking-tight mb-6 drop-shadow-md">
+              The people behind SafaBin
+            </h1>
+          </FadeIn>
+          <FadeIn delay={200}>
+            <p className="text-white/70 text-lg max-w-2xl mx-auto leading-relaxed">
+              A dedicated team working to make waste management smarter, more
+              efficient, and more sustainable for everyone.
             </p>
-            <a
-              href="mailto:careers@safabin.com"
-              className="inline-flex items-center px-6 py-3 bg-white text-primary font-semibold rounded-xl hover:bg-accent transition-colors duration-200"
-            >
-              Get in Touch
-            </a>
+          </FadeIn>
+        </section>
+
+        {/* Team Grid */}
+        <section className="pb-20 sm:pb-28 px-6 md:px-16 lg:px-24">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {TEAM.map((member, i) => (
+              <FadeIn key={member.name} delay={i * 80}>
+                <TeamCard member={member} />
+              </FadeIn>
+            ))}
           </div>
-        </FadeIn>
-      </section>
+        </section>
+
+        {/* Join CTA */}
+        <section className="pb-20 sm:pb-28 px-6 md:px-16 lg:px-24">
+          <FadeIn>
+            <div className="max-w-3xl mx-auto bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 sm:p-12 text-center shadow-2xl">
+              <h2 className="font-bold text-white text-2xl sm:text-3xl mb-4">
+                Want to join our mission?
+              </h2>
+              <p className="text-white/70 mb-8 max-w-lg mx-auto leading-relaxed">
+                We're always looking for passionate people who want to make a
+                difference in their communities.
+              </p>
+              <a
+                href="mailto:careers@safabin.com"
+                className="inline-flex items-center px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg"
+              >
+                Get in Touch
+              </a>
+            </div>
+          </FadeIn>
+        </section>
+      </div>
     </div>
   );
 }

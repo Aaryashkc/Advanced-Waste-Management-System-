@@ -45,9 +45,18 @@ function CustomerLoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center px-4 py-10 bg-white">
+    <div className="min-h-screen relative flex items-center justify-center px-4 py-10">
+      {/* Page Background */}
+      <div
+        className="absolute inset-0 z-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1920&q=80')`,
+        }}
+      />
+      <div className="absolute inset-0 z-0 bg-black/70 backdrop-blur-xs" />
+
       {/* Split card */}
-      <div className="relative z-10 w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-135 border border-gray-100">
+      <div className="relative z-10 w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-135 border border-white/10">
         {/* Left — Welcome panel */}
         <div className="relative md:w-1/2 flex flex-col justify-center px-12 py-14 md:py-20 overflow-hidden">
           <div
