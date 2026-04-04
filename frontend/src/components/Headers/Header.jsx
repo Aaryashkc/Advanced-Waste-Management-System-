@@ -13,7 +13,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const profileRef = useRef(null);
 
-  const transparentHeaderRoutes = new Set(["/", "/about-us", "/contact-us", "/help-support", "/login", "/signup", "/our-team"]);
+  const transparentHeaderRoutes = new Set(["/", "/about-us", "/contact-us", "/help-support", "/login", "/signup", "/our-team", "/schedule", "/upload-waste", "/customer-dashboard"]);
   const isTransparentRoute = transparentHeaderRoutes.has(location.pathname);
 
   // Track scroll position

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Chart as ChartJS,
@@ -22,12 +22,13 @@ import {
   Upload,
   CalendarDays,
   ArrowRight,
-  Loader2,
+
   Truck,
   AlertTriangle,
 } from "lucide-react";
 import api from "../../utils/api";
 import useAuthStore from "../../stores/useAuthStore";
+import TruckLoader from "../shared/TruckLoader";
 
 ChartJS.register(
   CategoryScale,
@@ -40,6 +41,47 @@ ChartJS.register(
   Legend,
   Filler
 );
+
+/* ── Viewport observer (same pattern as OurTeam / SchedulePage) ── */
+
+function useInView() {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          obs.unobserve(el);
+        }
+      },
+      { threshold: 0.15 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, inView];
+}
+
+function FadeIn({ children, delay = 0, className = "" }) {
+  const [ref, inView] = useInView();
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        } ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ── Constants ── */
+
+const DASHBOARD_BG = "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1920&auto=format&fit=crop";
 
 const STATUS_COLORS = {
   PENDING: "#f59e0b",
@@ -65,33 +107,31 @@ const LEVEL_COLORS = {
   hard: "#ef4444",
 };
 
-function StatCard({ icon: Icon, label, value, accent, onClick }) {
+/* ── Stat card ── */
+
+function StatCard({ icon: Icon, label, value, accent }) {
   return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-4 rounded-2xl border bg-white p-5 text-left transition-all hover:shadow-md ${
-        onClick ? "cursor-pointer hover:-translate-y-0.5" : "cursor-default"
-      }`}
-      style={{ borderColor: `${accent}25` }}
+    <div
+      className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center hover:bg-white/10 hover:border-white/20 transition-all duration-300"
     >
       <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-        style={{ backgroundColor: `${accent}15` }}
+        className="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center"
+        style={{ backgroundColor: `${accent}20` }}
       >
-        <Icon size={22} style={{ color: accent }} />
+        <Icon size={20} style={{ color: accent }} />
       </div>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm text-gray-500 truncate">{label}</p>
-      </div>
-    </button>
+      <p className="text-2xl sm:text-3xl font-bold text-white">{value}</p>
+      <p className="text-white/50 text-sm mt-1 font-medium">{label}</p>
+    </div>
   );
 }
 
+/* ── Chart card (glassmorphism) ── */
+
 function ChartCard({ title, children, className = "" }) {
   return (
-    <div className={`rounded-2xl border border-gray-100 bg-white p-5 shadow-sm ${className}`}>
-      <h3 className="mb-4 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+    <div className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 sm:p-6 hover:border-white/15 transition-all duration-300 ${className}`}>
+      <h3 className="mb-4 text-xs font-semibold text-white/40 uppercase tracking-widest flex items-center gap-2">
         {title}
       </h3>
       {children}
@@ -99,29 +139,32 @@ function ChartCard({ title, children, className = "" }) {
   );
 }
 
+/* ── Recent pickup row ── */
+
 function RecentPickupRow({ pickup }) {
   const statusColor = STATUS_COLORS[pickup.status] || "#9ca3af";
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-50 bg-gray-50/50 px-4 py-3">
+    <div className="group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 hover:border-white/20 transition-all duration-300">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-800 truncate">
+        <p className="text-sm font-semibold text-white truncate font-['Outfit',sans-serif]">
           {pickup.location?.address || pickup.area || "Pickup Request"}
         </p>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-xs text-white/40 mt-0.5 font-['Outfit',sans-serif]">
           {new Date(pickup.createdAt).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
             year: "numeric",
           })}
-          {" \u00B7 "}
+          {" · "}
           {pickup.category}
         </p>
       </div>
       <span
-        className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+        className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold border"
         style={{
           color: statusColor,
           backgroundColor: `${statusColor}15`,
+          borderColor: `${statusColor}30`,
         }}
       >
         {pickup.status}
@@ -129,6 +172,18 @@ function RecentPickupRow({ pickup }) {
     </div>
   );
 }
+
+/* ── Empty chart placeholder ── */
+
+function EmptyChart({ message }) {
+  return (
+    <div className="flex h-52 items-center justify-center">
+      <p className="text-sm text-white/30 font-['Outfit',sans-serif]">{message}</p>
+    </div>
+  );
+}
+
+/* ── Main component ── */
 
 function CustomerDashboard() {
   const navigate = useNavigate();
@@ -256,7 +311,13 @@ function CustomerDashboard() {
     plugins: {
       legend: {
         position: "bottom",
-        labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10, font: { size: 12 } },
+        labels: {
+          padding: 16,
+          usePointStyle: true,
+          pointStyleWidth: 10,
+          font: { size: 12, family: "'Outfit', sans-serif" },
+          color: "rgba(255,255,255,0.5)",
+        },
       },
     },
   };
@@ -267,15 +328,24 @@ function CustomerDashboard() {
     plugins: {
       legend: {
         position: "bottom",
-        labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10, font: { size: 12 } },
+        labels: {
+          padding: 16,
+          usePointStyle: true,
+          pointStyleWidth: 10,
+          font: { size: 12, family: "'Outfit', sans-serif" },
+          color: "rgba(255,255,255,0.5)",
+        },
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 12 } } },
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 12, family: "'Outfit', sans-serif" }, color: "rgba(255,255,255,0.35)" },
+      },
       y: {
         beginAtZero: true,
-        ticks: { stepSize: 1, font: { size: 12 } },
-        grid: { color: "rgba(0,0,0,0.04)" },
+        ticks: { stepSize: 1, font: { size: 12, family: "'Outfit', sans-serif" }, color: "rgba(255,255,255,0.35)" },
+        grid: { color: "rgba(255,255,255,0.05)" },
       },
     },
   };
@@ -283,10 +353,17 @@ function CustomerDashboard() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50/60 flex items-center justify-center pt-20">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-gray-500">Loading your dashboard...</p>
+      <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${DASHBOARD_BG})` }}
+        />
+        <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-xs" />
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <TruckLoader />
+            <p className="text-sm text-white/50 font-medium">Loading your dashboard...</p>
+          </div>
         </div>
       </div>
     );
@@ -295,11 +372,20 @@ function CustomerDashboard() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50/60 flex items-center justify-center pt-20">
-        <div className="flex flex-col items-center gap-3 text-center px-6">
-          <AlertTriangle className="h-10 w-10 text-amber-500" />
-          <p className="text-gray-700 font-medium">Could not load dashboard</p>
-          <p className="text-sm text-gray-500">{error}</p>
+      <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${DASHBOARD_BG})` }}
+        />
+        <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-xs" />
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/20 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-red-400" />
+          </div>
+          <div className="text-center">
+            <p className="text-red-300 text-lg font-semibold mb-1">Could not load dashboard</p>
+            <p className="text-red-400/60 text-sm max-w-sm">{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -315,134 +401,179 @@ function CustomerDashboard() {
     (stats?.statusCounts?.COLLECTING || 0);
 
   return (
-    <div className="min-h-screen bg-gray-50/60 pt-24 pb-16">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Greeting */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Welcome back, {user?.name?.split(" ")[0] || "there"}
-          </h1>
-          <p className="mt-1 text-gray-500">
-            Here's an overview of your waste collection activity.
-          </p>
-        </div>
+    <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+      {/* ── Dynamic Background ── */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${DASHBOARD_BG})` }}
+      />
+      <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-xs" />
 
-        {/* Quick actions */}
-        <div className="mb-8 flex flex-wrap gap-3">
-          <button
-            onClick={() => navigate("/upload-waste")}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary/90 cursor-pointer"
-          >
-            <Upload size={16} />
-            Request Pickup
-          </button>
-          <button
-            onClick={() => navigate("/schedule")}
-            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 cursor-pointer"
-          >
-            <CalendarDays size={16} />
-            View Schedule
-          </button>
-        </div>
+      {/* ── Content ── */}
+      <div className="relative z-10 pt-24">
+        {/* ── Hero header ── */}
+        <section className="pb-8 sm:pb-12 px-6 md:px-16 lg:px-24 text-center">
+          <FadeIn>
+            <span className="inline-block text-white/50 text-xs font-semibold tracking-widest uppercase mb-4">
+              Dashboard
+            </span>
+          </FadeIn>
 
-        {/* Stat cards */}
-        <div className="mb-8 grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard icon={Package} label="Total Requests" value={stats?.total || 0} accent="#3b82f6" />
-          <StatCard icon={CheckCircle2} label="Completed" value={completed} accent="#22c55e" />
-          <StatCard icon={Truck} label="Active" value={active} accent="#6366f1" />
-          <StatCard icon={Clock} label="Pending" value={pending} accent="#f59e0b" />
-          <StatCard icon={XCircle} label="Cancelled" value={cancelled} accent="#ef4444" />
-        </div>
+          <FadeIn delay={100}>
+            <h1 className="font-bold text-white text-4xl sm:text-5xl lg:text-[3.5rem] leading-[1.1] tracking-tight mb-6 drop-shadow-md">
+              Welcome back, {user?.name?.split(" ")[0] || "there"}
+            </h1>
+          </FadeIn>
 
-        {/* Charts row 1: Monthly trend + Status */}
-        <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ChartCard title="Monthly Trend" className="lg:col-span-2">
-            {monthlyChartData ? (
-              <div className="h-64">
-                <Line data={monthlyChartData} options={lineOptions} />
-              </div>
-            ) : (
-              <EmptyChart message="No monthly data yet" />
-            )}
-          </ChartCard>
+          <FadeIn delay={200}>
+            <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed mb-6">
+              Here's an overview of your waste collection activity.
+            </p>
+          </FadeIn>
 
-          <ChartCard title="Status Breakdown">
-            {statusChartData ? (
-              <div className="h-64 flex items-center justify-center">
-                <Doughnut data={statusChartData} options={doughnutOptions} />
-              </div>
-            ) : (
-              <EmptyChart message="No pickups yet" />
-            )}
-          </ChartCard>
-        </div>
-
-        {/* Charts row 2: Category + Level + Spending */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <ChartCard title="By Category">
-            {categoryChartData ? (
-              <div className="h-52 flex items-center justify-center">
-                <Doughnut data={categoryChartData} options={doughnutOptions} />
-              </div>
-            ) : (
-              <EmptyChart message="No data" />
-            )}
-          </ChartCard>
-
-          <ChartCard title="By Difficulty">
-            {levelChartData ? (
-              <div className="h-52 flex items-center justify-center">
-                <Doughnut data={levelChartData} options={doughnutOptions} />
-              </div>
-            ) : (
-              <EmptyChart message="No data" />
-            )}
-          </ChartCard>
-
-          <ChartCard title="Total Spent">
-            <div className="flex h-52 flex-col items-center justify-center">
-              <TrendingUp size={32} className="text-primary/30 mb-3" />
-              <p className="text-3xl font-bold text-gray-900">
-                NPR {(stats?.totalSpent || 0).toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-400 mt-1">on completed pickups</p>
-            </div>
-          </ChartCard>
-        </div>
-
-        {/* Recent pickups */}
-        <ChartCard title="Recent Pickups">
-          {pickups.length > 0 ? (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {pickups.map((p) => (
-                <RecentPickupRow key={p.id} pickup={p} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Package size={40} className="text-gray-200 mb-3" />
-              <p className="text-gray-500 font-medium">No pickups yet</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Request your first pickup to see activity here.
-              </p>
+          {/* Quick actions */}
+          <FadeIn delay={250}>
+            <div className="flex flex-wrap justify-center gap-3">
               <button
                 onClick={() => navigate("/upload-waste")}
-                className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary/90 cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg cursor-pointer"
               >
-                Get Started <ArrowRight size={14} />
+                <Upload size={16} />
+                Request Pickup
+              </button>
+              <button
+                onClick={() => navigate("/schedule")}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold rounded-xl hover:bg-white/20 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+              >
+                <CalendarDays size={16} />
+                View Schedule
               </button>
             </div>
-          )}
-        </ChartCard>
-      </div>
-    </div>
-  );
-}
+          </FadeIn>
+        </section>
 
-function EmptyChart({ message }) {
-  return (
-    <div className="flex h-52 items-center justify-center">
-      <p className="text-sm text-gray-400">{message}</p>
+        {/* ── Stat cards ── */}
+        <section className="pb-8 px-6 md:px-16 lg:px-24">
+          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[
+              { icon: Package, value: stats?.total || 0, label: "Total Requests", accent: "#3b82f6" },
+              { icon: CheckCircle2, value: completed, label: "Completed", accent: "#22c55e" },
+              { icon: Truck, value: active, label: "Active", accent: "#6366f1" },
+              { icon: Clock, value: pending, label: "Pending", accent: "#f59e0b" },
+              { icon: XCircle, value: cancelled, label: "Cancelled", accent: "#ef4444" },
+            ].map((stat, i) => (
+              <FadeIn key={stat.label} delay={300 + i * 80}>
+                <StatCard {...stat} />
+              </FadeIn>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Charts row 1: Monthly trend + Status ── */}
+        <section className="pb-6 px-6 md:px-16 lg:px-24">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <FadeIn delay={500} className="lg:col-span-2">
+              <ChartCard title="Monthly Trend">
+                {monthlyChartData ? (
+                  <div className="h-64">
+                    <Line data={monthlyChartData} options={lineOptions} />
+                  </div>
+                ) : (
+                  <EmptyChart message="No monthly data yet" />
+                )}
+              </ChartCard>
+            </FadeIn>
+
+            <FadeIn delay={580}>
+              <ChartCard title="Status Breakdown">
+                {statusChartData ? (
+                  <div className="h-64 flex items-center justify-center">
+                    <Doughnut data={statusChartData} options={doughnutOptions} />
+                  </div>
+                ) : (
+                  <EmptyChart message="No pickups yet" />
+                )}
+              </ChartCard>
+            </FadeIn>
+          </div>
+        </section>
+
+        {/* ── Charts row 2: Category + Level + Spending ── */}
+        <section className="pb-6 px-6 md:px-16 lg:px-24">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FadeIn delay={620}>
+              <ChartCard title="By Category">
+                {categoryChartData ? (
+                  <div className="h-52 flex items-center justify-center">
+                    <Doughnut data={categoryChartData} options={doughnutOptions} />
+                  </div>
+                ) : (
+                  <EmptyChart message="No data" />
+                )}
+              </ChartCard>
+            </FadeIn>
+
+            <FadeIn delay={660}>
+              <ChartCard title="By Difficulty">
+                {levelChartData ? (
+                  <div className="h-52 flex items-center justify-center">
+                    <Doughnut data={levelChartData} options={doughnutOptions} />
+                  </div>
+                ) : (
+                  <EmptyChart message="No data" />
+                )}
+              </ChartCard>
+            </FadeIn>
+
+            <FadeIn delay={700}>
+              <ChartCard title="Total Spent">
+                <div className="flex h-52 flex-col items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+                    <TrendingUp size={28} className="text-emerald-400/60" />
+                  </div>
+                  <p className="text-3xl font-bold text-white">
+                    NPR {(stats?.totalSpent || 0).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-white/40 mt-1">on completed pickups</p>
+                </div>
+              </ChartCard>
+            </FadeIn>
+          </div>
+        </section>
+
+        {/* ── Recent pickups ── */}
+        <section className="px-6 md:px-16 lg:px-24 pb-20">
+          <div className="max-w-7xl mx-auto">
+            <FadeIn delay={750}>
+              <ChartCard title="Recent Pickups">
+                {pickups.length > 0 ? (
+                  <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                    {pickups.map((p) => (
+                      <RecentPickupRow key={p.id} pickup={p} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center mb-4">
+                      <Package size={32} className="text-white/30" />
+                    </div>
+                    <p className="text-white/60 font-semibold text-lg mb-1">No pickups yet</p>
+                    <p className="text-sm text-white/40 mb-6 max-w-md">
+                      Request your first pickup to see activity here.
+                    </p>
+                    <button
+                      onClick={() => navigate("/upload-waste")}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg cursor-pointer"
+                    >
+                      Get Started <ArrowRight size={14} />
+                    </button>
+                  </div>
+                )}
+              </ChartCard>
+            </FadeIn>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

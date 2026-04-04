@@ -1,7 +1,8 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import TruckLoader from "../shared/TruckLoader";
+import ScheduleBg from "../../assets/schedule_truck.png";
 import {
   ArrowLeft,
   Search,
@@ -27,19 +28,56 @@ import {
   FileWarning,
 } from "lucide-react";
 
+/* ── Viewport observer (same pattern as OurTeam) ── */
+
+function useInView() {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          obs.unobserve(el);
+        }
+      },
+      { threshold: 0.15 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, inView];
+}
+
+function FadeIn({ children, delay = 0, className = "" }) {
+  const [ref, inView] = useInView();
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        } ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /* ── Constants ── */
 
 const ACTION_CONFIG = {
-  dispatch: { color: "bg-emerald-600", text: "text-emerald-700", bg: "bg-emerald-50", label: "Dispatch", icon: Truck },
-  skip: { color: "bg-gray-400", text: "text-gray-500", bg: "bg-gray-50", label: "Skip", icon: SkipForward },
-  reduced: { color: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", label: "Reduced", icon: TrendingDown },
+  dispatch: { color: "bg-emerald-500", text: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-500/30", label: "Dispatch", icon: Truck },
+  skip: { color: "bg-gray-400", text: "text-gray-300", bg: "bg-gray-500/15", border: "border-gray-500/30", label: "Skip", icon: SkipForward },
+  reduced: { color: "bg-amber-500", text: "text-amber-300", bg: "bg-amber-500/15", border: "border-amber-500/30", label: "Reduced", icon: TrendingDown },
 };
 
 const TYPE_CONFIG = {
-  commercial: { icon: Building2, color: "text-blue-600", bg: "bg-blue-50" },
-  residential: { icon: Home, color: "text-violet-600", bg: "bg-violet-50" },
-  suburban: { icon: Trees, color: "text-teal-600", bg: "bg-teal-50" },
-  rural: { icon: Mountain, color: "text-emerald-600", bg: "bg-emerald-50" },
+  commercial: { icon: Building2, color: "text-blue-400", bg: "bg-blue-500/15" },
+  residential: { icon: Home, color: "text-violet-400", bg: "bg-violet-500/15" },
+  suburban: { icon: Trees, color: "text-teal-400", bg: "bg-teal-500/15" },
+  rural: { icon: Mountain, color: "text-emerald-400", bg: "bg-emerald-500/15" },
 };
 
 const WASTE_LEVEL = (kg) => {
@@ -72,16 +110,14 @@ function resolveTotalWaste(schedule, publicSchedule) {
     || 0;
 }
 
-/* ── Truck loader (same as login page) ── */
-
-/* ── Normalize area item fields (API uses area/areaType, fallback to district/districtType) ── */
+/* ── Normalize area item fields ── */
 
 function areaName(item) { return item.area || item.district || "Unknown"; }
 function areaType(item) { return item.areaType || item.districtType || "residential"; }
 
 /* ── Compact row for the list view ── */
 
-function ScheduleRow({ item, isSelected, onClick }) {
+function ScheduleRow({ item, isSelected, onClick, index }) {
   const action = ACTION_CONFIG[item.action] || ACTION_CONFIG.skip;
   const typeConf = TYPE_CONFIG[areaType(item)] || TYPE_CONFIG.residential;
   const TypeIcon = typeConf.icon;
@@ -89,50 +125,51 @@ function ScheduleRow({ item, isSelected, onClick }) {
   const isSkipped = item.action === "skip";
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-4 sm:px-6 py-3.5 flex items-center gap-3 transition-colors duration-150 ${
-        isSelected
-          ? "bg-primary/8"
+    <FadeIn delay={index * 40}>
+      <button
+        onClick={onClick}
+        className={`group w-full text-left px-5 py-4 flex items-center gap-4 rounded-2xl border transition-all duration-300 mb-2 ${isSelected
+          ? "bg-white/15 border-white/25 shadow-lg shadow-white/5"
           : isSkipped
-          ? "opacity-50 hover:bg-primary/4"
-          : "hover:bg-primary/4"
-      }`}
-    >
-      {/* Status dot */}
-      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${action.color}`} />
-
-      {/* Area type icon */}
-      <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ${typeConf.bg}`}>
-        <TypeIcon className={`w-4 h-4 ${typeConf.color}`} />
-      </div>
-
-      {/* Main info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-primary truncate font-['Outfit',sans-serif]">
-          {areaName(item)}
-        </p>
-        <p className="text-xs text-primary/45 mt-0.5 font-['Outfit',sans-serif]">
-          {areaType(item)}
-        </p>
-      </div>
-
-      {/* Waste amount */}
-      <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-        <span className={`w-1.5 h-1.5 rounded-full ${level.dot}`} />
-        <span className="text-sm font-semibold text-primary tabular-nums">
-          {item.predictedWasteKg?.toLocaleString()}
-        </span>
-        <span className="text-xs text-primary/40">kg</span>
-      </div>
-
-      {/* Action badge */}
-      <span
-        className={`text-[11px] font-semibold px-2 py-0.5 rounded-md flex-shrink-0 ${action.bg} ${action.text}`}
+            ? "opacity-50 hover:opacity-80 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/15"
+            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-white/5"
+          }`}
       >
-        {action.label}
-      </span>
-    </button>
+        {/* Status dot */}
+        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${action.color} shadow-lg`} />
+
+        {/* Area type icon */}
+        <div className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center ${typeConf.bg} border border-white/10`}>
+          <TypeIcon className={`w-5 h-5 ${typeConf.color}`} />
+        </div>
+
+        {/* Main info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white truncate font-['Outfit',sans-serif]">
+            {areaName(item)}
+          </p>
+          <p className="text-xs text-white/40 mt-0.5 font-['Outfit',sans-serif] capitalize">
+            {areaType(item)}
+          </p>
+        </div>
+
+        {/* Waste amount */}
+        <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+          <span className={`w-1.5 h-1.5 rounded-full ${level.dot}`} />
+          <span className="text-sm font-semibold text-white tabular-nums">
+            {item.predictedWasteKg?.toLocaleString()}
+          </span>
+          <span className="text-xs text-white/35">kg</span>
+        </div>
+
+        {/* Action badge */}
+        <span
+          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg flex-shrink-0 border ${action.bg} ${action.text} ${action.border}`}
+        >
+          {action.label}
+        </span>
+      </button>
+    </FadeIn>
   );
 }
 
@@ -148,17 +185,17 @@ function DetailPanel({ item, onClose }) {
   const level = WASTE_LEVEL(item.predictedWasteKg || 0);
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-black/90 backdrop-blur-xl">
       {/* Panel header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-primary/8">
-        <h3 className="font-['Outfit',sans-serif] font-semibold text-primary text-base truncate pr-2">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+        <h3 className="font-['Outfit',sans-serif] font-semibold text-white text-base truncate pr-2">
           {areaName(item)}
         </h3>
         <button
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-primary/5 transition-colors flex-shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors flex-shrink-0"
         >
-          <X className="w-4 h-4 text-primary/50" />
+          <X className="w-4 h-4 text-white/50" />
         </button>
       </div>
 
@@ -166,38 +203,38 @@ function DetailPanel({ item, onClose }) {
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {/* Status + Type */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${action.bg} ${action.text}`}>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${action.bg} ${action.text} ${action.border}`}>
             <ActionIcon className="w-3.5 h-3.5" />
             {action.label}
           </span>
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${typeConf.bg} ${typeConf.color}`}>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 ${typeConf.bg} ${typeConf.color}`}>
             <TypeIcon className="w-3.5 h-3.5" />
             {areaType(item)}
           </span>
         </div>
 
         {/* Predicted waste */}
-        <div className="bg-secondary rounded-xl p-4">
-          <p className="text-xs text-primary/40 font-medium uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Scale className="w-3.5 h-3.5" />
             Predicted Waste
           </p>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-primary tabular-nums">
+            <span className="text-3xl font-bold text-white tabular-nums">
               {item.predictedWasteKg?.toLocaleString()}
             </span>
-            <span className="text-sm text-primary/50">kg</span>
+            <span className="text-sm text-white/50">kg</span>
           </div>
           <div className="flex items-center gap-1.5 mt-2">
             <span className={`w-2 h-2 rounded-full ${level.dot}`} />
-            <span className="text-xs text-primary/55 font-medium">{level.label} volume</span>
+            <span className="text-xs text-white/55 font-medium">{level.label} volume</span>
           </div>
         </div>
 
         {/* Assigned trucks */}
         {item.assignedTrucks?.length > 0 && (
           <div>
-            <p className="text-xs text-primary/40 font-medium uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <Route className="w-3.5 h-3.5" />
               Assigned Vehicles ({item.assignedTrucks.length})
             </p>
@@ -205,21 +242,21 @@ function DetailPanel({ item, onClose }) {
               {item.assignedTrucks.map((truck, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between bg-secondary rounded-xl px-4 py-3"
+                  className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Truck className="w-4 h-4 text-primary/40" />
+                    <Truck className="w-4 h-4 text-white/40" />
                     <div>
-                      <p className="text-sm font-medium text-primary">
+                      <p className="text-sm font-medium text-white">
                         {truck.licensePlate || truck.truckId}
                       </p>
-                      <p className="text-xs text-primary/45 flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-white/45 flex items-center gap-1 mt-0.5">
                         <User className="w-3 h-3" />
                         {truck.driverName}
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs text-primary/40 font-medium">
+                  <span className="text-xs text-white/40 font-medium">
                     {truck.capacity}kg cap.
                   </span>
                 </div>
@@ -230,12 +267,12 @@ function DetailPanel({ item, onClose }) {
 
         {/* Recommendation */}
         {item.recommendation && (
-          <div className="bg-blue-50/60 rounded-xl p-4">
-            <p className="text-xs text-blue-600/60 font-medium uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+            <p className="text-xs text-blue-400/60 font-medium uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Info className="w-3.5 h-3.5" />
               ML Recommendation
             </p>
-            <p className="text-sm text-blue-800/70 leading-relaxed">
+            <p className="text-sm text-blue-200/70 leading-relaxed">
               {item.recommendation}
             </p>
           </div>
@@ -252,9 +289,9 @@ function MobileDetailModal({ item, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="absolute inset-x-0 bottom-0 max-h-[85vh] bg-white rounded-t-2xl overflow-hidden animate-[modalIn_200ms_ease-out]">
-        <div className="w-10 h-1 bg-primary/15 rounded-full mx-auto mt-3" />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-x-0 bottom-0 max-h-[85vh] bg-black/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl overflow-hidden animate-[modalIn_200ms_ease-out]">
+        <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mt-3" />
         <DetailPanel item={item} onClose={onClose} />
       </div>
     </div>
@@ -344,12 +381,16 @@ function SchedulePage() {
   /* Loading */
   if (loading) {
     return (
-      <div className="bg-secondary min-h-screen pt-18 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <TruckLoader />
-          <p className="text-primary/60 text-sm font-medium font-['Outfit',sans-serif]">
-            Loading collection schedule...
-          </p>
+      <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+        <div className="fixed inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${ScheduleBg})` }} />
+        <div className="fixed inset-0 z-0 bg-black/70 backdrop-blur-xs" />
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <TruckLoader />
+            <p className="text-white/60 text-sm font-medium font-['Outfit',sans-serif]">
+              Loading collection schedule...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -358,23 +399,27 @@ function SchedulePage() {
   /* Error */
   if (error) {
     return (
-      <div className="bg-secondary min-h-screen pt-18 flex flex-col items-center justify-center gap-4 px-4">
-        <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
-          <AlertTriangle className="w-7 h-7 text-red-500" />
+      <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+        <div className="fixed inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${ScheduleBg})` }} />
+        <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/20 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-red-400" />
+          </div>
+          <div className="text-center">
+            <p className="text-red-300 text-lg font-semibold font-['Outfit',sans-serif] mb-1">
+              Something went wrong
+            </p>
+            <p className="text-red-400/60 text-sm max-w-sm">{error}</p>
+          </div>
+          <button
+            onClick={fetchPublicSchedule}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-xl text-sm font-medium hover:bg-gray-100 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
         </div>
-        <div className="text-center">
-          <p className="text-red-700 text-lg font-semibold font-['Outfit',sans-serif] mb-1">
-            Something went wrong
-          </p>
-          <p className="text-red-500/70 text-sm max-w-sm">{error}</p>
-        </div>
-        <button
-          onClick={fetchPublicSchedule}
-          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Retry
-        </button>
       </div>
     );
   }
@@ -382,267 +427,269 @@ function SchedulePage() {
   /* Empty */
   if (!schedule) {
     return (
-      <div className="bg-secondary min-h-screen pt-18 flex flex-col items-center justify-center gap-4 px-4">
-        <div className="w-16 h-16 rounded-2xl bg-primary/8 flex items-center justify-center">
-          <CalendarCheck className="w-8 h-8 text-primary/40" />
+      <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+        <div className="fixed inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${ScheduleBg})` }} />
+        <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+          <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
+            <CalendarCheck className="w-8 h-8 text-white/40" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-['Outfit',sans-serif] font-bold text-xl text-white mb-1">
+              No Schedule Available
+            </h3>
+            <p className="text-white/50 text-sm max-w-md">
+              No collection schedule has been generated for today yet.
+            </p>
+          </div>
+          <button
+            onClick={fetchPublicSchedule}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-xl text-sm font-medium hover:bg-gray-100 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Check Again
+          </button>
         </div>
-        <div className="text-center">
-          <h3 className="font-['Outfit',sans-serif] font-bold text-xl text-primary mb-1">
-            No Schedule Available
-          </h3>
-          <p className="text-primary/50 text-sm max-w-md">
-            No collection schedule has been generated for today yet.
-          </p>
-        </div>
-        <button
-          onClick={fetchPublicSchedule}
-          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Check Again
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="bg-secondary min-h-screen font-['Outfit',sans-serif] pt-18">
-      {/* ── Header + Stats (single primary block, no white gap) ── */}
-      <div className="bg-primary text-white px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Nav row */}
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate("/customer-dashboard")}
-                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="w-5 h-5 text-white/60" />
-              </button>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-white leading-tight">
-                  Collection Schedule
-                </h1>
-                <div className="flex items-center gap-1.5 text-xs text-white/45 mt-0.5">
-                  <Clock className="w-3 h-3" />
-                  <span>{todayStr}</span>
-                  {schedule?.status === "draft" && (
-                    <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[10px] font-semibold">
-                      <FileWarning className="w-2.5 h-2.5" />
-                      Draft
-                    </span>
+    <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+      {/* ── Dynamic Background (same as OurTeam) ── */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${ScheduleBg})` }}
+      />
+      <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
+
+      {/* ── Content ── */}
+      <div className="relative z-10 pt-24">
+        {/* ── Hero header ── */}
+        <section className="pb-8 sm:pb-12 px-6 md:px-16 lg:px-24 text-center">
+          <FadeIn>
+            <span className="inline-block text-white/50 text-xs font-semibold tracking-widest uppercase mb-4">
+              Collection Schedule
+            </span>
+          </FadeIn>
+
+          <FadeIn delay={100}>
+            <h1 className="font-bold text-white text-4xl sm:text-5xl lg:text-[3.5rem] leading-[1.1] tracking-tight mb-6 drop-shadow-md">
+              Today's Collection Plan
+            </h1>
+          </FadeIn>
+
+          <FadeIn delay={200}>
+            <p className="text-white/70 text-lg max-w-2xl mx-auto leading-relaxed mb-4">
+              AI-optimized waste collection routes and dispatch decisions for your city.
+            </p>
+            <div className="flex items-center justify-center gap-2 text-white/45 text-sm">
+              <Clock className="w-4 h-4" />
+              <span>{todayStr}</span>
+              {schedule?.status === "draft" && (
+                <span className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-400/30 text-amber-300 text-[10px] font-semibold">
+                  <FileWarning className="w-2.5 h-2.5" />
+                  Draft
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-md bg-white/10 border border-white/10 text-white/45 text-[10px] font-semibold">
+                <Leaf className="w-2.5 h-2.5" />
+                ML-Powered
+              </span>
+            </div>
+          </FadeIn>
+        </section>
+
+        {/* ── Stats grid ── */}
+        <section className="pb-8 px-6 md:px-16 lg:px-24">
+          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { icon: MapPin, value: totalAreas, label: "Total Areas" },
+              { icon: Truck, value: dispatchedCount, label: "Dispatched" },
+              { icon: SkipForward, value: skippedCount, label: "Skipped" },
+              { icon: Scale, value: totalWaste.toLocaleString(), label: "Predicted Waste", suffix: "kg" },
+            ].map((stat, i) => (
+              <FadeIn key={stat.label} delay={300 + i * 80}>
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+                  <stat.icon className="w-5 h-5 text-white/40 mx-auto mb-2" />
+                  <p className="text-2xl sm:text-3xl font-bold text-white">
+                    {stat.value}
+                    {stat.suffix && <span className="text-lg font-normal ml-1 text-white/50">{stat.suffix}</span>}
+                  </p>
+                  <p className="text-white/50 text-sm mt-1 font-medium">{stat.label}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Search + Filters bar ── */}
+        <section className="px-6 md:px-16 lg:px-24 pb-4">
+          <FadeIn delay={500}>
+            <div className="max-w-7xl mx-auto bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-4 sm:px-6 py-3">
+              <div className="flex items-center gap-2">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/35" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search areas..."
+                    className="w-full pl-9 pr-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter toggle (mobile) */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`sm:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${hasActiveFilters ? "bg-white/20 border-white/30 text-white" : "bg-white/10 border-white/10 text-white/50"
+                    }`}
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+
+                {/* Desktop filters */}
+                <div className="hidden sm:flex items-center gap-2">
+                  <select
+                    value={actionFilter}
+                    onChange={(e) => setActionFilter(e.target.value)}
+                    className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20 pr-8"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+                  >
+                    <option value="all" className="bg-[#1a1a1a] text-white">All Status</option>
+                    <option value="dispatch" className="bg-[#1a1a1a] text-white">Dispatched</option>
+                    <option value="skip" className="bg-[#1a1a1a] text-white">Skipped</option>
+                    <option value="reduced" className="bg-[#1a1a1a] text-white">Reduced</option>
+                  </select>
+
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20 pr-8"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+                  >
+                    <option value="all" className="bg-[#1a1a1a] text-white">All Types</option>
+                    {areaTypes.map((t) => (
+                      <option key={t} value={t} className="bg-[#1a1a1a] text-white">
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs text-white/50 hover:text-white transition-colors px-2"
+                    >
+                      Clear
+                    </button>
                   )}
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white/50 text-xs">
-                <Leaf className="w-3 h-3" />
-                ML-Powered
+              {/* Mobile filter dropdowns */}
+              {showFilters && (
+                <div className="sm:hidden flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
+                  <select
+                    value={actionFilter}
+                    onChange={(e) => setActionFilter(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#1a1a1a] text-white">All Status</option>
+                    <option value="dispatch" className="bg-[#1a1a1a] text-white">Dispatched</option>
+                    <option value="skip" className="bg-[#1a1a1a] text-white">Skipped</option>
+                    <option value="reduced" className="bg-[#1a1a1a] text-white">Reduced</option>
+                  </select>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
+                  >
+                    <option value="all" className="bg-[#1a1a1a] text-white">All Types</option>
+                    {areaTypes.map((t) => (
+                      <option key={t} value={t} className="bg-[#1a1a1a] text-white">
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                  {hasActiveFilters && (
+                    <button onClick={clearFilters} className="text-xs text-white/50 px-1">
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </FadeIn>
+        </section>
+
+        {/* ── Main content: List + Detail panel ── */}
+        <section className="px-6 md:px-16 lg:px-24 pb-20">
+          <div className="max-w-7xl mx-auto flex gap-6" style={{ minHeight: "calc(100vh - 500px)" }}>
+            {/* List */}
+            <div className={`flex-1 min-w-0 ${selectedItem ? "hidden lg:block" : ""}`}>
+              {/* Results count */}
+              <div className="py-3 text-xs text-white/40 font-medium">
+                {filteredAreas.length === totalAreas
+                  ? `${totalAreas} areas`
+                  : `${filteredAreas.length} of ${totalAreas} areas`}
               </div>
-              <button
-                onClick={fetchPublicSchedule}
-                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white"
-                title="Refresh"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center pb-6">
-            <div>
-              <MapPin className="w-5 h-5 text-white/40 mx-auto mb-2" />
-              <p className="text-2xl sm:text-3xl font-bold">{totalAreas}</p>
-              <p className="text-white/50 text-sm mt-1 font-medium">Total Areas</p>
-            </div>
-            <div>
-              <Truck className="w-5 h-5 text-white/40 mx-auto mb-2" />
-              <p className="text-2xl sm:text-3xl font-bold">{dispatchedCount}</p>
-              <p className="text-white/50 text-sm mt-1 font-medium">Dispatched</p>
-            </div>
-            <div>
-              <SkipForward className="w-5 h-5 text-white/40 mx-auto mb-2" />
-              <p className="text-2xl sm:text-3xl font-bold">{skippedCount}</p>
-              <p className="text-white/50 text-sm mt-1 font-medium">Skipped</p>
-            </div>
-            <div>
-              <Scale className="w-5 h-5 text-white/40 mx-auto mb-2" />
-              <p className="text-2xl sm:text-3xl font-bold">
-                {totalWaste.toLocaleString()}
-                <span className="text-lg font-normal ml-1">kg</span>
-              </p>
-              <p className="text-white/50 text-sm mt-1 font-medium">Predicted Waste</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Search + Filters bar ── */}
-      <div className="bg-white border-b border-primary/6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center gap-2">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/35" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search areas..."
-                className="w-full pl-9 pr-3 py-2 bg-secondary rounded-lg text-sm text-primary placeholder:text-primary/35 focus:outline-none focus:ring-2 focus:ring-primary/15 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-primary/30 hover:text-primary/60"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+              {filteredAreas.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 px-4">
+                  <MapPin className="w-10 h-10 text-white/20" />
+                  <p className="text-white/50 text-sm text-center">
+                    {searchQuery || hasActiveFilters
+                      ? "No areas match your filters."
+                      : "No areas in today's schedule."}
+                  </p>
+                  {(searchQuery || hasActiveFilters) && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-sm text-white/60 hover:text-white transition-colors"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-0">
+                  {filteredAreas.map((item, index) => (
+                    <ScheduleRow
+                      key={areaName(item)}
+                      item={item}
+                      index={index}
+                      isSelected={selectedItem && areaName(selectedItem) === areaName(item)}
+                      onClick={() => handleSelectItem(item)}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Filter toggle (mobile) */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`sm:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
-                hasActiveFilters ? "bg-primary text-white" : "bg-secondary text-primary/50"
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-            </button>
+            {/* Desktop detail panel */}
+            {selectedItem && (
+              <div className="hidden lg:block w-[380px] flex-shrink-0 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+                <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+              </div>
+            )}
 
-            {/* Desktop filters */}
-            <div className="hidden sm:flex items-center gap-2">
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                className="px-3 py-2 bg-secondary rounded-lg text-sm text-primary appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/15 pr-8"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23354f52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
-              >
-                <option value="all">All Status</option>
-                <option value="dispatch">Dispatched</option>
-                <option value="skip">Skipped</option>
-                <option value="reduced">Reduced</option>
-              </select>
-
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-2 bg-secondary rounded-lg text-sm text-primary appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/15 pr-8"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23354f52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
-              >
-                <option value="all">All Types</option>
-                {areaTypes.map((t) => (
-                  <option key={t} value={t}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </option>
-                ))}
-              </select>
-
-              {hasActiveFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="text-xs text-primary/50 hover:text-primary transition-colors px-2"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+            {/* Mobile detail modal */}
+            <MobileDetailModal
+              item={selectedItem}
+              onClose={() => setSelectedItem(null)}
+            />
           </div>
-
-          {/* Mobile filter dropdowns */}
-          {showFilters && (
-            <div className="sm:hidden flex items-center gap-2 mt-2 pt-2 border-t border-primary/6">
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                className="flex-1 px-3 py-2 bg-secondary rounded-lg text-sm text-primary appearance-none cursor-pointer focus:outline-none"
-              >
-                <option value="all">All Status</option>
-                <option value="dispatch">Dispatched</option>
-                <option value="skip">Skipped</option>
-                <option value="reduced">Reduced</option>
-              </select>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="flex-1 px-3 py-2 bg-secondary rounded-lg text-sm text-primary appearance-none cursor-pointer focus:outline-none"
-              >
-                <option value="all">All Types</option>
-                {areaTypes.map((t) => (
-                  <option key={t} value={t}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </option>
-                ))}
-              </select>
-              {hasActiveFilters && (
-                <button onClick={clearFilters} className="text-xs text-primary/50 px-1">
-                  Clear
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Main content: List + Detail panel ── */}
-      <div className="max-w-7xl mx-auto flex" style={{ minHeight: "calc(100vh - 260px)" }}>
-        {/* List */}
-        <div className={`flex-1 min-w-0 ${selectedItem ? "hidden lg:block" : ""}`}>
-          {/* Results count */}
-          <div className="px-4 sm:px-6 lg:px-8 py-3 text-xs text-primary/40 font-medium">
-            {filteredAreas.length === totalAreas
-              ? `${totalAreas} areas`
-              : `${filteredAreas.length} of ${totalAreas} areas`}
-          </div>
-
-          {filteredAreas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 px-4">
-              <MapPin className="w-10 h-10 text-primary/20" />
-              <p className="text-primary/50 text-sm text-center">
-                {searchQuery || hasActiveFilters
-                  ? "No areas match your filters."
-                  : "No areas in today's schedule."}
-              </p>
-              {(searchQuery || hasActiveFilters) && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-primary/60 hover:text-primary transition-colors"
-                >
-                  Clear all filters
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-primary/6">
-              {filteredAreas.map((item) => (
-                <ScheduleRow
-                  key={areaName(item)}
-                  item={item}
-                  isSelected={selectedItem && areaName(selectedItem) === areaName(item)}
-                  onClick={() => handleSelectItem(item)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Desktop detail panel */}
-        {selectedItem && (
-          <div className="hidden lg:block w-[380px] flex-shrink-0 border-l border-primary/8">
-            <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
-          </div>
-        )}
-
-        {/* Mobile detail modal */}
-        <MobileDetailModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-        />
+        </section>
       </div>
     </div>
   );
