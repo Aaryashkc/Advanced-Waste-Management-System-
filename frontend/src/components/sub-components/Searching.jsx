@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import ThankYouPage from "./ThankYouPage";
 import { getSocket } from "../../utils/socket";
 import usePickupStore from "../../stores/usePickupStore";
+import SearchingBg from "../../assets/ourteam.png";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -335,6 +336,21 @@ function SearchPage() {
     return () => clearInterval(intervalRef.current);
   }, [flow]);
 
+  // Auto-cancel any in-flight pickup if the user navigates away (unmount).
+  const flowRef = useRef(flow);
+  const pickupIdRef = useRef(pickupId);
+  useEffect(() => { flowRef.current = flow; }, [flow]);
+  useEffect(() => { pickupIdRef.current = pickupId; }, [pickupId]);
+  useEffect(() => {
+    return () => {
+      const f = flowRef.current;
+      const id = pickupIdRef.current;
+      if (id && (f === "searching" || f === "found")) {
+        cancelPickup(id);
+      }
+    };
+  }, [cancelPickup]);
+
   // Geolocation on mount
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -452,18 +468,35 @@ function SearchPage() {
   const showRoute = flow === "estimate" || flow === "searching" || flow === "found";
 
   return (
-    <div className="min-h-screen bg-[#f7f4ed]">
-      <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
+    <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
+      {/* ── Dynamic Background ── */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${SearchingBg})` }}
+      />
+      <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-24 pb-10">
 
         {/* ── Top bar ── */}
         <div className="flex items-center justify-between mb-5">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-medium text-primary/60 hover:text-primary transition">
+          <button
+            onClick={async () => {
+              // If a pickup is in-flight, cancel it before leaving so it doesn't
+              // linger as PENDING on the dashboard.
+              if (pickupId && (flow === "searching" || flow === "found")) {
+                await cancelPickup(pickupId);
+              }
+              navigate(-1);
+            }}
+            className="flex items-center gap-2 text-sm font-medium text-white/60 hover:text-white transition"
+          >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
             Back
           </button>
           <div className="flex items-center gap-2">
             {flow !== "confirm" && (
-              <span className="px-3 py-1 rounded-full bg-[#296200]/10 text-[#296200] text-xs font-bold uppercase tracking-wide">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wide">
                 {flow === "estimate" ? "Review" : flow === "searching" ? "Searching" : flow === "found" ? "Matched" : "Cancelled"}
               </span>
             )}
@@ -471,7 +504,7 @@ function SearchPage() {
         </div>
 
         {/* ── Map Card ── */}
-        <div className="bg-white rounded-3xl overflow-hidden shadow-lg border border-primary/8">
+        <div className="bg-white rounded-3xl overflow-hidden shadow-2xl border border-white/10">
 
           {/* Map */}
           <div className="relative h-[50vh] min-h-80 max-h-130">
@@ -675,7 +708,7 @@ function SearchPage() {
 
         {/* ── Legend (when route is showing) ── */}
         {showRoute && estimate?.depotLocation && (
-          <div className="mt-4 flex items-center justify-center gap-6 text-xs text-primary/50">
+          <div className="mt-4 flex items-center justify-center gap-6 text-xs text-white/60">
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-full bg-red-500" /> Your location
             </span>

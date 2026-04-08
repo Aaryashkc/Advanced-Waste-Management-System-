@@ -26,18 +26,8 @@ function useInView() {
   return [ref, inView];
 }
 
-function FadeIn({ children, delay = 0, className = '' }) {
-  const [ref, inView] = useInView();
-  return (
-    <div
-      ref={ref}
-      className={`transition-all duration-700 ease-out ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-        } ${className}`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  );
+function FadeIn({ children, className = '' }) {
+  return <div className={className}>{children}</div>;
 }
 
 function UploadWastePage() {
@@ -236,7 +226,7 @@ function UploadWastePage() {
         className="fixed inset-0 z-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${UploadBg})` }}
       />
-      <div className="fixed inset-0 z-0 bg-black/85 backdrop-blur-xs" />
+      <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
 
       {/* ── Content ── */}
       <div className="relative z-10 pt-24">

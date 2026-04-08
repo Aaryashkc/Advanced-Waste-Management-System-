@@ -29,6 +29,7 @@ import {
 import api from "../../utils/api";
 import useAuthStore from "../../stores/useAuthStore";
 import TruckLoader from "../shared/TruckLoader";
+import { getSocket } from "../../utils/socket";
 
 ChartJS.register(
   CategoryScale,
@@ -65,18 +66,8 @@ function useInView() {
   return [ref, inView];
 }
 
-function FadeIn({ children, delay = 0, className = "" }) {
-  const [ref, inView] = useInView();
-  return (
-    <div
-      ref={ref}
-      className={`transition-all duration-700 ease-out ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-        } ${className}`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  );
+function FadeIn({ children, className = "" }) {
+  return <div className={className}>{children}</div>;
 }
 
 /* ── Constants ── */
@@ -141,8 +132,25 @@ function ChartCard({ title, children, className = "" }) {
 
 /* ── Recent pickup row ── */
 
-function RecentPickupRow({ pickup }) {
+function RecentPickupRow({ pickup, onCancel }) {
   const statusColor = STATUS_COLORS[pickup.status] || "#9ca3af";
+  const [cancelling, setCancelling] = useState(false);
+  const canCancel = pickup.status === "PENDING" || pickup.status === "ASSIGNED";
+
+  const handleCancel = async (e) => {
+    e.stopPropagation();
+    if (!window.confirm("Cancel this pickup request?")) return;
+    setCancelling(true);
+    try {
+      await api.post(`/pickups/${pickup.id}/cancel`);
+      onCancel?.(pickup.id);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to cancel pickup");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
     <div className="group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 hover:border-white/20 transition-all duration-300">
       <div className="min-w-0 flex-1">
@@ -159,16 +167,27 @@ function RecentPickupRow({ pickup }) {
           {pickup.category}
         </p>
       </div>
-      <span
-        className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold border"
-        style={{
-          color: statusColor,
-          backgroundColor: `${statusColor}15`,
-          borderColor: `${statusColor}30`,
-        }}
-      >
-        {pickup.status}
-      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        {canCancel && (
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {cancelling ? "Cancelling..." : "Cancel"}
+          </button>
+        )}
+        <span
+          className="rounded-lg px-2.5 py-1 text-[11px] font-semibold border"
+          style={{
+            color: statusColor,
+            backgroundColor: `${statusColor}15`,
+            borderColor: `${statusColor}30`,
+          }}
+        >
+          {pickup.status}
+        </span>
+      </div>
     </div>
   );
 }
@@ -207,6 +226,46 @@ function CustomerDashboard() {
     };
     fetchData();
     return () => { cancelled = true; };
+  }, []);
+
+  // ── Realtime: keep dashboard in sync via WebSocket ───────────────────────
+  useEffect(() => {
+    const socket = getSocket();
+
+    const applyStatusChange = (id, nextStatus, extra = {}) => {
+      setData((prev) => {
+        if (!prev) return prev;
+        const target = prev.pickups.find((p) => p.id?.toString() === id?.toString());
+        if (!target) return prev;
+        const prevStatus = target.status;
+        if (prevStatus === nextStatus) return prev;
+
+        const nextPickups = prev.pickups.map((p) =>
+          p.id?.toString() === id?.toString() ? { ...p, status: nextStatus, ...extra } : p
+        );
+        const counts = { ...(prev.stats?.statusCounts || {}) };
+        counts[prevStatus] = Math.max(0, (counts[prevStatus] || 0) - 1);
+        counts[nextStatus] = (counts[nextStatus] || 0) + 1;
+        return { ...prev, pickups: nextPickups, stats: { ...prev.stats, statusCounts: counts } };
+      });
+    };
+
+    const onStatusUpdate = (data) => applyStatusChange(data.id, data.status);
+    const onAccepted = (data) => applyStatusChange(data.id, "ASSIGNED", { driverId: data.driverId });
+    const onCreated = () => {
+      // A new pickup belongs to us — refetch to pick it up with full payload
+      api.get("/pickups/my-pickups").then((res) => setData(res.data)).catch(() => {});
+    };
+
+    socket.on("pickup:statusUpdate", onStatusUpdate);
+    socket.on("pickup:accepted", onAccepted);
+    socket.on("pickup:created", onCreated);
+
+    return () => {
+      socket.off("pickup:statusUpdate", onStatusUpdate);
+      socket.off("pickup:accepted", onAccepted);
+      socket.off("pickup:created", onCreated);
+    };
   }, []);
 
   const stats = data?.stats;
@@ -358,7 +417,7 @@ function CustomerDashboard() {
           className="fixed inset-0 z-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${DASHBOARD_BG})` }}
         />
-        <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-xs" />
+        <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
             <TruckLoader />
@@ -377,7 +436,7 @@ function CustomerDashboard() {
           className="fixed inset-0 z-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${DASHBOARD_BG})` }}
         />
-        <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-xs" />
+        <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen gap-4 px-4">
           <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/20 flex items-center justify-center">
             <AlertTriangle className="w-7 h-7 text-red-400" />
@@ -407,7 +466,7 @@ function CustomerDashboard() {
         className="fixed inset-0 z-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${DASHBOARD_BG})` }}
       />
-      <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-xs" />
+      <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
 
       {/* ── Content ── */}
       <div className="relative z-10 pt-24">
@@ -549,7 +608,29 @@ function CustomerDashboard() {
                 {pickups.length > 0 ? (
                   <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
                     {pickups.map((p) => (
-                      <RecentPickupRow key={p.id} pickup={p} />
+                      <RecentPickupRow
+                        key={p.id}
+                        pickup={p}
+                        onCancel={(id) =>
+                          setData((prev) => {
+                            if (!prev) return prev;
+                            const prevStatus = prev.pickups.find((x) => x.id === id)?.status;
+                            const nextPickups = prev.pickups.map((x) =>
+                              x.id === id ? { ...x, status: "CANCELLED" } : x
+                            );
+                            const nextStatusCounts = { ...(prev.stats?.statusCounts || {}) };
+                            if (prevStatus) {
+                              nextStatusCounts[prevStatus] = Math.max(0, (nextStatusCounts[prevStatus] || 0) - 1);
+                            }
+                            nextStatusCounts.CANCELLED = (nextStatusCounts.CANCELLED || 0) + 1;
+                            return {
+                              ...prev,
+                              pickups: nextPickups,
+                              stats: { ...prev.stats, statusCounts: nextStatusCounts },
+                            };
+                          })
+                        }
+                      />
                     ))}
                   </div>
                 ) : (

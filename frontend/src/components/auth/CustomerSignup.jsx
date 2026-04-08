@@ -97,7 +97,7 @@ function CustomerSignUpPage() {
       {/* Split card */}
       <div className="relative z-10 w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[600px] border border-white/10">
         {/* Left — Welcome panel */}
-        <div className="relative md:w-5/12 flex flex-col justify-center px-12 py-14 md:py-20 overflow-hidden">
+        <div className="relative md:w-5/12 hidden md:flex flex-col justify-center px-12 py-14 md:py-20 overflow-hidden">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{

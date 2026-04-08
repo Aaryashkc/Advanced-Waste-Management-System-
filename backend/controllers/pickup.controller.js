@@ -583,7 +583,7 @@ export const acceptPickup = async (req, res) => {
 export const cancelPickup = async (req, res) => {
   try {
     const { _id, role, name } = req.user;
-    const { reason } = req.body;
+    const { reason } = req.body || {};
 
     // Atomic: only cancel if in a cancellable state
     const now = new Date();

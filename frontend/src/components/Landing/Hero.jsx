@@ -5,6 +5,13 @@ import { getDashboardRoute } from '../../utils/roleRouting';
 import { useRef, useState, useEffect } from 'react';
 import HERO_IMAGE from "../../assets/hero.png"
 
+// Preload at module scope so the browser caches the hero image once and
+// keeps it ready for instant paint on every remount (fixes flash on nav back).
+if (typeof window !== "undefined") {
+  const preload = new Image();
+  preload.src = HERO_IMAGE;
+}
+
 /* ── Viewport observer ── */
 function useInView(options = {}) {
   const ref = useRef(null);
@@ -69,14 +76,10 @@ export function Hero() {
   const getStartedLabel = isAuthenticated ? 'Go to Dashboard' : 'Get Started';
 
   return (
-    <section className="relative w-full min-h-screen flex items-center overflow-hidden pt-20">
-      {/* Background Image - NO fade effect */}
-      <img
-        src={HERO_IMAGE}
-        alt="Modern clean city"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-
+    <section
+      className="relative w-full min-h-screen flex items-center overflow-hidden pt-20 bg-black bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+    >
       {/* Dark Overlay with Gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/40 z-0"></div>
 
