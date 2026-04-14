@@ -72,6 +72,48 @@ function emitSafe(fn) {
   try { fn(getIO()); } catch (_) { /* socket may not be initialized */ }
 }
 
+/**
+ * Resolve an Organization for a pickup location.
+ * Tries area name first, then falls back to nearest area by GPS.
+ * Returns the org's _id, or null if nothing matches.
+ * Used when a customer doesn't have an orgId set on their account
+ * (e.g. self-signup), so pickups still get scoped to a region for
+ * admin/history/stats filtering.
+ */
+async function resolveOrgIdForLocation({ latitude, longitude, area }) {
+  let areaDoc = null;
+  if (area) {
+    areaDoc = await Area.findOne({ name: area, isActive: true, orgId: { $ne: null } }).lean();
+  }
+  if (!areaDoc && latitude != null && longitude != null) {
+    const allAreas = await Area.find({
+      isActive: true,
+      orgId: { $ne: null },
+      "coordinates.latitude": { $exists: true, $ne: null },
+      "coordinates.longitude": { $exists: true, $ne: null },
+    }).lean();
+    if (allAreas.length === 0) return null;
+
+    const toRad = (d) => (d * Math.PI) / 180;
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    let minDist = Infinity;
+    for (const a of allAreas) {
+      const dLat = toRad(a.coordinates.latitude - lat);
+      const dLng = toRad(a.coordinates.longitude - lng);
+      const sLat = Math.sin(dLat / 2);
+      const sLng = Math.sin(dLng / 2);
+      const h = sLat * sLat + Math.cos(toRad(lat)) * Math.cos(toRad(a.coordinates.latitude)) * sLng * sLng;
+      const dist = 2 * 6371 * Math.asin(Math.sqrt(h));
+      if (dist < minDist) {
+        minDist = dist;
+        areaDoc = a;
+      }
+    }
+  }
+  return areaDoc?.orgId || null;
+}
+
 // ── POST /api/pickups/estimate ─────────────────────────────────────────────
 
 /**
@@ -230,13 +272,26 @@ export const createPickup = async (req, res) => {
 
     const customer = req.user;
 
+    // Resolve the org for this pickup. Prefer the customer's orgId if set,
+    // otherwise derive it from the area / nearest area to the GPS location.
+    // This ensures admin-scoped history & stats see the pickup even when the
+    // customer self-signed-up without being assigned to an org.
+    let resolvedOrgId = customer.orgId || null;
+    if (!resolvedOrgId) {
+      resolvedOrgId = await resolveOrgIdForLocation({
+        latitude,
+        longitude,
+        area: area || null,
+      });
+    }
+
     // Run the driver-matching algorithm (now area-aware)
     const matched = await findBestDrivers({
       latitude: Number(latitude),
       longitude: Number(longitude),
       category: category || "non-recyclable",
       level: level || "easy",
-      orgId: customer.orgId,
+      orgId: resolvedOrgId,
       area: area || null,
     });
 
@@ -244,7 +299,7 @@ export const createPickup = async (req, res) => {
 
     const pickup = await PickupRequest.create({
       customerId: customer._id,
-      orgId: customer.orgId,
+      orgId: resolvedOrgId,
       wasteUploadId: wasteUploadId || null,
       location: { latitude, longitude, address: address || null },
       province: province || null,

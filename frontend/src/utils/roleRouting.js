@@ -28,8 +28,8 @@ export const ROLE_ROUTES = {
     { path: '/customer-dashboard', label: 'Dashboard' },
     { path: '/schedule', label: 'Schedule' },
     { path: '/upload-waste', label: 'Request Pickup' },
+    { path: '/billing', label: 'Billing' },
     { path: '/about-us', label: 'About Us' },
-    { path: '/contact-us', label: 'Contact Us' },
   ],
   driver: [
     { path: '/driver-dashboard', label: 'Dashboard' },

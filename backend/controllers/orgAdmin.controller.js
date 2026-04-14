@@ -5,6 +5,7 @@ import Task from "../models/Task.model.js";
 import Organization from "../models/Organization.model.js";
 import DeletionRequest from "../models/DeletionRequest.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
+import { buildPickupAnalytics } from "../services/pickupAnalytics.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
@@ -497,141 +498,83 @@ export const getMyDeletionRequests = async (req, res) => {
 
 // ========== Admin Analytics ==========
 
+/**
+ * Org admin dashboard analytics — same shape as super-admin's, but scoped
+ * to the admin's organization. All numbers come from PickupRequest (the
+ * real source of truth) — the legacy Task-based aggregations were stale
+ * because Task is the ML scheduler's per-area record, not actual work.
+ *
+ * Reuses buildPickupAnalytics() from superAdmin.controller.js so both
+ * roles share one aggregation pipeline.
+ */
 export const getAdminAnalytics = async (req, res) => {
   try {
     const orgId = req.user.orgId;
     if (!orgId) return res.status(403).json({ message: "Organization ID required" });
 
     const orgIdObj = new mongoose.Types.ObjectId(orgId);
+    const match = { orgId: orgIdObj };
 
-    // 1. Ecosystem Stats
-    const totalDrivers = await User.countDocuments({ orgId, role: "driver" });
-    const activeVehicles = await Truck.countDocuments({ orgId, isAvailable: true });
-    
-    // Total Waste (sum of estimatedVolume from COMPLETED tasks)
-    const wasteAggregation = await Task.aggregate([
-      { $match: { orgId: orgIdObj, status: "COMPLETED" } },
-      { $group: { _id: null, totalWaste: { $sum: "$estimatedVolume" } } }
-    ]);
-    const totalWasteCollected = wasteAggregation.length > 0 ? wasteAggregation[0].totalWaste : 0;
-    
-    const activeRoutes = await Task.countDocuments({ 
-        orgId, 
-        status: { $in: ["ASSIGNED", "IN_PROGRESS"] } 
-    });
-
-    // 2. Driver Performance
-    const driverStats = await Task.aggregate([
-      { $match: { orgId: orgIdObj, status: "COMPLETED", assignedDriverId: { $ne: null } } },
-      { 
-        $group: { 
-          _id: "$assignedDriverId", 
-          wasteCollected: { $sum: "$estimatedVolume" },
-          completedTasks: { $sum: 1 } 
-        } 
-      }
-    ]);
-
-    // Populate driver names
-    const driverData = await Promise.all(driverStats.map(async stat => {
-      const driver = await Driver.findById(stat._id).populate("userId", "name");
-      return {
-        _id: stat._id,
-        name: driver?.userId?.name || "Unknown Driver",
-        wasteCollectedField: stat.wasteCollected,
-        activeVehicles: 1, // Dummy data so Scatter chart doesn't break
-        routes: stat.completedTasks
-      };
-    }));
-
-    // 3. Time Series Data (Last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const timeSeriesAggregation = await Task.aggregate([
-      { $match: { orgId: orgIdObj, status: "COMPLETED", completedAt: { $gte: sevenDaysAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$completedAt" } },
-          dailyWaste: { $sum: "$estimatedVolume" }
-        }
-      },
-      {
-        $project: {
-          date: "$_id",
-          dailyWaste: 1,
-          _id: 0
-        }
-      },
-      { $sort: { date: 1 } }
-    ]);
-
-    const org = await Organization.findById(orgId);
-    const timeSeriesDataRaw = timeSeriesAggregation.map(item => ({
-      ...item,
-      orgName: org?.name || "Organization"
-    }));
-
-    // 4. Waste Type Breakdown
-    const wasteTypeDistribution = await Task.aggregate([
-      { $match: { orgId: orgIdObj, status: "COMPLETED" } },
-      { $group: { _id: "$wasteType", amount: { $sum: "$estimatedVolume" } } }
-    ]);
-
-    // 5. Task Status Distribution
-    const taskStatusDistribution = await Task.aggregate([
-      { $match: { orgId: orgIdObj } },
-      { $group: { _id: "$status", count: { $sum: 1 } } }
-    ]);
-
-    // 6. Pickup stats for this org
-    const pickupStatusAgg = await PickupRequest.aggregate([
-      { $match: { orgId: orgIdObj } },
-      { $group: { _id: "$status", count: { $sum: 1 } } },
-    ]);
-    const pickupStatusMap = {};
-    let totalPickups = 0;
-    for (const s of pickupStatusAgg) {
-      pickupStatusMap[s._id] = s.count;
-      totalPickups += s.count;
-    }
-
-    const pickupTrend = await PickupRequest.aggregate([
-      { $match: { orgId: orgIdObj, createdAt: { $gte: sevenDaysAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          total: { $sum: 1 },
-          completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+    const [totalDrivers, activeVehicles, pickupAnalytics, areaBreakdown] = await Promise.all([
+      User.countDocuments({ orgId, role: "driver" }),
+      Truck.countDocuments({ orgId, isAvailable: true }),
+      buildPickupAnalytics(match),
+      // Per-area pickup breakdown — replaces the old Task-based driver chart
+      PickupRequest.aggregate([
+        { $match: { ...match, area: { $ne: null } } },
+        {
+          $group: {
+            _id: "$area",
+            total: { $sum: 1 },
+            completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+            revenue: {
+              $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, { $ifNull: ["$estimatedPrice", 0] }, 0] },
+            },
+          },
         },
-      },
-      { $sort: { _id: 1 } },
+        { $sort: { total: -1 } },
+        { $limit: 15 },
+        {
+          $project: {
+            name: "$_id",
+            total: 1,
+            completed: 1,
+            revenue: { $round: ["$revenue", 0] },
+            _id: 0,
+          },
+        },
+      ]),
     ]);
 
     res.status(200).json({
       success: true,
       data: {
+        // Headline cards (Dashboard.jsx reads these — note totalOrganizations
+        // is repurposed as totalDrivers for the admin role; the frontend
+        // already labels it correctly based on role).
         ecosystemStats: {
           totalOrganizations: totalDrivers,
-          totalWasteCollected,
           activeVehicles,
-          activeRoutes,
-          totalPickups,
-          completedPickups: pickupStatusMap.COMPLETED || 0,
-          activePickups: (pickupStatusMap.PENDING || 0) + (pickupStatusMap.ASSIGNED || 0) +
-            (pickupStatusMap.EN_ROUTE || 0) + (pickupStatusMap.ARRIVED || 0) + (pickupStatusMap.COLLECTING || 0),
+          totalPickups: pickupAnalytics.summary.total,
+          completedPickups: pickupAnalytics.summary.completed,
+          activePickups: pickupAnalytics.summary.active,
+          cancelledPickups: pickupAnalytics.summary.cancelled,
+          completionRate: pickupAnalytics.summary.completionRate,
+          totalRevenue: pickupAnalytics.summary.totalRevenue,
+          avgResponseMs: pickupAnalytics.summary.avgResponseMs,
+          avgTaskDurationMs: pickupAnalytics.summary.avgTaskDurationMs,
         },
-        organizationData: driverData,
-        timeSeriesDataRaw,
-        wasteTypeDistribution,
-        taskStatusDistribution,
-        pickupStats: {
-          statusDistribution: pickupStatusAgg.map(s => ({ status: s._id, count: s.count })),
-          dailyTrend: pickupTrend.map(d => ({ date: d._id, total: d.total, completed: d.completed })),
-        },
-      }
+        // Charts
+        statusDistribution: pickupAnalytics.statusDistribution,
+        categoryDistribution: pickupAnalytics.categoryDistribution,
+        levelDistribution: pickupAnalytics.levelDistribution,
+        dailyTrend: pickupAnalytics.dailyTrend,
+        hourlyDistribution: pickupAnalytics.hourlyDistribution,
+        topDrivers: pickupAnalytics.topDrivers,
+        // Per-area breakdown (admin view)
+        areaBreakdown,
+      },
     });
-
   } catch (error) {
     console.error("Error generating admin analytics:", error);
     res.status(500).json({ success: false, message: "Failed to generate analytics", error: error.message });

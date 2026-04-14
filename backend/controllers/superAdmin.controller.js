@@ -4,6 +4,7 @@ import Task from "../models/Task.model.js";
 import Truck from "../models/Truck.model.js";
 import Driver from "../models/Driver.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
+import { buildPickupAnalytics } from "../services/pickupAnalytics.js";
 import DeletionRequest from "../models/DeletionRequest.model.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
@@ -227,156 +228,76 @@ export const addAdminToOrg = async (req, res) => {
 
 export const getSuperAdminAnalytics = async (req, res) => {
   try {
-    // 1. Ecosystem Stats
-    const totalOrganizations = await Organization.countDocuments();
-    const activeVehicles = await Truck.countDocuments({ isAvailable: true });
-    
-    // Total Waste (sum of estimatedVolume from COMPLETED tasks)
-    const wasteAggregation = await Task.aggregate([
-      { $match: { status: "COMPLETED" } },
-      { $group: { _id: null, totalWaste: { $sum: "$estimatedVolume" } } }
-    ]);
-    const totalWasteCollected = wasteAggregation.length > 0 ? wasteAggregation[0].totalWaste : 0;
-    
-    // Active Routes (we will use IN_PROGRESS and ASSIGNED tasks as a proxy for active routes)
-    const activeRoutes = await Task.countDocuments({ status: { $in: ["ASSIGNED", "IN_PROGRESS"] } });
-
-    // 2. Organization Data for Bar and Scatter Plots
-    // Grouping tasks by organization to find their waste, routes, and trucks
-    const orgs = await Organization.find();
-    
-    // Use aggregation to get task stats per org
-    const orgStats = await Task.aggregate([
-      { $match: { status: "COMPLETED" } },
-      { 
-        $group: { 
-          _id: "$orgId", 
-          wasteCollected: { $sum: "$estimatedVolume" },
-          completedRoutes: { $sum: 1 } 
-        } 
-      }
-    ]);
-
-    // Count trucks per org
-    const truckStats = await Truck.aggregate([
-      { $group: { _id: "$orgId", activeVehicles: { $sum: { $cond: ["$isAvailable", 1, 0] } } } }
-    ]);
-
-    const orgData = orgs.map(org => {
-      const taskStat = orgStats.find(s => String(s._id) === String(org._id)) || { wasteCollected: 0, completedRoutes: 0 };
-      const trkStat = truckStats.find(s => String(s._id) === String(org._id)) || { activeVehicles: 0 };
-      
-      return {
-        _id: org._id,
-        name: org.name,
-        wasteCollectedField: taskStat.wasteCollected,
-        activeVehicles: trkStat.activeVehicles,
-        routes: taskStat.completedRoutes
-      };
-    });
-
-    // 3. Time Series Data (Last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const timeSeriesAggregation = await Task.aggregate([
-      { $match: { status: "COMPLETED", completedAt: { $gte: sevenDaysAgo } } },
-      {
-        $group: {
-          _id: {
-            orgId: "$orgId",
-            date: { $dateToString: { format: "%Y-%m-%d", date: "$completedAt" } }
+    // Real ecosystem-wide counts (not pickup-derived)
+    const [totalOrganizations, activeVehicles, pickupAnalytics, orgBreakdown] = await Promise.all([
+      Organization.countDocuments(),
+      Truck.countDocuments({ isAvailable: true }),
+      buildPickupAnalytics({}),
+      // Per-organization pickup breakdown — replaces the old Task-based bar chart
+      PickupRequest.aggregate([
+        { $match: { orgId: { $ne: null } } },
+        {
+          $group: {
+            _id: "$orgId",
+            total: { $sum: 1 },
+            completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+            revenue: {
+              $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, { $ifNull: ["$estimatedPrice", 0] }, 0] },
+            },
           },
-          dailyWaste: { $sum: "$estimatedVolume" }
-        }
-      },
-      {
-        $lookup: {
-          from: "organizations",
-          localField: "_id.orgId",
-          foreignField: "_id",
-          as: "org"
-        }
-      },
-      { $unwind: "$org" },
-      {
-        $project: {
-          orgName: "$org.name",
-          date: "$_id.date",
-          dailyWaste: 1,
-          _id: 0
-        }
-      },
-      { $sort: { date: 1 } }
-    ]);
-
-    // 4. Waste Type Breakdown (Pie Chart)
-    const wasteTypeAggregation = await Task.aggregate([
-      { $match: { status: "COMPLETED" } },
-      { $group: { _id: "$wasteType", amount: { $sum: "$estimatedVolume" } } }
-    ]);
-
-    // 5. Task Status Distribution (Doughnut Chart)
-    const taskStatusAggregation = await Task.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 } } }
-    ]);
-
-    // Map time series to a more charting friendly format dynamically in the frontend, 
-    // but we can pass the raw aggregated array here.
-
-    // 6. Pickup Stats (real pickup data for dashboard)
-    const pickupStatusAgg = await PickupRequest.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
         },
-      },
-    ]);
-    const pickupStatusMap = {};
-    let totalPickups = 0;
-    for (const s of pickupStatusAgg) {
-      pickupStatusMap[s._id] = s.count;
-      totalPickups += s.count;
-    }
-
-    // 7. Pickup daily trend (last 7 days)
-    const pickupTrend = await PickupRequest.aggregate([
-      { $match: { createdAt: { $gte: sevenDaysAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          total: { $sum: 1 },
-          completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+        { $sort: { total: -1 } },
+        { $limit: 15 },
+        {
+          $lookup: {
+            from: "organizations",
+            localField: "_id",
+            foreignField: "_id",
+            as: "org",
+            pipeline: [{ $project: { name: 1 } }],
+          },
         },
-      },
-      { $sort: { _id: 1 } },
+        { $unwind: { path: "$org", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            orgId: "$_id",
+            name: { $ifNull: ["$org.name", "Unknown org"] },
+            total: 1,
+            completed: 1,
+            revenue: { $round: ["$revenue", 0] },
+            _id: 0,
+          },
+        },
+      ]),
     ]);
 
     res.status(200).json({
       success: true,
       data: {
+        // Headline cards (Dashboard.jsx reads these)
         ecosystemStats: {
           totalOrganizations,
-          totalWasteCollected,
           activeVehicles,
-          activeRoutes,
-          totalPickups,
-          completedPickups: pickupStatusMap.COMPLETED || 0,
-          activePickups: (pickupStatusMap.PENDING || 0) + (pickupStatusMap.ASSIGNED || 0) +
-            (pickupStatusMap.EN_ROUTE || 0) + (pickupStatusMap.ARRIVED || 0) + (pickupStatusMap.COLLECTING || 0),
+          totalPickups: pickupAnalytics.summary.total,
+          completedPickups: pickupAnalytics.summary.completed,
+          activePickups: pickupAnalytics.summary.active,
+          cancelledPickups: pickupAnalytics.summary.cancelled,
+          completionRate: pickupAnalytics.summary.completionRate,
+          totalRevenue: pickupAnalytics.summary.totalRevenue,
+          avgResponseMs: pickupAnalytics.summary.avgResponseMs,
+          avgTaskDurationMs: pickupAnalytics.summary.avgTaskDurationMs,
         },
-        organizationData: orgData,
-        timeSeriesDataRaw: timeSeriesAggregation,
-        wasteTypeDistribution: wasteTypeAggregation,
-        taskStatusDistribution: taskStatusAggregation,
-        pickupStats: {
-          statusDistribution: pickupStatusAgg.map(s => ({ status: s._id, count: s.count })),
-          dailyTrend: pickupTrend.map(d => ({ date: d._id, total: d.total, completed: d.completed })),
-        },
-      }
+        // Charts
+        statusDistribution: pickupAnalytics.statusDistribution,
+        categoryDistribution: pickupAnalytics.categoryDistribution,
+        levelDistribution: pickupAnalytics.levelDistribution,
+        dailyTrend: pickupAnalytics.dailyTrend,
+        hourlyDistribution: pickupAnalytics.hourlyDistribution,
+        topDrivers: pickupAnalytics.topDrivers,
+        // Cross-org breakdown (super-admin only)
+        orgBreakdown,
+      },
     });
-
   } catch (error) {
     console.error("Error generating super admin analytics:", error);
     res.status(500).json({ success: false, message: "Failed to generate analytics", error: error.message });

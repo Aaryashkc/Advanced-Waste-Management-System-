@@ -15,6 +15,7 @@ import {
   BarChart3,
   FileText,
   DollarSign,
+  Receipt,
   X,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     { name: "Pricing", icon: DollarSign, path: "/admin-dashboard/pricing" },
     { name: "History", icon: ClipboardList, path: "/admin-dashboard/history" },
     { name: "Notifications", icon: Bell, path: "/admin-dashboard/notifications" },
+    { name: "Billing", icon: Receipt, path: "/admin-dashboard/billing" },
     ...(isSuperAdmin
       ? [
           { name: "Users", icon: UsersRound, path: "/admin-dashboard/users" },

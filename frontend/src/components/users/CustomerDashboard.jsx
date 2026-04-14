@@ -22,12 +22,13 @@ import {
   Upload,
   CalendarDays,
   ArrowRight,
-
+  Receipt,
   Truck,
   AlertTriangle,
 } from "lucide-react";
 import api from "../../utils/api";
 import useAuthStore from "../../stores/useAuthStore";
+import useBillingStore from "../../stores/useBillingStore";
 import TruckLoader from "../shared/TruckLoader";
 import { getSocket } from "../../utils/socket";
 
@@ -207,64 +208,76 @@ function EmptyChart({ message }) {
 function CustomerDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { bills, summary: billingSummary, fetchMyBills, payBill } = useBillingStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [billingPayingId, setBillingPayingId] = useState(null);
 
+  // Single source of truth for fetching dashboard data.
+  // Stable across renders so socket / focus listeners can call it without
+  // re-registering, and so that we never patch stats locally and drift out
+  // of sync with the server (which caused "stats reset after payment" since
+  // the old socket handler only updated statusCounts and not totalSpent /
+  // monthly / category / level / total).
+  const fetchDashboard = useRef(null);
+  fetchDashboard.current = async ({ showLoader = false } = {}) => {
+    try {
+      if (showLoader) setLoading(true);
+      const res = await api.get("/pickups/my-pickups");
+      setData(res.data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load dashboard");
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
-    let cancelled = false;
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get("/pickups/my-pickups");
-        if (!cancelled) setData(res.data);
-      } catch (err) {
-        if (!cancelled) setError(err.response?.data?.message || "Failed to load dashboard");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => { cancelled = true; };
+    fetchDashboard.current({ showLoader: true });
+    fetchMyBills();
   }, []);
 
   // ── Realtime: keep dashboard in sync via WebSocket ───────────────────────
+  // Any pickup event that could affect this customer's stats triggers a full
+  // refetch. This is cheaper than reasoning about partial patches and
+  // guarantees totalSpent / monthly / category / level / status counts all
+  // stay consistent with the server (especially after payment completion).
   useEffect(() => {
     const socket = getSocket();
+    const refetch = () => fetchDashboard.current();
 
-    const applyStatusChange = (id, nextStatus, extra = {}) => {
-      setData((prev) => {
-        if (!prev) return prev;
-        const target = prev.pickups.find((p) => p.id?.toString() === id?.toString());
-        if (!target) return prev;
-        const prevStatus = target.status;
-        if (prevStatus === nextStatus) return prev;
-
-        const nextPickups = prev.pickups.map((p) =>
-          p.id?.toString() === id?.toString() ? { ...p, status: nextStatus, ...extra } : p
-        );
-        const counts = { ...(prev.stats?.statusCounts || {}) };
-        counts[prevStatus] = Math.max(0, (counts[prevStatus] || 0) - 1);
-        counts[nextStatus] = (counts[nextStatus] || 0) + 1;
-        return { ...prev, pickups: nextPickups, stats: { ...prev.stats, statusCounts: counts } };
-      });
-    };
-
-    const onStatusUpdate = (data) => applyStatusChange(data.id, data.status);
-    const onAccepted = (data) => applyStatusChange(data.id, "ASSIGNED", { driverId: data.driverId });
-    const onCreated = () => {
-      // A new pickup belongs to us — refetch to pick it up with full payload
-      api.get("/pickups/my-pickups").then((res) => setData(res.data)).catch(() => {});
-    };
-
-    socket.on("pickup:statusUpdate", onStatusUpdate);
-    socket.on("pickup:accepted", onAccepted);
-    socket.on("pickup:created", onCreated);
+    socket.on("pickup:statusUpdate", refetch);
+    socket.on("pickup:accepted", refetch);
+    socket.on("pickup:created", refetch);
+    socket.on("pickup:cancelled", refetch);
+    socket.on("payment:updated", refetch);
 
     return () => {
-      socket.off("pickup:statusUpdate", onStatusUpdate);
-      socket.off("pickup:accepted", onAccepted);
-      socket.off("pickup:created", onCreated);
+      socket.off("pickup:statusUpdate", refetch);
+      socket.off("pickup:accepted", refetch);
+      socket.off("pickup:created", refetch);
+      socket.off("pickup:cancelled", refetch);
+      socket.off("payment:updated", refetch);
+    };
+  }, []);
+
+  // Refetch when the tab regains focus / becomes visible.
+  // This catches the eSewa redirect flow: customer leaves the SPA for the
+  // hosted checkout, comes back to /payment-success, then to the dashboard.
+  // Without this, any cached dashboard state would look stale ("reset").
+  useEffect(() => {
+    const onFocus = () => fetchDashboard.current();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchDashboard.current();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
@@ -507,6 +520,13 @@ function CustomerDashboard() {
                 <CalendarDays size={16} />
                 View Schedule
               </button>
+              <button
+                onClick={() => navigate("/billing")}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold rounded-xl hover:bg-white/20 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+              >
+                <Receipt size={16} />
+                Pay Bills
+              </button>
             </div>
           </FadeIn>
         </section>
@@ -527,6 +547,84 @@ function CustomerDashboard() {
             ))}
           </div>
         </section>
+
+        {/* ── Billing Summary ── */}
+        {billingSummary && billingSummary.unpaid > 0 && (
+          <section className="pb-6 px-6 md:px-16 lg:px-24">
+            <div className="max-w-5xl mx-auto">
+              <FadeIn delay={450}>
+                <div className="bg-white/5 backdrop-blur-md border border-amber-500/20 rounded-2xl p-5 sm:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest flex items-center gap-2">
+                      <Receipt size={14} /> Pending Bills
+                    </h3>
+                    <button
+                      onClick={() => navigate("/billing")}
+                      className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition flex items-center gap-1"
+                    >
+                      View All <ArrowRight size={12} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-amber-400">{billingSummary.unpaid}</p>
+                      <p className="text-xs text-white/40 mt-0.5">Unpaid Bills</p>
+                    </div>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-red-400">NPR {(billingSummary.totalDue || 0).toLocaleString()}</p>
+                      <p className="text-xs text-white/40 mt-0.5">Total Due</p>
+                    </div>
+                  </div>
+
+                  {/* Show up to 3 unpaid bills with quick-pay */}
+                  <div className="space-y-2">
+                    {bills
+                      .filter((b) => b.status === "UNPAID" || b.status === "OVERDUE")
+                      .slice(0, 3)
+                      .map((bill) => {
+                        const isOverdue = bill.status === "OVERDUE";
+                        const isPaying = billingPayingId === bill._id;
+                        return (
+                          <div
+                            key={bill._id}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 transition-all"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-white">
+                                {new Date(bill.billingYear, bill.billingMonth - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                              </p>
+                              <p className="text-xs text-white/40 mt-0.5">
+                                Due: {new Date(bill.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                {isOverdue && <span className="text-red-400 ml-2 font-semibold">OVERDUE</span>}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-white font-bold text-sm">NPR {bill.amount.toLocaleString()}</span>
+                              <button
+                                onClick={async () => {
+                                  setBillingPayingId(bill._id);
+                                  const result = await payBill(bill._id, "esewa");
+                                  if (result.redirecting) return;
+                                  setBillingPayingId(null);
+                                  if (!result.success) alert(result.error || "Payment failed");
+                                  else fetchMyBills();
+                                }}
+                                disabled={isPaying}
+                                className="rounded-lg px-3 py-1.5 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isPaying ? "Processing..." : "Pay eSewa"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+          </section>
+        )}
 
         {/* ── Charts row 1: Monthly trend + Status ── */}
         <section className="pb-6 px-6 md:px-16 lg:px-24">
@@ -611,25 +709,7 @@ function CustomerDashboard() {
                       <RecentPickupRow
                         key={p.id}
                         pickup={p}
-                        onCancel={(id) =>
-                          setData((prev) => {
-                            if (!prev) return prev;
-                            const prevStatus = prev.pickups.find((x) => x.id === id)?.status;
-                            const nextPickups = prev.pickups.map((x) =>
-                              x.id === id ? { ...x, status: "CANCELLED" } : x
-                            );
-                            const nextStatusCounts = { ...(prev.stats?.statusCounts || {}) };
-                            if (prevStatus) {
-                              nextStatusCounts[prevStatus] = Math.max(0, (nextStatusCounts[prevStatus] || 0) - 1);
-                            }
-                            nextStatusCounts.CANCELLED = (nextStatusCounts.CANCELLED || 0) + 1;
-                            return {
-                              ...prev,
-                              pickups: nextPickups,
-                              stats: { ...prev.stats, statusCounts: nextStatusCounts },
-                            };
-                          })
-                        }
+                        onCancel={() => fetchDashboard.current()}
                       />
                     ))}
                   </div>

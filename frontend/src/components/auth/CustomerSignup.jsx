@@ -13,12 +13,52 @@ function CustomerSignUpPage() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('idle'); // idle | loading | success | denied | unavailable | error
 
   useEffect(() => {
     if (isAuthenticated && user) {
       navigate(getDashboardRoute(user.role), { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
+
+  const fetchLocation = () => {
+    if (!('geolocation' in navigator)) {
+      setLocationStatus('unavailable');
+      return;
+    }
+    setLocationStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+            { headers: { 'Accept': 'application/json' } }
+          );
+          const data = await res.json();
+          const addr = data?.display_name || '';
+          if (addr) {
+            setFormData((prev) => ({ ...prev, address: prev.address || addr }));
+            setErrors((prev) => ({ ...prev, address: '' }));
+            setLocationStatus('success');
+          } else {
+            setLocationStatus('error');
+          }
+        } catch {
+          setLocationStatus('error');
+        }
+      },
+      (err) => {
+        setLocationStatus(err.code === err.PERMISSION_DENIED ? 'denied' : 'error');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    fetchLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const validateForm = () => {
     const errs = {};
@@ -209,12 +249,37 @@ function CustomerSignUpPage() {
 
             {/* Address */}
             <div>
-              <label
-                htmlFor="address"
-                className="block text-base font-medium text-primary/80 mb-2"
-              >
-                Address
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label
+                  htmlFor="address"
+                  className="block text-base font-medium text-primary/80"
+                >
+                  Address
+                </label>
+                <button
+                  type="button"
+                  onClick={fetchLocation}
+                  disabled={locationStatus === 'loading'}
+                  className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                  {locationStatus === 'loading' ? 'Detecting...' : 'Use my location'}
+                </button>
+              </div>
+              {locationStatus === 'denied' && (
+                <p className="text-amber-600 text-xs mb-2">
+                  Location permission denied. Please enter your address manually.
+                </p>
+              )}
+              {(locationStatus === 'error' || locationStatus === 'unavailable') && (
+                <p className="text-amber-600 text-xs mb-2">
+                  Couldn't detect your location. Please enter your address manually.
+                </p>
+              )}
+              {locationStatus === 'success' && (
+                <p className="text-green-600 text-xs mb-2">
+                  Address auto-filled from your location. Edit if needed.
+                </p>
+              )}
               <textarea
                 id="address"
                 value={formData.address}

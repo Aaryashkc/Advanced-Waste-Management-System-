@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import {
   LogOut, Mail, Phone, Shield, MapPin, Truck, Building2,
   ChevronRight, Package, Calendar, Clock, CheckCircle,
-  XCircle, ArrowLeft, Weight, User, History,
+  XCircle, ArrowLeft, Weight, User, History, Receipt,
+  CreditCard, Wallet, Ban,
 } from "lucide-react";
 import useAuthStore from "../stores/useAuthStore";
+import useBillingStore from "../stores/useBillingStore";
 import { getDashboardRoute } from "../utils/roleRouting";
 import api from "../utils/api";
 
@@ -18,6 +20,8 @@ export default function Profile() {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const isDriver = user?.role === "driver";
+  const isCustomer = user?.role === "customer_admin";
+  const { history: billingHistory, fetchPaymentHistory } = useBillingStore();
 
   // Fetch driver profile with truck & org
   useEffect(() => {
@@ -29,6 +33,12 @@ export default function Profile() {
       } catch (_) {}
     })();
   }, [isDriver]);
+
+  // Fetch billing history for customers
+  useEffect(() => {
+    if (!isCustomer || activeTab !== "billing") return;
+    fetchPaymentHistory();
+  }, [isCustomer, activeTab, fetchPaymentHistory]);
 
   // Fetch pickup history for drivers
   useEffect(() => {
@@ -78,6 +88,11 @@ export default function Profile() {
         { key: "truck", label: "Truck", Icon: Truck },
         { key: "history", label: "History", Icon: History },
       ]
+    : isCustomer
+    ? [
+        { key: "info", label: "Info", Icon: User },
+        { key: "billing", label: "Payments", Icon: Receipt },
+      ]
     : [];
 
   return (
@@ -108,8 +123,8 @@ export default function Profile() {
 
       <div className="px-5 sm:px-8 -mt-8 space-y-4 max-w-2xl">
 
-        {/* Tabs for drivers */}
-        {isDriver && tabs.length > 0 && (
+        {/* Tabs for drivers & customers */}
+        {(isDriver || isCustomer) && tabs.length > 0 && (
           <div className="flex gap-1 bg-white rounded-2xl shadow-sm border border-primary/8 p-1.5">
             {tabs.map((t) => (
               <button
@@ -129,7 +144,7 @@ export default function Profile() {
         )}
 
         {/* INFO TAB */}
-        {(activeTab === "info" || !isDriver) && (
+        {(activeTab === "info" || (!isDriver && !isCustomer)) && (
           <div className="space-y-4">
             {/* Contact Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-primary/8 overflow-hidden">
@@ -211,6 +226,69 @@ export default function Profile() {
                 Logout
               </button>
             </div>
+          </div>
+        )}
+
+        {/* BILLING TAB (customers only) */}
+        {isCustomer && activeTab === "billing" && (
+          <div className="space-y-4">
+            {billingHistory.length > 0 ? (
+              billingHistory.map((bill) => {
+                const isPaid = bill.status === "PAID";
+                const isWaived = bill.status === "WAIVED";
+                return (
+                  <div key={bill._id} className="bg-white rounded-2xl shadow-sm border border-primary/8 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        isPaid ? "bg-emerald-50" : "bg-violet-50"
+                      }`}>
+                        {isPaid ? <CheckCircle size={18} className="text-emerald-600" /> :
+                         <Ban size={18} className="text-violet-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold text-primary">
+                            {new Date(bill.billingYear, bill.billingMonth - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                          </p>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            isPaid ? "bg-emerald-100 text-emerald-700" : "bg-violet-100 text-violet-700"
+                          }`}>
+                            {bill.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5 text-xs text-primary/45">
+                          <span className="flex items-center gap-1 font-semibold text-primary/70">
+                            NPR {bill.amount.toLocaleString()}
+                          </span>
+                          {bill.paidAt && (
+                            <span className="flex items-center gap-1">
+                              <Calendar size={11} />
+                              {new Date(bill.paidAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </span>
+                          )}
+                          {bill.paymentMethod && (
+                            <span className="flex items-center gap-1">
+                              {bill.paymentMethod === "esewa" ? <CreditCard size={11} /> : <Wallet size={11} />}
+                              {bill.paymentMethod}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-primary/8 p-8 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4">
+                  <Receipt size={28} className="text-primary/25" />
+                </div>
+                <h3 className="text-base font-semibold text-primary/70 mb-1">No payment history</h3>
+                <p className="text-sm text-primary/40 max-w-xs mx-auto">
+                  Your payment records will appear here after you pay your first bill.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

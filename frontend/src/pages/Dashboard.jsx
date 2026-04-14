@@ -16,12 +16,13 @@ import AdminAnalyticsCharts from "../components/dashboard/AdminAnalyticsCharts";
 import {
   Building2,
   Trash2,
-  Truck,
   Route,
   BrainCircuit,
   TrendingUp,
   TrendingDown,
   AlertTriangle,
+  CheckCircle2,
+  Users,
 } from "lucide-react";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
@@ -104,38 +105,50 @@ const Dashboard = () => {
 
   const ecosystemStats = data?.ecosystemStats || {};
 
+  // Build stats from data the backend actually populates from PickupRequest
+  // (the Task collection used to back totalWasteCollected / activeRoutes is
+  // unrelated to real pickup activity, so those cards always read zero —
+  // we now use the real pickup numbers instead).
+  const totalPickups = ecosystemStats.totalPickups || 0;
+  const completedPickups = ecosystemStats.completedPickups || 0;
+  const activePickups = ecosystemStats.activePickups || 0;
+  const completionRate =
+    totalPickups > 0 ? Math.round((completedPickups / totalPickups) * 100) : 0;
+
   const stats = useMemo(
     () => [
       {
         title: isSuperAdmin ? "Total Organizations" : "Total Drivers",
         value: ecosystemStats.totalOrganizations || 0,
         label: isSuperAdmin ? "Active Partners" : "In Organization",
-        icon: <Building2 className="w-5 h-5 text-primary" />,
+        icon: isSuperAdmin
+          ? <Building2 className="w-5 h-5 text-primary" />
+          : <Users className="w-5 h-5 text-primary" />,
         iconBg: "bg-primary/8",
       },
       {
-        title: "Total Waste Collected",
-        value: `${(ecosystemStats.totalWasteCollected || 0).toLocaleString()} kg`,
+        title: "Total Pickups",
+        value: totalPickups.toLocaleString(),
         label: "All Time",
         icon: <Trash2 className="w-5 h-5 text-emerald-600" />,
         iconBg: "bg-emerald-100",
       },
       {
-        title: "Active Vehicles",
-        value: ecosystemStats.activeVehicles || 0,
-        label: "Available Trucks",
-        icon: <Truck className="w-5 h-5 text-blue-600" />,
-        iconBg: "bg-blue-100",
+        title: "Completed Pickups",
+        value: completedPickups.toLocaleString(),
+        label: `${completionRate}% completion rate`,
+        icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
+        iconBg: "bg-green-100",
       },
       {
-        title: "Active Routes",
-        value: ecosystemStats.activeRoutes || 0,
-        label: "Tasks In Progress",
+        title: "Active Now",
+        value: activePickups.toLocaleString(),
+        label: "Pending + In Progress",
         icon: <Route className="w-5 h-5 text-amber-600" />,
         iconBg: "bg-amber-100",
       },
     ],
-    [ecosystemStats, isSuperAdmin]
+    [ecosystemStats, isSuperAdmin, totalPickups, completedPickups, activePickups, completionRate]
   );
 
   // ML Insights derived from today's schedule (using correct backend field names)
@@ -301,43 +314,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Pickup Overview Card */}
-      {data?.ecosystemStats && (data.ecosystemStats.totalPickups > 0 || data.ecosystemStats.activePickups > 0) && (
-        <div className="bg-white rounded-2xl border border-primary/10 p-6">
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Trash2 className="w-4.5 h-4.5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-primary">Pickup Overview</h3>
-              <p className="text-xs text-primary/40">Real-time pickup request statistics</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl bg-blue-50/60 border border-blue-200/40 px-3.5 py-3 text-center">
-              <p className="text-lg font-bold text-blue-700">{data.ecosystemStats.totalPickups || 0}</p>
-              <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Total Pickups</p>
-            </div>
-            <div className="rounded-xl bg-green-50/60 border border-green-200/40 px-3.5 py-3 text-center">
-              <p className="text-lg font-bold text-green-700">{data.ecosystemStats.completedPickups || 0}</p>
-              <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Completed</p>
-            </div>
-            <div className="rounded-xl bg-amber-50/60 border border-amber-200/40 px-3.5 py-3 text-center">
-              <p className="text-lg font-bold text-amber-700">{data.ecosystemStats.activePickups || 0}</p>
-              <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Active Now</p>
-            </div>
-            <div className="rounded-xl bg-emerald-50/60 border border-emerald-200/40 px-3.5 py-3 text-center">
-              <p className="text-lg font-bold text-emerald-700">
-                {data.ecosystemStats.totalPickups > 0
-                  ? Math.round((data.ecosystemStats.completedPickups / data.ecosystemStats.totalPickups) * 100)
-                  : 0}%
-              </p>
-              <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Completion Rate</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Analytics Charts */}
       <section>
         {isLoading ? (
@@ -351,7 +327,7 @@ const Dashboard = () => {
             </p>
           </div>
         ) : isSuperAdmin ? (
-          <AnalyticsCharts analyticsData={data} />
+          <AnalyticsCharts analyticsData={data} mode="super_admin" />
         ) : (
           <AdminAnalyticsCharts analyticsData={data} />
         )}

@@ -21,8 +21,10 @@ import notificationRoutes from "./routes/notification.route.js";
 import historyRoutes from "./routes/history.route.js";
 import pricingConfigRoutes from "./routes/pricingConfig.route.js";
 import paymentRoutes from "./routes/payment.route.js";
+import billingRoutes from "./routes/billing.route.js";
 import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
 import { autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
+import { runBillGeneration } from "./controllers/billing.controller.js";
 import { initSocket } from "./socket/socketServer.js";
 
 dotenv.config();
@@ -30,8 +32,10 @@ dotenv.config();
 // Single cron schedule guard so hot reload (e.g. nodemon) does not register multiple jobs
 let cleanupCronScheduled = false;
 let mlScheduleCronScheduled = false;
+let billingCronScheduled = false;
 const CRON_SCHEDULE = "0 2 * * *"; // 2:00 AM every day (server local time)
 const ML_SCHEDULE_CRON = "0 0 * * *"; // 12:00 AM (midnight) every day — generates today's schedule
+const BILLING_CRON = "0 3 1 * *"; // 3:00 AM on the 1st of every month — generate monthly bills
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -68,6 +72,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/pricing-config", pricingConfigRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/billing", billingRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -147,5 +152,21 @@ server.listen(PORT, () => {
         .then((r) => console.log(`ML startup schedule: ${r.message}`))
         .catch((e) => console.error("ML startup schedule error:", e));
     }, 5000);
+  }
+
+  if (!billingCronScheduled) {
+    billingCronScheduled = true;
+    cron.schedule(BILLING_CRON, () => {
+      runBillGeneration()
+        .then((r) => console.log(`Billing: ${r.message}`))
+        .catch((e) => console.error("Billing generation error:", e));
+    });
+
+    // Generate bills on startup (if not already generated for this month)
+    setTimeout(() => {
+      runBillGeneration()
+        .then((r) => console.log(`Billing startup: ${r.message}`))
+        .catch((e) => console.error("Billing startup error:", e));
+    }, 7000);
   }
 });

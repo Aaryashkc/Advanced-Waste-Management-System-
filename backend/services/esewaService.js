@@ -116,6 +116,49 @@ export function buildEsewaInitiationPayload({ amount, pickupId }) {
   };
 }
 
+// ── Build billing initiation payload ─────────────────────────────────────
+
+/**
+ * Build the form data for a monthly billing payment via eSewa.
+ * Same security model as pickup payments — amount from DB, server-signed.
+ */
+export function buildEsewaBillingPayload({ amount, billingId }) {
+  const { productCode, secretKey, baseUrl } = getConfig();
+
+  const totalAmount = Number(amount);
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+    throw new Error("Invalid amount for eSewa billing payment");
+  }
+
+  const transactionUuid = `BILL-${billingId}-${randomUUID()}`;
+
+  const signedFieldNames = "total_amount,transaction_uuid,product_code";
+  const message =
+    `total_amount=${totalAmount}` +
+    `,transaction_uuid=${transactionUuid}` +
+    `,product_code=${productCode}`;
+
+  const signature = sign(message, secretKey);
+
+  return {
+    transactionUuid,
+    actionUrl: `${baseUrl}/api/epay/main/v2/form`,
+    formFields: {
+      amount: String(totalAmount),
+      tax_amount: "0",
+      total_amount: String(totalAmount),
+      transaction_uuid: transactionUuid,
+      product_code: productCode,
+      product_service_charge: "0",
+      product_delivery_charge: "0",
+      success_url: `${process.env.BACKEND_URL}/api/billing/esewa/success`,
+      failure_url: `${process.env.BACKEND_URL}/api/billing/esewa/failure`,
+      signed_field_names: signedFieldNames,
+      signature,
+    },
+  };
+}
+
 // ── Verify the signed callback payload ────────────────────────────────────
 
 /**
