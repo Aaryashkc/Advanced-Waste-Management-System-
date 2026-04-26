@@ -1,4 +1,6 @@
 import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -26,9 +28,12 @@ import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
 import { autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
 import { runBillGeneration } from "./controllers/billing.controller.js";
 import { ensurePickupRequestIndexes, expireStalePendingPickups } from "./services/pickupExpiry.js";
+import { ensurePaymentIndexes } from "./services/paymentIndexes.js";
 import { initSocket } from "./socket/socketServer.js";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 // Single cron schedule guard so hot reload (e.g. nodemon) does not register multiple jobs
 let cleanupCronScheduled = false;
@@ -129,6 +134,7 @@ server.listen(PORT, async () => {
   try {
     await connectDB();
     await ensurePickupRequestIndexes();
+    await ensurePaymentIndexes();
     await expireStalePendingPickups();
   } catch (err) {
     console.error("Startup database initialization failed:", err.message);

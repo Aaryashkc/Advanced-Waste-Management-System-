@@ -25,12 +25,14 @@ export const ROLE_ROUTES = {
     { path: '/admin-dashboard/vehicles', label: 'Vehicles' },
     { path: '/admin-dashboard/drivers', label: 'Drivers' },
     { path: '/admin-dashboard/billing', label: 'My Billing' },
+    { path: '/admin-dashboard/contact', label: 'Contact' },
   ],
   customer_admin: [
     { path: '/customer-dashboard', label: 'Dashboard' },
     { path: '/schedule', label: 'Schedule' },
     { path: '/upload-waste', label: 'Request Pickup' },
     { path: '/billing', label: 'Billing' },
+    { path: '/contact-us', label: 'Contact Us' },
     { path: '/about-us', label: 'About Us' },
   ],
   driver: [

@@ -46,7 +46,13 @@ export async function buildPickupAnalytics(match) {
             },
           },
           totalRevenue: {
-            $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, { $ifNull: ["$estimatedPrice", 0] }, 0] },
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ["$status", "COMPLETED"] }, { $eq: ["$paymentStatus", "PAID"] }] },
+                { $ifNull: ["$estimatedPrice", 0] },
+                0,
+              ],
+            },
           },
           avgResponseMs: {
             $avg: { $cond: [{ $ne: ["$responseTimeMs", null] }, "$responseTimeMs", "$$REMOVE"] },
@@ -93,7 +99,7 @@ export async function buildPickupAnalytics(match) {
     ]),
 
     PickupRequest.aggregate([
-      { $match: { ...match, status: "COMPLETED", driverId: { $ne: null } } },
+      { $match: { ...match, status: "COMPLETED", paymentStatus: "PAID", driverId: { $ne: null } } },
       {
         $group: {
           _id: "$driverId",

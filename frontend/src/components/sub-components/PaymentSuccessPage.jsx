@@ -22,6 +22,7 @@ export default function PaymentSuccessPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    localStorage.removeItem("pending-pickup-payment");
     if (!pickupId) {
       setError("Missing pickup reference.");
       setLoading(false);

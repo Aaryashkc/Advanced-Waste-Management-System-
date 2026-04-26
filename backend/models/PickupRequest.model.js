@@ -80,7 +80,7 @@ const pickupRequestSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        "PENDING", "ASSIGNED", "EN_ROUTE", "ARRIVED",
+        "PAYMENT_REQUIRED", "PENDING", "ASSIGNED", "EN_ROUTE", "ARRIVED",
         "COLLECTING", "REJECTED", "CANCELLED", "EXPIRED", "COMPLETED",
       ],
       default: "PENDING",
@@ -151,7 +151,7 @@ const pickupRequestSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: ["cash", "esewa"],
-      default: "cash",
+      default: null,
       index: true,
     },
     // High-level payment state — driven by the Payment record(s) for this pickup.

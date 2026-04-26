@@ -17,6 +17,7 @@ import {
   FileText,
   DollarSign,
   Receipt,
+  Mail,
   X,
   Moon,
   Sun,
@@ -42,6 +43,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     { name: "History", icon: ClipboardList, path: "/admin-dashboard/history" },
     { name: "Notifications", icon: Bell, path: "/admin-dashboard/notifications" },
     { name: isSuperAdmin ? "Billing Management" : "My Billing", icon: Receipt, path: "/admin-dashboard/billing" },
+    { name: "Contact", icon: Mail, path: "/admin-dashboard/contact" },
     ...(isSuperAdmin
       ? [
           { name: "Users", icon: UsersRound, path: "/admin-dashboard/users" },

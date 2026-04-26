@@ -51,10 +51,7 @@ const paymentSchema = new mongoose.Schema(
     // Unique idempotency key sent to eSewa (uuid)
     transactionUuid: {
       type: String,
-      default: null,
-      unique: true,
-      sparse: true,
-      index: true,
+      default: undefined,
     },
     // eSewa's own reference id returned after a successful payment
     esewaRefId: { type: String, default: null },
@@ -81,6 +78,14 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.index({ pickupId: 1, status: 1 });
 paymentSchema.index({ customerId: 1, createdAt: -1 });
+paymentSchema.index(
+  { transactionUuid: 1 },
+  {
+    unique: true,
+    name: "transactionUuid_1",
+    partialFilterExpression: { transactionUuid: { $type: "string" } },
+  }
+);
 
 const Payment = mongoose.model("Payment", paymentSchema);
 export default Payment;

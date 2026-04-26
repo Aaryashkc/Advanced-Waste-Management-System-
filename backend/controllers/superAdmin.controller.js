@@ -243,7 +243,13 @@ export const getSuperAdminAnalytics = async (req, res) => {
             total: { $sum: 1 },
             completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
             revenue: {
-              $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, { $ifNull: ["$estimatedPrice", 0] }, 0] },
+              $sum: {
+                $cond: [
+                  { $and: [{ $eq: ["$status", "COMPLETED"] }, { $eq: ["$paymentStatus", "PAID"] }] },
+                  { $ifNull: ["$estimatedPrice", 0] },
+                  0,
+                ],
+              },
             },
           },
         },
@@ -353,10 +359,10 @@ export const getAllVehicles = async (req, res) => {
 
 export const createVehicle = async (req, res) => {
   try {
-    const { truckType, capacity, licensePlate, orgId } = req.body;
+    const { truckType = "MIXED", capacity, licensePlate, orgId } = req.body;
 
-    if (!truckType || !capacity || !licensePlate || !orgId) {
-      return res.status(400).json({ message: "truckType, capacity, licensePlate, and orgId are required" });
+    if (!capacity || !licensePlate || !orgId) {
+      return res.status(400).json({ message: "capacity, licensePlate, and orgId are required" });
     }
 
     const org = await Organization.findById(orgId);

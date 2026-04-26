@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -28,6 +28,8 @@ const customerIcon = new L.Icon({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
 });
+
+const PICKUP_SESSION_KEY = "pending-pickup-payment";
 
 // ── Map helpers ──────────────────────────────────────────────────────────────
 function MapClickHandler({ onClick }) {
@@ -303,12 +305,14 @@ function Btn({ children, onClick, disabled, variant = "primary", className = "" 
 function SearchPage() {
   const routerLocation = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pickupIdFromUrl = searchParams.get("pickupId");
 
   const { wasteUploadId = null, category = "non-recyclable", level = "easy" } =
     routerLocation.state || {};
 
   const {
-    createPickup, cancelPickup, estimatePickup, clearEstimate,
+    createPickup, cancelPickup, estimatePickup, clearEstimate, fetchPickup, restoreEstimateFromPickup,
     estimate, estimateLoading, estimateError,
     currentPickup, loading,
   } = usePickupStore();
@@ -332,6 +336,76 @@ function SearchPage() {
   // Countdown
   const [secondsLeft, setSecondsLeft] = useState(60);
   const intervalRef = useRef(null);
+  const flowRef = useRef(flow);
+  const pickupIdRef = useRef(pickupId);
+  const paymentSettledRef = useRef(paymentSettled);
+
+  const clearPickupResume = useCallback(() => {
+    localStorage.removeItem(PICKUP_SESSION_KEY);
+    setSearchParams({}, { replace: true });
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(PICKUP_SESSION_KEY);
+    let session = null;
+    try {
+      session = raw ? JSON.parse(raw) : null;
+    } catch {
+      localStorage.removeItem(PICKUP_SESSION_KEY);
+    }
+
+    const resumePickupId = pickupIdFromUrl || session?.pickupId;
+    if (!resumePickupId) return;
+
+    let cancelled = false;
+    (async () => {
+      const result = await fetchPickup(resumePickupId);
+      if (cancelled) return;
+      if (!result.success || !result.pickup) {
+        clearPickupResume();
+        return;
+      }
+
+      const pickup = result.pickup;
+      const loc = pickup.location;
+      const nextSession = {
+        pickupId: pickup.id,
+        selectedLocation: session?.selectedLocation || null,
+        selectedAddress: loc?.address || session?.selectedAddress || null,
+      };
+      if (loc?.latitude && loc?.longitude) {
+        const nextLocation = [Number(loc.latitude), Number(loc.longitude)];
+        setSelectedLocation(nextLocation);
+        setMapCenter(nextLocation);
+        setMapZoom(16);
+        setSelectedAddress(loc.address || session?.selectedAddress || null);
+        nextSession.selectedLocation = nextLocation;
+      }
+      restoreEstimateFromPickup(pickup);
+      setPickupId(pickup.id);
+      localStorage.setItem(PICKUP_SESSION_KEY, JSON.stringify(nextSession));
+      if (!pickupIdFromUrl) {
+        setSearchParams({ pickupId: pickup.id }, { replace: true });
+      }
+
+      if (pickup.status === "PAYMENT_REQUIRED") {
+        setFlow("payment");
+        setShowPaymentModal(true);
+        setPaymentSettled(false);
+        paymentSettledRef.current = false;
+      } else if (["PENDING", "ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"].includes(pickup.status)) {
+        setPaymentSettled(true);
+        paymentSettledRef.current = true;
+        setFlow(pickup.status === "PENDING" ? "searching" : "found");
+        setDriverInfo(pickup.driverInfo || null);
+        setAssignedAt(pickup.assignedAt || null);
+      } else {
+        clearPickupResume();
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [pickupIdFromUrl, fetchPickup, restoreEstimateFromPickup, setSearchParams, clearPickupResume]);
 
   useEffect(() => {
     if (flow !== "found") { clearInterval(intervalRef.current); return; }
@@ -346,9 +420,6 @@ function SearchPage() {
   // IMPORTANT: do NOT cancel once the customer has chosen a payment method —
   // otherwise eSewa redirects (page navigates away → React unmount) would
   // wipe the freshly created pickup and corrupt the customer's history.
-  const flowRef = useRef(flow);
-  const pickupIdRef = useRef(pickupId);
-  const paymentSettledRef = useRef(paymentSettled);
   useEffect(() => { flowRef.current = flow; }, [flow]);
   useEffect(() => { pickupIdRef.current = pickupId; }, [pickupId]);
   useEffect(() => { paymentSettledRef.current = paymentSettled; }, [paymentSettled]);
@@ -386,23 +457,27 @@ function SearchPage() {
       setDriverInfo(data.driverInfo || null);
       setAssignedAt(data.assignedAt || null);
       setFlow("found");
-      // Driver matched — prompt the customer to choose how they want to pay.
-      if (!paymentSettled) setShowPaymentModal(true);
     };
     const onStatus = (data) => {
       if (pickupId && data.id?.toString() !== pickupId?.toString()) return;
-      if (data.status === "CANCELLED" || data.status === "EXPIRED") setFlow("cancelled");
+      if (data.status === "CANCELLED" || data.status === "EXPIRED") {
+        clearPickupResume();
+        setFlow("cancelled");
+      }
     };
     const onStatusUpdate = (data) => {
       if (pickupId && data.id?.toString() !== pickupId?.toString()) return;
       setTaskStatus(data.status);
-      if (data.status === "COMPLETED") setFlow("thankyou");
+      if (data.status === "COMPLETED") {
+        clearPickupResume();
+        setFlow("thankyou");
+      }
     };
     socket.on("pickup:accepted", onAccepted);
     socket.on("pickup:status", onStatus);
     socket.on("pickup:statusUpdate", onStatusUpdate);
     return () => { socket.off("pickup:accepted", onAccepted); socket.off("pickup:status", onStatus); socket.off("pickup:statusUpdate", onStatusUpdate); };
-  }, [pickupId]);
+  }, [pickupId, clearPickupResume]);
 
   // Route bounds & positions
   const routeBounds = estimate?.depotLocation && selectedLocation
@@ -421,22 +496,33 @@ function SearchPage() {
   };
 
   const handleAcceptEstimate = async () => {
-    setFlow("searching");
+    setFlow("payment");
     const result = await createPickup(
       { latitude: selectedLocation[0], longitude: selectedLocation[1], address: selectedAddress },
       { wasteUploadId, category, level }
     );
-    if (result.success) setPickupId(result.pickup.id);
+    if (result.success) {
+      setPickupId(result.pickup.id);
+      setSearchParams({ pickupId: result.pickup.id }, { replace: true });
+      localStorage.setItem(PICKUP_SESSION_KEY, JSON.stringify({
+        pickupId: result.pickup.id,
+        selectedLocation,
+        selectedAddress,
+      }));
+      setShowPaymentModal(true);
+    }
     else { alert(result.error || "Failed to create pickup request."); setFlow("estimate"); }
   };
 
   const handleCancelSearching = async () => {
     if (pickupId) await cancelPickup(pickupId);
+    clearPickupResume();
     setFlow("confirm"); setPickupId(null); clearEstimate();
   };
 
   const handleCancel = async () => {
     if (pickupId) await cancelPickup(pickupId);
+    clearPickupResume();
     setFlow("confirm"); setPickupId(null); setDriverInfo(null); clearEstimate();
   };
 
@@ -449,7 +535,10 @@ function SearchPage() {
     const result = await initiatePayment({ pickupId, method });
     if (result.success) {
       setShowPaymentModal(false);
-      // For eSewa the browser is already redirecting away — nothing else to do.
+      if (method === "cash") {
+        setFlow("searching");
+      }
+      // For eSewa the browser is already redirecting away.
     } else {
       // Roll back if initiation failed so the customer can retry / cancel.
       setPaymentSettled(false);
@@ -458,6 +547,7 @@ function SearchPage() {
   };
 
   const handleBackToHome = () => {
+    clearPickupResume();
     setFlow("confirm"); setSelectedLocation(null); setSelectedAddress(null);
     setPickupId(null); setDriverInfo(null); clearEstimate();
     usePickupStore.getState().resetPickup();
@@ -496,7 +586,7 @@ function SearchPage() {
       ? `${selectedLocation[0].toFixed(5)}, ${selectedLocation[1].toFixed(5)}`
       : null;
 
-  const showRoute = flow === "estimate" || flow === "searching" || flow === "found";
+  const showRoute = flow === "estimate" || flow === "payment" || flow === "searching" || flow === "found";
 
   return (
     <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
@@ -515,8 +605,9 @@ function SearchPage() {
             onClick={async () => {
               // If a pickup is in-flight, cancel it before leaving so it doesn't
               // linger as PENDING on the dashboard.
-              if (pickupId && (flow === "searching" || flow === "found")) {
+              if (pickupId && (flow === "payment" || flow === "searching" || flow === "found")) {
                 await cancelPickup(pickupId);
+                clearPickupResume();
               }
               navigate(-1);
             }}
@@ -528,7 +619,7 @@ function SearchPage() {
           <div className="flex items-center gap-2">
             {flow !== "confirm" && (
               <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wide">
-                {flow === "estimate" ? "Review" : flow === "searching" ? "Searching" : flow === "found" ? "Matched" : "Cancelled"}
+                {flow === "estimate" ? "Review" : flow === "payment" ? "Payment" : flow === "searching" ? "Searching" : flow === "found" ? "Matched" : "Cancelled"}
               </span>
             )}
           </div>
@@ -636,7 +727,7 @@ function SearchPage() {
                   )}
                 </div>
 
-                <PriceCard estimate={estimate} category={category} level={level} />
+                <PriceCard estimate={estimate} category={currentPickup?.category || category} level={currentPickup?.level || level} />
 
                 <div className="flex items-center gap-3 pt-1">
                   <Btn variant="outline" onClick={() => { setFlow("confirm"); clearEstimate(); }}>Change Location</Btn>
@@ -647,6 +738,27 @@ function SearchPage() {
                         Requesting...
                       </span>
                     ) : "Accept & Request Pickup"}
+                  </Btn>
+                </div>
+              </div>
+            )}
+
+            {/* PAYMENT */}
+            {flow === "payment" && estimate && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-primary">Choose Payment Method</h2>
+                  <p className="text-sm text-primary/50 mt-1">
+                    Your request will be sent to drivers after you choose how to pay.
+                  </p>
+                </div>
+
+                <PriceCard estimate={estimate} category={currentPickup?.category || category} level={currentPickup?.level || level} />
+
+                <div className="flex items-center gap-3 pt-1">
+                  <Btn variant="outline" onClick={handleCancelSearching}>Cancel Request</Btn>
+                  <Btn onClick={() => setShowPaymentModal(true)} disabled={payLoading}>
+                    {payLoading ? "Processing..." : "Choose Payment"}
                   </Btn>
                 </div>
               </div>
@@ -760,7 +872,7 @@ function SearchPage() {
             <div className="p-6 border-b border-primary/10">
               <h3 className="text-2xl font-bold text-primary">Choose Payment Method</h3>
               <p className="text-sm text-primary/60 mt-1">
-                Driver matched! How would you like to pay?
+                Choose how you want to pay before we notify drivers.
               </p>
               {estimate?.estimatedPrice && (
                 <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full bg-[#296200]/10 text-[#296200] font-bold text-sm">

@@ -206,7 +206,10 @@ export const payBill = async (req, res) => {
     });
   } catch (err) {
     console.error("payBill error:", err);
-    res.status(500).json({ message: "Failed to process payment" });
+    res.status(500).json({
+      message: "Failed to process payment",
+      ...(process.env.NODE_ENV === "development" && { error: err.message }),
+    });
   }
 };
 

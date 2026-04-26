@@ -36,10 +36,14 @@ export default function PaymentBadge({ pickup, compact = false }) {
     message = "Online payment failed. Collect cash on delivery.";
   } else {
     // cash (default)
-    theme = { bg: "bg-orange-100", border: "border-orange-400", text: "text-orange-900", icon: "text-orange-700" };
-    Icon = Banknote;
-    title = "CASH ON DELIVERY";
-    message = `Collect ${currency} ${amount ?? "—"} from the customer at pickup.`;
+    Icon = isPaid ? CheckCircle2 : Banknote;
+    theme = isPaid
+      ? { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-900", icon: "text-emerald-700" }
+      : { bg: "bg-orange-100", border: "border-orange-400", text: "text-orange-900", icon: "text-orange-700" };
+    title = isPaid ? "CASH RECEIVED" : "CASH ON DELIVERY";
+    message = isPaid
+      ? "Cash has been confirmed and the payment is now recorded."
+      : `Collect ${currency} ${amount ?? "--"} from the customer, then tap Cash Received.`;
   }
 
   if (compact) {

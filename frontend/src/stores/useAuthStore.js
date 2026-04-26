@@ -10,7 +10,7 @@ const useAuthStore = create(
       user: null,
       token: null,
       isAuthenticated: false,
-      loading: false,
+      loading: true,
       error: null,
 
       // Actions
@@ -167,12 +167,12 @@ const useAuthStore = create(
         if (token && user) {
           // Also validate the persisted role
           if (!VALID_ROLES.includes(user.role)) {
-            set({ isAuthenticated: false, user: null, token: null, error: 'Unauthorized role' });
+            set({ isAuthenticated: false, user: null, token: null, loading: false, error: 'Unauthorized role' });
             return;
           }
-          set({ isAuthenticated: true });
+          set({ isAuthenticated: true, loading: false });
         } else {
-          set({ isAuthenticated: false });
+          set({ isAuthenticated: false, loading: false });
         }
       },
 

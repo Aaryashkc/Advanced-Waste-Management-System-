@@ -35,6 +35,7 @@ export default function TaskFlow() {
   const [loading, setLoading] = useState(!passedPickup);
   const [error, setError] = useState(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [cashUpdating, setCashUpdating] = useState(false);
 
   // Fetch pickup if not passed via state
   useEffect(() => {
@@ -127,6 +128,21 @@ export default function TaskFlow() {
     const ok2 = await updateStatus("COMPLETED");
     if (ok2) {
       setPage(1); // Show completed state
+    }
+  }
+
+  async function handleCashReceived() {
+    if (!pickupId || cashUpdating) return;
+    setCashUpdating(true);
+    setError(null);
+    try {
+      await api.post(`/payments/${pickupId}/cash-collected`);
+      const fresh = await api.get(`/pickups/${pickupId}`);
+      if (fresh.data?.pickup) setPickup(fresh.data.pickup);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to confirm cash received");
+    } finally {
+      setCashUpdating(false);
     }
   }
 
@@ -255,6 +271,16 @@ export default function TaskFlow() {
                 whether the customer pre-paid online or owes cash. */}
             <div className="mb-6">
               <PaymentBadge pickup={pickup} />
+              {pickup?.paymentMethod === "cash" && pickup?.paymentStatus !== "PAID" && (
+                <button
+                  type="button"
+                  onClick={handleCashReceived}
+                  disabled={cashUpdating}
+                  className="mt-3 w-full sm:w-auto bg-emerald-600 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-emerald-700 active:scale-95 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cashUpdating ? "Confirming..." : "Cash Received"}
+                </button>
+              )}
             </div>
 
             <button

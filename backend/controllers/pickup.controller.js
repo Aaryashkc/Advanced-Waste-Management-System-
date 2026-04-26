@@ -73,6 +73,19 @@ function emitSafe(fn) {
   try { fn(getIO()); } catch (_) { /* socket may not be initialized */ }
 }
 
+export function emitPickupToDrivers(pickup, customerName = null) {
+  emitSafe((io) => {
+    const payload = { ...pickupPayload(pickup), customerName };
+    const matchedIds = pickup.matchedDriverIds || [];
+    if (matchedIds.length > 0) {
+      matchedIds.forEach((driverId) => io.to(`driver:${driverId}`).emit("pickup:created", payload));
+    } else {
+      io.to("drivers").emit("pickup:created", payload);
+    }
+    io.to("admins").emit("pickup:created", payload);
+  });
+}
+
 /**
  * Resolve an Organization for a pickup location.
  * Tries area name first, then falls back to nearest area by GPS.
@@ -259,14 +272,9 @@ export const createPickup = async (req, res) => {
     const {
       latitude, longitude, address, category, level, wasteUploadId, province, area,
       estimatedPrice, priceBreakdown, routeDistanceKm, routeDurationMinutes, routeGeometry, depotLocation,
-      paymentMethod,
     } = req.body;
 
     // Whitelist payment method — never trust arbitrary client values
-    const safePaymentMethod = ["cash", "esewa"].includes(paymentMethod)
-      ? paymentMethod
-      : "cash";
-
     if (!latitude || !longitude) {
       return res.status(400).json({ message: "latitude and longitude are required" });
     }
@@ -308,59 +316,50 @@ export const createPickup = async (req, res) => {
       category: category || "non-recyclable",
       level: level || "easy",
       matchedDriverIds: matchedUserIds,
+      status: "PAYMENT_REQUIRED",
       estimatedPrice: estimatedPrice || null,
       priceBreakdown: priceBreakdown || null,
       routeDistanceKm: routeDistanceKm || null,
       routeDurationMinutes: routeDurationMinutes || null,
       routeGeometry: routeGeometry || null,
       depotLocation: depotLocation || null,
-      paymentMethod: safePaymentMethod,
       paymentStatus: "UNPAID",
       statusHistory: [
         {
           from: null,
-          to: "PENDING",
+          to: "PAYMENT_REQUIRED",
           at: new Date(),
           by: { userId: customer._id, role: customer.role, name: customer.name },
+          note: "Awaiting payment method selection",
         },
       ],
     });
 
     // Audit: CREATED event
-    logEvent(pickup._id, "CREATED", customer, null, "PENDING", {
+    logEvent(pickup._id, "CREATED", customer, null, "PAYMENT_REQUIRED", {
       location: pickup.location,
       category: pickup.category,
       level: pickup.level,
       province: pickup.province,
       area: pickup.area,
+      paymentRequired: true,
     });
 
     // Audit: MATCHED or BROADCAST event
     if (matched.length > 0) {
-      logEvent(pickup._id, "MATCHED", { role: "system", name: "DriverMatcher" }, "PENDING", "PENDING", {
+      logEvent(pickup._id, "MATCHED", { role: "system", name: "DriverMatcher" }, "PAYMENT_REQUIRED", "PAYMENT_REQUIRED", {
         matchedCount: matched.length,
         matchedDriverIds: matchedUserIds,
         scores: matched.map((m) => ({ userId: m.userId, score: m.score })),
       });
     } else {
-      logEvent(pickup._id, "BROADCAST", { role: "system", name: "DriverMatcher" }, "PENDING", "PENDING", {
+      logEvent(pickup._id, "BROADCAST", { role: "system", name: "DriverMatcher" }, "PAYMENT_REQUIRED", "PAYMENT_REQUIRED", {
         reason: "No matching drivers found — broadcast to all",
       });
     }
 
-    // Emit to matched drivers (or fallback to all)
-    emitSafe((io) => {
-      const payload = { ...pickupPayload(pickup), customerName: customer.name };
-      if (matched.length > 0) {
-        matched.forEach((m) => io.to(`driver:${m.userId}`).emit("pickup:created", payload));
-      } else {
-        io.to("drivers").emit("pickup:created", payload);
-      }
-      io.to("admins").emit("pickup:created", payload);
-    });
-
     return res.status(201).json({
-      message: "Pickup request created",
+      message: "Pickup draft created. Choose a payment method to request a driver.",
       pickup: pickupPayload(pickup),
     });
   } catch (err) {
@@ -468,7 +467,7 @@ export const getMyPickups = async (req, res) => {
       statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
       categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
       levelCounts[p.level] = (levelCounts[p.level] || 0) + 1;
-      if (p.estimatedPrice && p.status === "COMPLETED") totalSpent += p.estimatedPrice;
+      if (p.estimatedPrice && p.status === "COMPLETED" && p.paymentStatus === "PAID") totalSpent += p.estimatedPrice;
 
       // Monthly aggregation (last 6 months)
       const d = new Date(p.createdAt);
@@ -553,6 +552,8 @@ export const getPendingPickups = async (req, res) => {
 
     const pendingPickups = await PickupRequest.find({
       status: "PENDING",
+      paymentMethod: { $in: ["cash", "esewa"] },
+      paymentStatus: { $in: ["PENDING", "PAID"] },
       expiresAt: { $gt: new Date() },
       $or: [{ orgId: driverUser.orgId }, { orgId: null }],
     }).sort({ createdAt: -1 });
@@ -610,7 +611,12 @@ export const acceptPickup = async (req, res) => {
 
     // Atomic update — only succeeds if status is still PENDING
     const updated = await PickupRequest.findOneAndUpdate(
-      { _id: req.params.id, status: "PENDING" },
+      {
+        _id: req.params.id,
+        status: "PENDING",
+        paymentMethod: { $in: ["cash", "esewa"] },
+        paymentStatus: { $in: ["PENDING", "PAID"] },
+      },
       {
         $set: {
           status: "ASSIGNED",
@@ -686,7 +692,7 @@ export const cancelPickup = async (req, res) => {
     const updated = await PickupRequest.findOneAndUpdate(
       {
         _id: req.params.id,
-        status: { $in: ["PENDING", "ASSIGNED"] },
+        status: { $in: ["PAYMENT_REQUIRED", "PENDING", "ASSIGNED"] },
         $or: [
           { customerId: _id },                                      // owner
           ...(role === "admin" || role === "super_admin" ? [{}] : []), // admin override

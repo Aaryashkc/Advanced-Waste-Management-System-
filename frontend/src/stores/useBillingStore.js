@@ -76,7 +76,10 @@ const useBillingStore = create((set, get) => ({
     } catch (err) {
       return {
         success: false,
-        error: err.response?.data?.message || "Payment failed",
+        error:
+          err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Payment failed",
       };
     }
   },

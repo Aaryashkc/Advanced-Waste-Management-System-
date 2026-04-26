@@ -11,7 +11,11 @@ import {
   assignTaskToDriver,
   estimateWasteVolume,
   createDriverByAdmin,
+  updateDriverByAdmin,
   getOrgTrucks,
+  updateOrgTruck,
+  assignDriverToOrgTruck,
+  unassignDriverFromOrgTruck,
   requestDeletion,
   getMyDeletionRequests,
   getAdminAnalytics,
@@ -41,10 +45,14 @@ router.post("/estimate-volume", estimateWasteVolume);
 // Driver management (org-scoped)
 router.get("/drivers", getAllDrivers);
 router.post("/drivers/create", createDriverByAdmin);
+router.put("/drivers/:driverId", updateDriverByAdmin);
 router.get("/drivers/:driverId/detail", getDriverDetail);
 
 // Truck listing (org-scoped)
 router.get("/trucks", getOrgTrucks);
+router.put("/trucks/:vehicleId", updateOrgTruck);
+router.post("/trucks/:truckId/unassign-driver", unassignDriverFromOrgTruck);
+router.post("/assign-driver-truck", assignDriverToOrgTruck);
 
 // Deletion requests
 router.post("/deletion-requests", requestDeletion);

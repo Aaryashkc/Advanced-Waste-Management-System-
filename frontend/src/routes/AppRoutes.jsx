@@ -44,6 +44,7 @@ import PricingConfig from "../pages/PricingConfig";
 import BillingPage from "../components/users/BillingPage";
 import BillingOverview from "../pages/BillingOverview";
 import AdminBilling from "../pages/AdminBilling";
+import AdminContact from "../pages/AdminContact";
 import PickupStatusToast from "../components/users/PickupStatusToast";
 import DriverStatusToast from "../components/Driver/DriverStatusToast";
 import DriverNavbar from "../components/Driver/DriverNavbar";
@@ -251,6 +252,7 @@ const AppRoutes = () => {
           <Route path="history" element={<History />} />
           <Route path="pricing" element={<PricingConfig />} />
           <Route path="billing" element={<DashboardBillingRoute />} />
+          <Route path="contact" element={<AdminContact />} />
           <Route path="users" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <Users />

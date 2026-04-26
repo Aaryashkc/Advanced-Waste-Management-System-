@@ -38,7 +38,11 @@ const useDriverStore = create((set, get) => ({
   updateDriver: async (driverId, data) => {
     try {
       const token = useAuthStore.getState().token;
-      await axios.put(`${API_URL}/super-admin/drivers/${driverId}`, data, { headers: { Authorization: `Bearer ${token}` } });
+      const user = useAuthStore.getState().user;
+      const url = user?.role === 'super_admin'
+        ? `${API_URL}/super-admin/drivers/${driverId}`
+        : `${API_URL}/org-admin/drivers/${driverId}`;
+      await axios.put(url, data, { headers: { Authorization: `Bearer ${token}` } });
       get().fetchDrivers();
       return { success: true };
     } catch (error) {

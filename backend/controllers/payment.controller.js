@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import Payment from "../models/Payment.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
+import User from "../models/User.model.js";
+import { emitPickupToDrivers } from "./pickup.controller.js";
 import {
   buildEsewaInitiationPayload,
   decodeAndVerifyCallback,
@@ -58,6 +60,26 @@ function paymentPayload(p) {
  *  - esewa: creates a Payment row, returns the SIGNED form fields the
  *           browser must POST to eSewa to start the hosted checkout.
  */
+async function dispatchPickupAfterPaymentChoice(pickup) {
+  const previousStatus = pickup.status;
+
+  if (pickup.status !== "PENDING") {
+    pickup.status = "PENDING";
+    pickup.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    pickup.statusHistory.push({
+      from: previousStatus,
+      to: "PENDING",
+      at: new Date(),
+      by: { userId: null, role: "system", name: "PaymentFlow" },
+      note: "Payment method confirmed; request dispatched to drivers.",
+    });
+    await pickup.save();
+  }
+
+  const customer = await User.findById(pickup.customerId).select("name").lean();
+  emitPickupToDrivers(pickup, customer?.name || null);
+}
+
 export const initiatePayment = async (req, res) => {
   try {
     const { pickupId, method } = req.body;
@@ -91,25 +113,39 @@ export const initiatePayment = async (req, res) => {
     }
 
     // ── Cash flow ────────────────────────────────────────────────────────
+    if (!["PAYMENT_REQUIRED", "PENDING"].includes(pickup.status)) {
+      return res.status(400).json({ message: `Cannot choose payment for a pickup with status: ${pickup.status}` });
+    }
+
     if (method === "cash") {
-      const payment = await Payment.create({
-        pickupId: pickup._id,
-        customerId: customer._id,
-        amount,
-        currency: pickup.currency || "NPR",
-        method: "cash",
-        status: "PENDING",
-      });
+      let payment = await Payment.findOne({ pickupId: pickup._id, method: "cash", status: "PENDING" });
+      if (!payment) {
+        payment = await Payment.create({
+          pickupId: pickup._id,
+          customerId: customer._id,
+          amount,
+          currency: pickup.currency || "NPR",
+          method: "cash",
+          status: "PENDING",
+        });
+      }
 
       pickup.paymentMethod = "cash";
       pickup.paymentStatus = "PENDING";
       pickup.paymentId = payment._id;
       await pickup.save();
+      await dispatchPickupAfterPaymentChoice(pickup);
 
       return res.status(200).json({
         success: true,
         method: "cash",
         payment: paymentPayload(payment),
+        pickup: {
+          id: pickup._id,
+          status: pickup.status,
+          paymentMethod: pickup.paymentMethod,
+          paymentStatus: pickup.paymentStatus,
+        },
       });
     }
 
@@ -144,8 +180,11 @@ export const initiatePayment = async (req, res) => {
       payment: paymentPayload(payment),
     });
   } catch (err) {
-    console.error("initiatePayment error:", err.message);
-    return res.status(500).json({ message: "Failed to initiate payment" });
+    console.error("initiatePayment error:", err);
+    return res.status(500).json({
+      message: "Failed to initiate payment",
+      ...(process.env.NODE_ENV === "development" && { error: err.message }),
+    });
   }
 };
 
@@ -244,10 +283,12 @@ export const esewaSuccess = async (req, res) => {
     );
 
     if (updated) {
-      await PickupRequest.updateOne(
-        { _id: payment.pickupId },
-        { paymentStatus: "PAID" }
-      );
+      const pickup = await PickupRequest.findById(payment.pickupId);
+      if (pickup) {
+        pickup.paymentStatus = "PAID";
+        await pickup.save();
+        await dispatchPickupAfterPaymentChoice(pickup);
+      }
     }
 
     return res.redirect(

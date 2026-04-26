@@ -48,7 +48,10 @@ const usePaymentStore = create((set) => ({
       return { success: true, payment: res.data.payment };
     } catch (err) {
       const message =
-        err.response?.data?.message || err.message || "Failed to initiate payment";
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to initiate payment";
       set({ loading: false, error: message });
       return { success: false, error: message };
     }

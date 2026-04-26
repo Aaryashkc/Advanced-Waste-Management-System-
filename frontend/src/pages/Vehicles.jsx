@@ -158,14 +158,14 @@ const Vehicles = () => {
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-lg bg-primary/8 flex items-center justify-center text-xs font-bold text-primary shrink-0">{v.assignedDriver.name?.charAt(0)?.toUpperCase()}</div>
                             <span className="text-sm text-primary">{v.assignedDriver.name}</span>
-                            {isSuperAdmin && <button onClick={() => handleUnassign(v.id)} className="ml-1 text-red-400 hover:text-red-600 text-xs" title="Unassign">&times;</button>}
+                            <button onClick={() => handleUnassign(v.id)} className="ml-1 text-red-400 hover:text-red-600 text-xs" title="Unassign">&times;</button>
                           </div>
                         ) : <span className="text-red-500 text-xs font-medium">No Driver</span>}
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {isSuperAdmin && <button onClick={() => openEdit(v)} className="px-2.5 py-1.5 text-xs font-semibold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition">Edit</button>}
-                          {isSuperAdmin && <button onClick={() => { setAssignVehicle(v); setSelectedDriverId(""); setFormError(""); }} className="px-2.5 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">Assign</button>}
+                          <button onClick={() => openEdit(v)} className="px-2.5 py-1.5 text-xs font-semibold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition">Edit</button>
+                          <button onClick={() => { setAssignVehicle(v); setSelectedDriverId(""); setFormError(""); }} className="px-2.5 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">Assign</button>
                           <button onClick={() => { setDeleteTarget(v); setDeleteReason(""); setFormError(""); }} className="px-2.5 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
                             {isSuperAdmin ? "Delete" : "Request Delete"}
                           </button>

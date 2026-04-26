@@ -290,15 +290,20 @@ export const createAdmin = async (req, res) => {
 
 export const addTruck = async (req, res) => {
   try {
-    const { truckType, capacity, licensePlate } = req.body;
+    const { truckType = "MIXED", capacity, licensePlate } = req.body;
     const orgId = req.user.orgId;
 
     if (!orgId) {
       return res.status(403).json({ message: "Organization ID required" });
     }
 
-    if (!truckType || !capacity || !licensePlate) {
-      return res.status(400).json({ message: "Truck type, capacity, and license plate are required" });
+    if (!capacity || !licensePlate) {
+      return res.status(400).json({ message: "Capacity and license plate are required" });
+    }
+
+    const org = await Organization.findById(orgId);
+    if (!org) {
+      return res.status(404).json({ message: "Organization not found" });
     }
 
     const truck = new Truck({
@@ -310,9 +315,15 @@ export const addTruck = async (req, res) => {
 
     await truck.save();
 
+    if (!org.fleet.some((id) => id.toString() === truck._id.toString())) {
+      org.fleet.push(truck._id);
+      await org.save();
+    }
+
     res.status(201).json({
+      success: true,
       message: "Truck added successfully",
-      truck
+      data: truck
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to add truck", error: error.message });
@@ -551,6 +562,45 @@ export const createDriverByAdmin = async (req, res) => {
   }
 };
 
+export const updateDriverByAdmin = async (req, res) => {
+  try {
+    const { driverId } = req.params;
+    const { name, email, phone, isAvailable } = req.body;
+    const orgId = req.user.orgId;
+
+    if (!orgId) {
+      return res.status(403).json({ message: "Organization ID required" });
+    }
+
+    const driver = await Driver.findById(driverId).populate("userId");
+    if (!driver || driver.userId?.orgId?.toString() !== orgId.toString()) {
+      return res.status(404).json({ message: "Driver not found in your organization" });
+    }
+
+    if (name) driver.userId.name = name;
+    if (email) driver.userId.email = email.toLowerCase();
+    if (phone) driver.userId.phone = phone;
+    await driver.userId.save();
+
+    if (typeof isAvailable === "boolean") driver.isAvailable = isAvailable;
+    await driver.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Driver updated",
+      data: {
+        id: driver._id,
+        name: driver.userId.name,
+        email: driver.userId.email,
+        phone: driver.userId.phone,
+        orgId: driver.userId.orgId,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update driver", error: error.message });
+  }
+};
+
 // ========== Admin: Get own org trucks ==========
 
 export const getOrgTrucks = async (req, res) => {
@@ -561,6 +611,19 @@ export const getOrgTrucks = async (req, res) => {
     }
 
     const trucks = await Truck.find({ orgId }).sort({ createdAt: -1 });
+    const truckIds = trucks.map((truck) => truck._id);
+    const assignedDrivers = await Driver.find({ assignedTruckId: { $in: truckIds } }).populate("userId", "name email");
+
+    const driverByTruck = {};
+    assignedDrivers.forEach((driver) => {
+      if (driver.assignedTruckId) {
+        driverByTruck[driver.assignedTruckId.toString()] = {
+          driverId: driver._id,
+          name: driver.userId?.name || "Unknown",
+          email: driver.userId?.email || "",
+        };
+      }
+    });
 
     const formatted = trucks.map(t => ({
       id: t._id,
@@ -569,12 +632,105 @@ export const getOrgTrucks = async (req, res) => {
       capacity: t.capacity,
       licensePlate: t.licensePlate,
       isAvailable: t.isAvailable,
+      assignedDriver: driverByTruck[t._id.toString()] || null,
       createdAt: t.createdAt
     }));
 
     res.status(200).json({ success: true, data: formatted });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch trucks", error: error.message });
+  }
+};
+
+export const updateOrgTruck = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    const { capacity, licensePlate, isAvailable } = req.body;
+    const orgId = req.user.orgId;
+
+    if (!orgId) {
+      return res.status(403).json({ message: "Organization ID required" });
+    }
+
+    const truck = await Truck.findById(vehicleId);
+    if (!truck || truck.orgId?.toString() !== orgId.toString()) {
+      return res.status(404).json({ message: "Vehicle not found in your organization" });
+    }
+
+    if (capacity !== undefined) truck.capacity = Number(capacity);
+    if (licensePlate) truck.licensePlate = licensePlate;
+    if (typeof isAvailable === "boolean") truck.isAvailable = isAvailable;
+
+    await truck.save();
+
+    res.status(200).json({ success: true, message: "Vehicle updated", data: truck });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update vehicle", error: error.message });
+  }
+};
+
+export const assignDriverToOrgTruck = async (req, res) => {
+  try {
+    const { driverId, truckId } = req.body;
+    const orgId = req.user.orgId;
+
+    if (!orgId) {
+      return res.status(403).json({ message: "Organization ID required" });
+    }
+
+    if (!driverId || !truckId) {
+      return res.status(400).json({ message: "driverId and truckId are required" });
+    }
+
+    const [driver, truck] = await Promise.all([
+      Driver.findById(driverId).populate("userId", "orgId"),
+      Truck.findById(truckId),
+    ]);
+
+    if (!driver || driver.userId?.orgId?.toString() !== orgId.toString()) {
+      return res.status(404).json({ message: "Driver not found in your organization" });
+    }
+
+    if (!truck || truck.orgId?.toString() !== orgId.toString()) {
+      return res.status(404).json({ message: "Truck not found in your organization" });
+    }
+
+    await Driver.updateMany(
+      { assignedTruckId: truckId, _id: { $ne: driver._id } },
+      { $set: { assignedTruckId: null } }
+    );
+
+    driver.assignedTruckId = truckId;
+    await driver.save();
+
+    res.status(200).json({ success: true, message: "Driver assigned to truck successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to assign driver to truck", error: error.message });
+  }
+};
+
+export const unassignDriverFromOrgTruck = async (req, res) => {
+  try {
+    const { truckId } = req.params;
+    const orgId = req.user.orgId;
+
+    if (!orgId) {
+      return res.status(403).json({ message: "Organization ID required" });
+    }
+
+    const truck = await Truck.findById(truckId);
+    if (!truck || truck.orgId?.toString() !== orgId.toString()) {
+      return res.status(404).json({ message: "Truck not found in your organization" });
+    }
+
+    const result = await Driver.updateMany(
+      { assignedTruckId: truckId },
+      { $set: { assignedTruckId: null } }
+    );
+
+    res.status(200).json({ success: true, message: `Unassigned ${result.modifiedCount} driver(s) from truck` });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to unassign driver", error: error.message });
   }
 };
 
@@ -598,10 +754,17 @@ export const requestDeletion = async (req, res) => {
     if (type === "vehicle") {
       const truck = await Truck.findById(targetId);
       if (!truck) return res.status(404).json({ message: "Vehicle not found" });
+      if (truck.orgId?.toString() !== orgId?.toString()) {
+        return res.status(403).json({ message: "Vehicle belongs to another organization" });
+      }
       targetName = truck.licensePlate;
     } else {
       const driver = await Driver.findById(targetId).populate("userId", "name");
       if (!driver) return res.status(404).json({ message: "Driver not found" });
+      const driverUser = await User.findById(driver.userId?._id || driver.userId).select("orgId");
+      if (driverUser?.orgId?.toString() !== orgId?.toString()) {
+        return res.status(403).json({ message: "Driver belongs to another organization" });
+      }
       targetName = driver.userId?.name || "Unknown Driver";
     }
 
@@ -673,7 +836,13 @@ export const getAdminAnalytics = async (req, res) => {
             total: { $sum: 1 },
             completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
             revenue: {
-              $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, { $ifNull: ["$estimatedPrice", 0] }, 0] },
+              $sum: {
+                $cond: [
+                  { $and: [{ $eq: ["$status", "COMPLETED"] }, { $eq: ["$paymentStatus", "PAID"] }] },
+                  { $ifNull: ["$estimatedPrice", 0] },
+                  0,
+                ],
+              },
             },
           },
         },

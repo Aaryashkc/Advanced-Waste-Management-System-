@@ -143,9 +143,6 @@ const Topbar = ({ onMenuToggle }) => {
                 <CreditCard className="h-4 w-4" />
               )}
               <span>{billingAlertLabel}</span>
-              <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] leading-none">
-                {unpaidBillCount}
-              </span>
             </button>
           )}
 

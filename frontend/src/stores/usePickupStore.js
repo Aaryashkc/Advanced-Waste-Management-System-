@@ -49,6 +49,21 @@ const usePickupStore = create((set, get) => ({
 
     clearEstimate: () => set({ estimate: null, estimateError: null, estimateLoading: false }),
 
+    restoreEstimateFromPickup: (pickup) => set({
+        estimate: pickup ? {
+            success: true,
+            estimatedPrice: pickup.estimatedPrice,
+            priceBreakdown: pickup.priceBreakdown,
+            currency: pickup.currency,
+            distanceKm: pickup.routeDistanceKm,
+            durationMinutes: pickup.routeDurationMinutes,
+            routeGeometry: pickup.routeGeometry,
+            depotLocation: pickup.depotLocation,
+        } : null,
+        estimateError: null,
+        estimateLoading: false,
+    }),
+
     /**
      * Create a pickup request (now includes pricing data from the estimate).
      * POST /api/pickups
@@ -66,7 +81,6 @@ const usePickupStore = create((set, get) => ({
                 level: extras.level || "easy",
                 wasteUploadId: extras.wasteUploadId || null,
                 area: extras.area || null,
-                paymentMethod: extras.paymentMethod === "esewa" ? "esewa" : "cash",
                 // Pricing data from estimate
                 estimatedPrice: estimate?.estimatedPrice || null,
                 priceBreakdown: estimate?.priceBreakdown || null,

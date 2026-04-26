@@ -39,7 +39,11 @@ const useVehicleStore = create((set, get) => ({
   updateVehicle: async (vehicleId, data) => {
     try {
       const token = useAuthStore.getState().token;
-      await axios.put(`${API_URL}/super-admin/vehicles/${vehicleId}`, data, { headers: { Authorization: `Bearer ${token}` } });
+      const user = useAuthStore.getState().user;
+      const url = user?.role === 'super_admin'
+        ? `${API_URL}/super-admin/vehicles/${vehicleId}`
+        : `${API_URL}/org-admin/trucks/${vehicleId}`;
+      await axios.put(url, data, { headers: { Authorization: `Bearer ${token}` } });
       get().fetchVehicles();
       return { success: true };
     } catch (error) {
@@ -61,7 +65,11 @@ const useVehicleStore = create((set, get) => ({
   unassignDriverFromTruck: async (truckId) => {
     try {
       const token = useAuthStore.getState().token;
-      await axios.post(`${API_URL}/super-admin/vehicles/${truckId}/unassign-driver`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      const user = useAuthStore.getState().user;
+      const url = user?.role === 'super_admin'
+        ? `${API_URL}/super-admin/vehicles/${truckId}/unassign-driver`
+        : `${API_URL}/org-admin/trucks/${truckId}/unassign-driver`;
+      await axios.post(url, {}, { headers: { Authorization: `Bearer ${token}` } });
       get().fetchVehicles();
       return { success: true };
     } catch (error) {
@@ -72,7 +80,11 @@ const useVehicleStore = create((set, get) => ({
   assignDriverToTruck: async (driverId, truckId) => {
     try {
       const token = useAuthStore.getState().token;
-      await axios.post(`${API_URL}/super-admin/assign-driver-truck`, { driverId, truckId }, { headers: { Authorization: `Bearer ${token}` } });
+      const user = useAuthStore.getState().user;
+      const url = user?.role === 'super_admin'
+        ? `${API_URL}/super-admin/assign-driver-truck`
+        : `${API_URL}/org-admin/assign-driver-truck`;
+      await axios.post(url, { driverId, truckId }, { headers: { Authorization: `Bearer ${token}` } });
       get().fetchVehicles();
       return { success: true };
     } catch (error) {

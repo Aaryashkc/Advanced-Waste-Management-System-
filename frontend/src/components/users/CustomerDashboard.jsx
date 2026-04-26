@@ -76,6 +76,7 @@ function FadeIn({ children, className = "" }) {
 const DASHBOARD_BG = "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1920&auto=format&fit=crop";
 
 const STATUS_COLORS = {
+  PAYMENT_REQUIRED: "#f97316",
   PENDING: "#f59e0b",
   ASSIGNED: "#3b82f6",
   EN_ROUTE: "#6366f1",
@@ -133,10 +134,12 @@ function ChartCard({ title, children, className = "" }) {
 
 /* ── Recent pickup row ── */
 
-function RecentPickupRow({ pickup, onCancel }) {
+function RecentPickupRow({ pickup, onCancel, onCompletePayment }) {
   const statusColor = STATUS_COLORS[pickup.status] || "#9ca3af";
   const [cancelling, setCancelling] = useState(false);
-  const canCancel = pickup.status === "PENDING" || pickup.status === "ASSIGNED";
+  const pickupId = pickup.id || pickup._id;
+  const needsPayment = pickup.status === "PAYMENT_REQUIRED";
+  const canCancel = needsPayment || pickup.status === "PENDING" || pickup.status === "ASSIGNED";
 
   const handleCancel = async (e) => {
     e.stopPropagation();
@@ -169,6 +172,17 @@ function RecentPickupRow({ pickup, onCancel }) {
         </p>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {needsPayment && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompletePayment?.(pickupId);
+            }}
+            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold border border-orange-500/30 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 transition"
+          >
+            Complete Payment
+          </button>
+        )}
         {canCancel && (
           <button
             onClick={handleCancel}
@@ -716,6 +730,7 @@ function CustomerDashboard() {
                         key={p.id}
                         pickup={p}
                         onCancel={() => fetchDashboard.current()}
+                        onCompletePayment={(id) => navigate(`/searching?pickupId=${encodeURIComponent(id)}`)}
                       />
                     ))}
                   </div>
