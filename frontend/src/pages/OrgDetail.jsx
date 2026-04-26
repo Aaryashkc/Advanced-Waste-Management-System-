@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useOrganizationStore from "../stores/useOrganizationStore";
+import useAuthStore from "../stores/useAuthStore";
+import LocationPickerMap from "../components/shared/LocationPickerMap";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,16 +33,62 @@ const StatCard = ({ label, value, color = "var(--primary)", sub }) => (
   </div>
 );
 
-const OrgDetail = () => {
+const OrgDetail = ({ myOrganization = false }) => {
   const { orgId } = useParams();
   const navigate = useNavigate();
-  const { currentOrg, isLoading, fetchOrgDetail, clearCurrentOrg } = useOrganizationStore();
+  const user = useAuthStore((s) => s.user);
+  const { currentOrg, isLoading, fetchOrgDetail, clearCurrentOrg, updateOrganization } = useOrganizationStore();
   const [activeTab, setActiveTab] = useState("overview");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", latitude: null, longitude: null, address: "" });
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const targetOrgId = myOrganization ? "mine" : orgId;
+  const isSuperAdmin = user?.role === "super_admin";
 
   useEffect(() => {
-    fetchOrgDetail(orgId);
+    fetchOrgDetail(targetOrgId);
     return () => clearCurrentOrg();
-  }, [orgId]);
+  }, [targetOrgId, fetchOrgDetail, clearCurrentOrg]);
+
+  const openEdit = () => {
+    setEditForm({
+      name: currentOrg?.name || "",
+      latitude: currentOrg?.location?.latitude || null,
+      longitude: currentOrg?.location?.longitude || null,
+      address: currentOrg?.location?.address || "",
+    });
+    setFormError("");
+    setEditOpen(true);
+  };
+
+  const handleEdit = async (event) => {
+    event.preventDefault();
+    setFormError("");
+    if (!editForm.name || !editForm.address) {
+      setFormError("Organization name and location are required");
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await updateOrganization(targetOrgId, {
+      name: editForm.name,
+      location: {
+        address: editForm.address,
+        ...(editForm.latitude && editForm.longitude
+          ? { latitude: editForm.latitude, longitude: editForm.longitude }
+          : {}),
+      },
+    });
+    setSubmitting(false);
+
+    if (result.success) {
+      await fetchOrgDetail(targetOrgId);
+      setEditOpen(false);
+    } else {
+      setFormError(result.error);
+    }
+  };
 
   if (isLoading || !currentOrg) {
     return (
@@ -98,14 +146,24 @@ const OrgDetail = () => {
   return (
     <div className="space-y-6">
       {/* Back + Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate("/admin-dashboard/organizations")} className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center hover:bg-primary/10 transition">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4 min-w-0">
+        <button onClick={() => navigate(isSuperAdmin && !myOrganization ? "/admin-dashboard/organizations" : "/admin-dashboard")} className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center hover:bg-primary/10 transition shrink-0">
           <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight">{org?.name}</h1>
           <p className="text-sm text-primary/50">{org?.location?.address || "No address set"}</p>
         </div>
+        </div>
+        <button
+          type="button"
+          onClick={openEdit}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 sm:self-auto"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" /></svg>
+          Edit Organization
+        </button>
       </div>
 
       {/* Tabs */}
@@ -349,6 +407,38 @@ const OrgDetail = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {editOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-8 relative">
+            <button onClick={() => setEditOpen(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center text-primary/60 hover:bg-primary/10 transition">&#x2715;</button>
+            <h2 className="text-xl font-bold text-primary mb-6">Edit Organization</h2>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-primary/70 mb-1">Organization Name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+              <LocationPickerMap
+                label="Depot / Office Location"
+                required
+                placeholder="Search for office location..."
+                height="250px"
+                value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
+                onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
+              />
+              {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
+              <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition disabled:opacity-50">
+                {submitting ? "Saving..." : "Save Changes"}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -27,7 +27,12 @@ const useOrganizationStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const token = useAuthStore.getState().token;
-      const res = await axios.get(`${API_URL}/super-admin/organizations/${orgId}`, {
+      const user = useAuthStore.getState().user;
+      const isMyOrg = orgId === "mine" || user?.role === "admin";
+      const url = isMyOrg
+        ? `${API_URL}/org-admin/organization`
+        : `${API_URL}/super-admin/organizations/${orgId}`;
+      const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       set({ currentOrg: res.data.data, isLoading: false });
@@ -56,10 +61,19 @@ const useOrganizationStore = create((set, get) => ({
   updateOrganization: async (orgId, data) => {
     try {
       const token = useAuthStore.getState().token;
-      await axios.put(`${API_URL}/super-admin/organizations/${orgId}`, data, {
+      const user = useAuthStore.getState().user;
+      const isMyOrg = orgId === "mine" || user?.role === "admin";
+      const url = isMyOrg
+        ? `${API_URL}/org-admin/organization`
+        : `${API_URL}/super-admin/organizations/${orgId}`;
+      const res = await axios.put(url, data, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      get().fetchOrganizations();
+      if (isMyOrg) {
+        set({ currentOrg: res.data.data || res.data.organization || null });
+      } else {
+        get().fetchOrganizations();
+      }
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to update organization' };

@@ -43,6 +43,7 @@ import History from "../pages/History";
 import PricingConfig from "../pages/PricingConfig";
 import BillingPage from "../components/users/BillingPage";
 import BillingOverview from "../pages/BillingOverview";
+import AdminBilling from "../pages/AdminBilling";
 import PickupStatusToast from "../components/users/PickupStatusToast";
 import DriverStatusToast from "../components/Driver/DriverStatusToast";
 import DriverNavbar from "../components/Driver/DriverNavbar";
@@ -58,6 +59,22 @@ const AdminRedirect = () => {
     return <Navigate to="/admin-dashboard" replace />;
   }
   return <HomePage />;
+};
+
+const DashboardBillingRoute = () => {
+  const { user } = useAuthStore();
+  if (user?.role === "super_admin") return <BillingOverview />;
+  return <AdminBilling />;
+};
+
+const CustomerBillingRoute = () => {
+  const { user } = useAuthStore();
+  if (user?.role === "admin") return <Navigate to="/admin-dashboard/billing" replace />;
+  return (
+    <ProtectedRoute allowedRoles={['customer_admin']}>
+      <BillingPage />
+    </ProtectedRoute>
+  );
 };
 
 const AppRoutes = () => {
@@ -137,11 +154,7 @@ const AppRoutes = () => {
         />
         <Route
           path="/billing"
-          element={
-            <ProtectedRoute allowedRoles={['customer_admin', 'admin']}>
-              <BillingPage />
-            </ProtectedRoute>
-          }
+          element={<CustomerBillingRoute />}
         />
         <Route
           path="/searching"
@@ -212,8 +225,21 @@ const AppRoutes = () => {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="organizations" element={<Organizations />} />
-          <Route path="organizations/:orgId" element={<OrgDetail />} />
+          <Route path="organizations" element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <Organizations />
+            </ProtectedRoute>
+          } />
+          <Route path="organizations/:orgId" element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <OrgDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="my-organization" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <OrgDetail myOrganization />
+            </ProtectedRoute>
+          } />
           <Route path="vehicles" element={<Vehicles />} />
           <Route path="drivers" element={<Drivers />} />
           <Route path="drivers/:driverId" element={<DriverDetail />} />
@@ -224,7 +250,7 @@ const AppRoutes = () => {
           <Route path="ml-schedule/history" element={<MLScheduleHistory />} />
           <Route path="history" element={<History />} />
           <Route path="pricing" element={<PricingConfig />} />
-          <Route path="billing" element={<BillingOverview />} />
+          <Route path="billing" element={<DashboardBillingRoute />} />
           <Route path="users" element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <Users />

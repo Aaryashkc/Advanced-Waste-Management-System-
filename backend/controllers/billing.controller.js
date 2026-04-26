@@ -20,6 +20,14 @@ function periodLabel(month, year) {
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
+function getFrontendBillingPath(bill) {
+  return bill?.billedRole === "admin" ? "/admin-dashboard/billing" : "/billing";
+}
+
+function redirectBillingPayment(res, bill, query) {
+  return res.redirect(`${FRONTEND_URL}${getFrontendBillingPath(bill)}?${query}`);
+}
+
 /**
  * Resolve the org for a user. Uses user.orgId if set, otherwise
  * tries to find an area matching the user's address.
@@ -62,6 +70,35 @@ async function getFeesForOrg(orgId) {
     };
   }
   return { customerFee: DEFAULT_CUSTOMER_FEE, adminFee: DEFAULT_ADMIN_FEE };
+}
+
+async function markOrgAdminPeriodPaid(sourceBill) {
+  if (
+    sourceBill.billedRole !== "admin" ||
+    !sourceBill.orgId ||
+    sourceBill.status !== "PAID"
+  ) {
+    return;
+  }
+
+  await Billing.updateMany(
+    {
+      orgId: sourceBill.orgId,
+      billedRole: "admin",
+      billingMonth: sourceBill.billingMonth,
+      billingYear: sourceBill.billingYear,
+      status: { $in: ["UNPAID", "OVERDUE"] },
+    },
+    {
+      $set: {
+        status: "PAID",
+        paidAt: sourceBill.paidAt || new Date(),
+        paymentMethod: sourceBill.paymentMethod,
+        resolvedBy: sourceBill.resolvedBy,
+        notes: sourceBill.notes || "Paid by another admin in this organization",
+      },
+    }
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -144,6 +181,7 @@ export const payBill = async (req, res) => {
         name: req.user.name,
       };
       await bill.save();
+      await markOrgAdminPeriodPaid(bill);
 
       return res.json({ success: true, method: "cash", bill });
     }
@@ -181,6 +219,7 @@ export const payBill = async (req, res) => {
 export const esewaBillingSuccess = async (req, res) => {
   try {
     const data = req.query.data || req.body?.data;
+    let bill = null;
 
     let decoded;
     try {
@@ -192,14 +231,14 @@ export const esewaBillingSuccess = async (req, res) => {
 
     const { transaction_uuid: transactionUuid, total_amount: totalAmountStr } = decoded;
 
-    const bill = await Billing.findOne({ transactionRef: transactionUuid });
+    bill = await Billing.findOne({ transactionRef: transactionUuid });
     if (!bill) {
       return res.redirect(`${FRONTEND_URL}/billing?payment=failed&reason=unknown_transaction`);
     }
 
     // Already paid? Just redirect.
     if (bill.status === "PAID") {
-      return res.redirect(`${FRONTEND_URL}/billing?payment=success&billingId=${bill._id}`);
+      return redirectBillingPayment(res, bill, `payment=success&billingId=${bill._id}`);
     }
 
     // Verify amount matches
@@ -208,7 +247,7 @@ export const esewaBillingSuccess = async (req, res) => {
       console.warn(
         `[esewa-billing] amount mismatch for ${transactionUuid}: expected ${bill.amount}, got ${callbackAmount}`
       );
-      return res.redirect(`${FRONTEND_URL}/billing?payment=failed&reason=amount_mismatch`);
+      return redirectBillingPayment(res, bill, "payment=failed&reason=amount_mismatch");
     }
 
     // Server-to-server verification
@@ -220,11 +259,11 @@ export const esewaBillingSuccess = async (req, res) => {
       });
     } catch (err) {
       console.error("[esewa-billing] status API error:", err.message);
-      return res.redirect(`${FRONTEND_URL}/billing?payment=failed&reason=verification_failed`);
+      return redirectBillingPayment(res, bill, "payment=failed&reason=verification_failed");
     }
 
     if (statusResp?.status !== "COMPLETE") {
-      return res.redirect(`${FRONTEND_URL}/billing?payment=failed&reason=not_complete`);
+      return redirectBillingPayment(res, bill, "payment=failed&reason=not_complete");
     }
 
     // Mark bill as PAID
@@ -233,12 +272,13 @@ export const esewaBillingSuccess = async (req, res) => {
     bill.paymentMethod = "esewa";
     bill.resolvedBy = {
       userId: bill.customerId,
-      role: "customer_admin",
+      role: bill.billedRole || "customer_admin",
       name: "eSewa Payment",
     };
     await bill.save();
+    await markOrgAdminPeriodPaid(bill);
 
-    return res.redirect(`${FRONTEND_URL}/billing?payment=success&billingId=${bill._id}`);
+    return redirectBillingPayment(res, bill, `payment=success&billingId=${bill._id}`);
   } catch (err) {
     console.error("esewaBillingSuccess error:", err.message);
     return res.redirect(`${FRONTEND_URL}/billing?payment=failed&reason=server_error`);
@@ -251,9 +291,11 @@ export const esewaBillingSuccess = async (req, res) => {
 export const esewaBillingFailure = async (req, res) => {
   try {
     const data = req.query.data || req.body?.data;
+    let bill = null;
     if (data) {
       try {
         const decoded = decodeAndVerifyCallback(data);
+        bill = await Billing.findOne({ transactionRef: decoded.transaction_uuid });
         // Clear the transactionRef so the customer can retry
         await Billing.updateOne(
           { transactionRef: decoded.transaction_uuid },
@@ -263,7 +305,7 @@ export const esewaBillingFailure = async (req, res) => {
         // Signature failure — ignore silently
       }
     }
-    return res.redirect(`${FRONTEND_URL}/billing?payment=failed&reason=cancelled`);
+    return redirectBillingPayment(res, bill, "payment=failed&reason=cancelled");
   } catch (err) {
     console.error("esewaBillingFailure error:", err.message);
     return res.redirect(`${FRONTEND_URL}/billing?payment=failed&reason=server_error`);
@@ -617,6 +659,7 @@ export const runBillGeneration = async ({ orgId = null } = {}) => {
   let skipped = 0;
   let updated = 0;
   let outOfScope = 0;
+  const paidAdminBillByOrg = new Map();
 
   for (const user of billableUsers) {
     const userOrgId = await resolveUserOrgId(user);
@@ -628,6 +671,22 @@ export const runBillGeneration = async ({ orgId = null } = {}) => {
     const fees = await getFeesForOrg(userOrgId);
     const isAdmin = user.role === "admin";
     const fee = isAdmin ? fees.adminFee : fees.customerFee;
+    let paidAdminBill = null;
+
+    if (isAdmin && userOrgId) {
+      const orgKey = String(userOrgId);
+      if (!paidAdminBillByOrg.has(orgKey)) {
+        const paidBill = await Billing.findOne({
+          orgId: userOrgId,
+          billedRole: "admin",
+          billingMonth,
+          billingYear,
+          status: "PAID",
+        }).lean();
+        paidAdminBillByOrg.set(orgKey, paidBill || null);
+      }
+      paidAdminBill = paidAdminBillByOrg.get(orgKey);
+    }
 
     const existing = await Billing.findOne({
       customerId: user._id,
@@ -638,14 +697,23 @@ export const runBillGeneration = async ({ orgId = null } = {}) => {
     if (existing) {
       // Fix missing/wrong fields on existing bills
       const needsOrgUpdate = String(existing.orgId || "") !== String(userOrgId || "");
-      const needsAmountUpdate = (existing.status === "UNPAID" || existing.status === "OVERDUE") && existing.amount !== fee;
+      const canUpdateOpenBill = existing.status === "UNPAID" || existing.status === "OVERDUE";
+      const needsAmountUpdate = canUpdateOpenBill && existing.amount !== fee;
       const needsRoleUpdate = existing.billedRole !== user.role;
+      const needsSharedAdminPayment = canUpdateOpenBill && Boolean(paidAdminBill);
 
-      if (needsOrgUpdate || needsAmountUpdate || needsRoleUpdate) {
+      if (needsOrgUpdate || needsAmountUpdate || needsRoleUpdate || needsSharedAdminPayment) {
         const updateFields = {};
         if (needsOrgUpdate) updateFields.orgId = userOrgId;
         if (needsAmountUpdate) updateFields.amount = fee;
         if (needsRoleUpdate) updateFields.billedRole = user.role;
+        if (needsSharedAdminPayment) {
+          updateFields.status = "PAID";
+          updateFields.paidAt = paidAdminBill.paidAt || new Date();
+          updateFields.paymentMethod = paidAdminBill.paymentMethod;
+          updateFields.resolvedBy = paidAdminBill.resolvedBy;
+          updateFields.notes = paidAdminBill.notes || "Paid by another admin in this organization";
+        }
         await Billing.updateOne({ _id: existing._id }, { $set: updateFields });
         updated++;
       }
@@ -662,7 +730,11 @@ export const runBillGeneration = async ({ orgId = null } = {}) => {
       billingYear,
       amount: fee,
       dueDate,
-      status: "UNPAID",
+      status: paidAdminBill ? "PAID" : "UNPAID",
+      paidAt: paidAdminBill?.paidAt || null,
+      paymentMethod: paidAdminBill?.paymentMethod || null,
+      resolvedBy: paidAdminBill?.resolvedBy || undefined,
+      notes: paidAdminBill ? paidAdminBill.notes || "Paid by another admin in this organization" : null,
     });
     created++;
   }

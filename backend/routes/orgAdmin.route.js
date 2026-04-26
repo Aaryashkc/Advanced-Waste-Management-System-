@@ -15,7 +15,9 @@ import {
   requestDeletion,
   getMyDeletionRequests,
   getAdminAnalytics,
-  getPendingDeletionCount
+  getPendingDeletionCount,
+  getMyOrganization,
+  updateMyOrganization
 } from "../controllers/orgAdmin.controller.js";
 import { getAllDrivers } from "../controllers/driver.controller.js";
 import { getDriverDetail } from "../controllers/superAdmin.controller.js";
@@ -28,6 +30,8 @@ router.use(roleMiddleware("admin", "super_admin"));
 router.get("/admins", getOrgAdmins);
 router.post("/admins", createAdmin);
 router.put("/admins/:adminId", updateOrgAdmin);
+router.get("/organization", getMyOrganization);
+router.put("/organization", updateMyOrganization);
 router.post("/trucks", addTruck);
 router.post("/drivers", addDriver);
 router.put("/requests/:taskId/review", reviewOnDemandRequest);

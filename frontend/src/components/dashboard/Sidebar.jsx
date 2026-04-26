@@ -32,7 +32,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
     ...(isSuperAdmin
       ? [{ name: "Organizations", icon: Building2, path: "/admin-dashboard/organizations" }]
-      : []),
+      : [{ name: "My Organization", icon: Building2, path: "/admin-dashboard/my-organization" }]),
     { name: "Trucks", icon: Truck, path: "/admin-dashboard/vehicles" },
     { name: "Drivers", icon: Users, path: "/admin-dashboard/drivers" },
     { name: "Admins", icon: UserCog, path: "/admin-dashboard/admins" },
@@ -41,7 +41,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     { name: "Pricing", icon: DollarSign, path: "/admin-dashboard/pricing" },
     { name: "History", icon: ClipboardList, path: "/admin-dashboard/history" },
     { name: "Notifications", icon: Bell, path: "/admin-dashboard/notifications" },
-    { name: "Billing", icon: Receipt, path: "/admin-dashboard/billing" },
+    { name: isSuperAdmin ? "Billing Management" : "My Billing", icon: Receipt, path: "/admin-dashboard/billing" },
     ...(isSuperAdmin
       ? [
           { name: "Users", icon: UsersRound, path: "/admin-dashboard/users" },
@@ -55,7 +55,9 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     <div className="flex flex-col w-full h-full">
       {/* Brand */}
       <div className="h-16 flex items-center justify-between px-6 border-b border-primary/10">
-        <p className="text-lg font-bold text-primary tracking-tight">Admin Panel</p>
+        <p className="text-lg font-bold text-primary tracking-tight">
+          {isSuperAdmin ? "Super Admin" : "Org Admin"}
+        </p>
         {/* Mobile close button */}
         <button
           type="button"

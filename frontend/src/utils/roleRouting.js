@@ -14,15 +14,17 @@ export const VALID_ROLES = ['super_admin', 'admin', 'customer_admin', 'driver'];
 export const ROLE_ROUTES = {
   super_admin: [
     { path: '/admin-dashboard', label: 'Dashboard' },
+    { path: '/admin-dashboard/organizations', label: 'Organizations' },
     { path: '/admin-dashboard/vehicles', label: 'Vehicles' },
-    { path: '/admin-dashboard/zones', label: 'Zones' },
+    { path: '/admin-dashboard/drivers', label: 'Drivers' },
     { path: '/admin-dashboard/reports', label: 'Reports' },
   ],
   admin: [
     { path: '/admin-dashboard', label: 'Dashboard' },
+    { path: '/admin-dashboard/my-organization', label: 'My Organization' },
     { path: '/admin-dashboard/vehicles', label: 'Vehicles' },
-    { path: '/admin-dashboard/zones', label: 'Zones' },
-    { path: '/admin-dashboard/reports', label: 'Reports' },
+    { path: '/admin-dashboard/drivers', label: 'Drivers' },
+    { path: '/admin-dashboard/billing', label: 'My Billing' },
   ],
   customer_admin: [
     { path: '/customer-dashboard', label: 'Dashboard' },

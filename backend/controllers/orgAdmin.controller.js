@@ -5,9 +5,137 @@ import Task from "../models/Task.model.js";
 import Organization from "../models/Organization.model.js";
 import DeletionRequest from "../models/DeletionRequest.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
+import Area from "../models/Area.model.js";
 import { buildPickupAnalytics, buildScheduleAnalytics } from "../services/pickupAnalytics.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+
+async function buildOrganizationDetail(orgId) {
+  const org = await Organization.findById(orgId)
+    .populate("admins", "name email phone isActive createdAt");
+
+  if (!org) return null;
+
+  const trucks = await Truck.find({ orgId: org._id }).lean();
+  const orgDriverUsers = await User.find({ orgId: org._id, role: "driver" })
+    .select("_id name email phone isActive createdAt")
+    .lean();
+  const driverUserIds = orgDriverUsers.map((u) => u._id);
+  const drivers = await Driver.find({ userId: { $in: driverUserIds } })
+    .populate("assignedTruckId", "licensePlate truckType capacity")
+    .lean();
+  const areas = await Area.find({ orgId: org._id, isActive: true }).lean();
+
+  const driversWithUser = drivers.map((driver) => {
+    const user = orgDriverUsers.find((u) => u._id.toString() === driver.userId.toString());
+    return {
+      id: driver._id,
+      userId: driver.userId,
+      name: user?.name || "Unknown",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      isAvailable: driver.isAvailable,
+      assignedTruck: driver.assignedTruckId
+        ? {
+            id: driver.assignedTruckId._id,
+            licensePlate: driver.assignedTruckId.licensePlate,
+            truckType: driver.assignedTruckId.truckType,
+            capacity: driver.assignedTruckId.capacity,
+          }
+        : null,
+      createdAt: user?.createdAt,
+    };
+  });
+
+  const driverByTruck = {};
+  for (const driver of driversWithUser) {
+    if (driver.assignedTruck) {
+      driverByTruck[driver.assignedTruck.id.toString()] = {
+        name: driver.name,
+        id: driver.id,
+      };
+    }
+  }
+
+  const trucksFormatted = trucks.map((truck) => ({
+    id: truck._id,
+    licensePlate: truck.licensePlate,
+    truckType: truck.truckType,
+    capacity: truck.capacity,
+    dutyType: truck.dutyType,
+    isAvailable: truck.isAvailable,
+    assignedDriver: driverByTruck[truck._id.toString()] || null,
+    createdAt: truck.createdAt,
+  }));
+
+  const totalTrucks = trucks.length;
+  const totalDrivers = driversWithUser.length;
+  const trucksWithDrivers = trucksFormatted.filter((truck) => truck.assignedDriver).length;
+  const totalCapacity = trucks.reduce((sum, truck) => sum + (truck.capacity || 0), 0);
+
+  return {
+    _id: org._id,
+    name: org.name,
+    location: org.location,
+    createdAt: org.createdAt,
+    admins: org.admins,
+    trucks: trucksFormatted,
+    drivers: driversWithUser,
+    areas,
+    stats: {
+      totalAdmins: org.admins?.length || 0,
+      totalTrucks,
+      availableTrucks: trucks.filter((truck) => truck.isAvailable).length,
+      totalDrivers,
+      availableDrivers: driversWithUser.filter((driver) => driver.isAvailable).length,
+      trucksWithDrivers,
+      trucksWithoutDrivers: totalTrucks - trucksWithDrivers,
+      totalAreas: areas.length,
+      totalCapacity,
+    },
+  };
+}
+
+export const getMyOrganization = async (req, res) => {
+  try {
+    if (!req.user.orgId) {
+      return res.status(403).json({ message: "Organization ID required" });
+    }
+
+    const data = await buildOrganizationDetail(req.user.orgId);
+    if (!data) return res.status(404).json({ message: "Organization not found" });
+
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch organization details", error: error.message });
+  }
+};
+
+export const updateMyOrganization = async (req, res) => {
+  try {
+    if (!req.user.orgId) {
+      return res.status(403).json({ message: "Organization ID required" });
+    }
+
+    const { name, location } = req.body;
+    const org = await Organization.findById(req.user.orgId);
+    if (!org) return res.status(404).json({ message: "Organization not found" });
+
+    if (name) org.name = name;
+    if (location) {
+      if (location.address !== undefined) org.location.address = location.address;
+      if (location.latitude !== undefined) org.location.latitude = location.latitude;
+      if (location.longitude !== undefined) org.location.longitude = location.longitude;
+    }
+
+    await org.save();
+    const data = await buildOrganizationDetail(req.user.orgId);
+
+    res.status(200).json({ success: true, message: "Organization updated", data });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update organization", error: error.message });
+  }
+};
 
 export const getOrgAdmins = async (req, res) => {
   try {
