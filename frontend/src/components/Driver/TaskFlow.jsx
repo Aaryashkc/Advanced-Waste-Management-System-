@@ -204,8 +204,8 @@ export default function TaskFlow() {
 
         {/* Persistent mini-map (always visible during task) */}
         {pickup && !isCompleted && (
-          <div className="mb-6 bg-white rounded-2xl border-2 border-[#354f52]/20 shadow-sm overflow-hidden">
-            <div className="px-4 py-2 bg-[#354f52] text-white text-xs font-extrabold flex items-center justify-between">
+          <div className="mb-6 bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
+            <div className="px-4 py-2 bg-primary text-white text-xs font-extrabold flex items-center justify-between">
               <span>LIVE NAVIGATION</span>
               <span className="text-[10px] font-bold text-white/80">Tap ⤢ to expand</span>
             </div>
@@ -439,16 +439,16 @@ function TaskExecutionUI({
                 className={`flex items-center gap-3 border rounded-xl px-4 py-3 select-none transition-all ${checks[item.key]
                     ? "border-accent bg-accent/5"
                     : "border-primary/20"
-                  } ${isCompleted ? "opacity-70 cursor-not-allowed" : "cursor-pointer hover:border-accent"}`}
+                  } ${isCompleted ? "opacity-70 cursor-not-allowed" : "cursor-pointer hover:border-primary/50"}`}
               >
                 <input
                   type="checkbox"
                   checked={!!checks[item.key]}
                   disabled={isCompleted}
                   onChange={() => onToggle(item.key)}
-                  className="w-4 h-4 accent-accent"
+                  className="w-4 h-4 accent-primary"
                 />
-                <span className={`text-sm font-medium ${checks[item.key] ? "text-accent" : "text-primary"}`}>
+                <span className={`text-sm font-medium ${checks[item.key] ? "text-primary" : "text-primary"}`}>
                   {item.label}
                 </span>
               </label>
@@ -480,7 +480,7 @@ function TaskExecutionUI({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-semibold text-primary/60">CATEGORY</p>
-              <p className="mt-1 font-semibold text-accent">
+              <p className="mt-1 font-semibold text-primary">
                 {category.toUpperCase()}
               </p>
             </div>

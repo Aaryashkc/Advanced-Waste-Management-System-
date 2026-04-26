@@ -166,7 +166,7 @@ export const initiatePayment = async (req, res) => {
  */
 export const esewaSuccess = async (req, res) => {
   try {
-    const { data } = req.query;
+    const data = req.query.data || req.body?.data;
 
     // 1. Verify signature on the redirect payload
     let decoded;
@@ -262,19 +262,26 @@ export const esewaSuccess = async (req, res) => {
 // ── GET /api/payments/esewa/failure ───────────────────────────────────────
 export const esewaFailure = async (req, res) => {
   try {
-    const { data } = req.query;
+    const data = req.query.data || req.body?.data;
     if (data) {
       try {
         const decoded = decodeAndVerifyCallback(data);
-        await Payment.updateOne(
+        const payment = await Payment.findOneAndUpdate(
           { transactionUuid: decoded.transaction_uuid, status: "PENDING" },
           {
             status: "FAILED",
             esewaStatus: decoded.status || "FAILED",
             failedAt: new Date(),
             failureReason: "User cancelled or eSewa reported failure",
-          }
+          },
+          { new: true }
         );
+        if (payment) {
+          await PickupRequest.updateOne(
+            { _id: payment.pickupId },
+            { paymentStatus: "FAILED" }
+          );
+        }
       } catch {
         // Signature failure — ignore silently, do not mutate state
       }

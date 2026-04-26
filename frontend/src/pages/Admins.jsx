@@ -1,19 +1,21 @@
 import React, { useEffect, useState, useMemo } from "react";
 import useAdminStore from "../stores/useAdminStore";
 import useAuthStore from "../stores/useAuthStore";
+import useOrganizationStore from "../stores/useOrganizationStore";
 import { UserCog, Users, Building2, Shield, Search, ChevronRight, Mail, Phone, Calendar, X, Eye } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
 
 const Admins = () => {
   const { admins, orgName, orgGroups, isLoading, error, fetchAdmins, createAdmin, updateAdmin, deleteAdmin } = useAdminStore();
   const user = useAuthStore((s) => s.user);
+  const { organizations, fetchOrganizations } = useOrganizationStore();
   const isSuperAdmin = user?.role === "super_admin";
 
   const [showAdd, setShowAdd] = useState(false);
   const [editAdmin, setEditAdmin] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewAdmin, setViewAdmin] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", orgId: "" });
   const [editForm, setEditForm] = useState({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -21,6 +23,10 @@ const Admins = () => {
   const [roleFilter, setRoleFilter] = useState("all");
 
   useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
+
+  useEffect(() => {
+    if (isSuperAdmin) fetchOrganizations();
+  }, [isSuperAdmin, fetchOrganizations]);
 
   const filteredAdmins = useMemo(() => {
     let result = admins;
@@ -67,10 +73,11 @@ const Admins = () => {
     e.preventDefault();
     setFormError("");
     if (!form.name || !form.email || !form.password) { setFormError("Name, email, and password are required"); return; }
+    if (isSuperAdmin && !form.orgId) { setFormError("Please choose an organization for this admin"); return; }
     setSubmitting(true);
     const result = await createAdmin(form);
     setSubmitting(false);
-    if (result.success) { setShowAdd(false); setForm({ name: "", email: "", phone: "", password: "" }); }
+    if (result.success) { setShowAdd(false); setForm({ name: "", email: "", phone: "", password: "", orgId: "" }); }
     else setFormError(result.error);
   };
 
@@ -372,6 +379,23 @@ const Admins = () => {
                 <label className="block text-sm font-medium text-primary/60 mb-1">Phone</label>
                 <input type="text" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="98XXXXXXXX" className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />
               </div>
+              {isSuperAdmin && (
+                <div>
+                  <label className="block text-sm font-medium text-primary/60 mb-1">Organization</label>
+                  <select
+                    value={form.orgId}
+                    onChange={e => setForm({...form, orgId: e.target.value})}
+                    className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm bg-white"
+                  >
+                    <option value="">Choose organization</option>
+                    {organizations.map((org) => (
+                      <option key={org._id || org.id} value={org._id || org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-primary/60 mb-1">Password</label>
                 <input type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder="Min 6 characters" className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" />

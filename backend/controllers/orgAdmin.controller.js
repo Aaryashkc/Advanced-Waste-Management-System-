@@ -101,8 +101,9 @@ export const updateOrgAdmin = async (req, res) => {
 };
 export const createAdmin = async (req, res) => {
   try {
-    const { name, email, password, contactInfo } = req.body;
-    const orgId = req.user.orgId;
+    const { name, email, phone, password, contactInfo, orgId: requestedOrgId } = req.body;
+    const isSuperAdmin = req.user.role === "super_admin";
+    const orgId = isSuperAdmin ? requestedOrgId : req.user.orgId;
 
     if (!orgId) {
       return res.status(403).json({ message: "Organization ID required" });
@@ -112,7 +113,16 @@ export const createAdmin = async (req, res) => {
       return res.status(400).json({ message: "Name, email, and password are required" });
     }
 
-    const existingUser = await User.findOne({ email });
+    if (!mongoose.isValidObjectId(orgId)) {
+      return res.status(400).json({ message: "Valid organization ID is required" });
+    }
+
+    const org = await Organization.findById(orgId);
+    if (!org) {
+      return res.status(404).json({ message: "Organization not found" });
+    }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -121,14 +131,19 @@ export const createAdmin = async (req, res) => {
 
     const admin = new User({
       name,
-      email,
+      email: email.toLowerCase(),
       passwordHash: hashedPassword,
-      contactInfo,
+      phone: phone || contactInfo || undefined,
       role: "admin",
       orgId
     });
 
     await admin.save();
+
+    if (!org.admins.some((id) => id.toString() === admin._id.toString())) {
+      org.admins.push(admin._id);
+      await org.save();
+    }
 
     res.status(201).json({
       message: "Admin created successfully",
@@ -136,6 +151,7 @@ export const createAdmin = async (req, res) => {
         id: admin._id,
         name: admin.name,
         email: admin.email,
+        phone: admin.phone || "",
         role: admin.role
       }
     });

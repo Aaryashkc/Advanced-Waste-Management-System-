@@ -45,6 +45,19 @@ function BillingPage() {
     fetchMyBills();
   }, [fetchMyBills]);
 
+  useEffect(() => {
+    const refetch = () => fetchMyBills();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refetch();
+    };
+    window.addEventListener("focus", refetch);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", refetch);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [fetchMyBills]);
+
   // Handle eSewa redirect query params
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -64,7 +77,7 @@ function BillingPage() {
       searchParams.delete("reason");
       setSearchParams(searchParams, { replace: true });
     }
-  }, []);
+  }, [fetchMyBills, searchParams, setSearchParams]);
 
   const handlePay = async (billingId, method) => {
     setPayingId(billingId);
@@ -94,7 +107,7 @@ function BillingPage() {
         {/* Header */}
         <section className="pb-6 px-6 md:px-16 lg:px-24">
           <button
-            onClick={() => navigate("/customer-dashboard")}
+            onClick={() => navigate(user?.role === "admin" ? "/admin-dashboard" : "/customer-dashboard")}
             className="flex items-center gap-2 text-white/50 hover:text-white mb-6 transition text-sm"
           >
             <ArrowLeft size={16} /> Back to Dashboard

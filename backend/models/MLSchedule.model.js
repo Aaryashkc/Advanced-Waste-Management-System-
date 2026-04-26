@@ -36,6 +36,7 @@ const areaEntrySchema = new mongoose.Schema({
   holidayName: { type: String },
   assignedTrucks: [assignedTruckSchema],
   skipReason: { type: String, default: null },
+  orgId: { type: String },
   orgName: { type: String },
 }, { _id: false });
 

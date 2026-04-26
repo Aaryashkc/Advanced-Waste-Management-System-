@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import useBillingStore from "../stores/useBillingStore";
 import useAuthStore from "../stores/useAuthStore";
+import useOrganizationStore from "../stores/useOrganizationStore";
 
 const STATUS_BADGE = {
   UNPAID: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200/60" },
@@ -35,6 +36,7 @@ function formatPeriod(month, year) {
 export default function BillingOverview() {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === "super_admin";
+  const { organizations, fetchOrganizations } = useOrganizationStore();
 
   const {
     adminBills,
@@ -80,16 +82,50 @@ export default function BillingOverview() {
   }, [fetchBillingConfig]);
 
   useEffect(() => {
+    if (isSuperAdmin) fetchOrganizations();
+  }, [isSuperAdmin, fetchOrganizations]);
+
+  useEffect(() => {
     fetchBillingOverview(currentOverviewParams());
   }, [roleTab, fetchBillingOverview]);
 
-  // Pre-fill fee inputs when config loads
+  const getConfigOrgId = (config) => String(config?.orgId?._id || config?.orgId || "");
+  const currentFeeOrgId = isSuperAdmin
+    ? feeOrgId
+    : String(user?.orgId?._id || user?.orgId || "");
+  const globalConfig = billingConfigs.find((config) => !config.orgId);
+  const selectedOrgConfig =
+    currentFeeOrgId === "global"
+      ? globalConfig
+      : billingConfigs.find((config) => getConfigOrgId(config) === currentFeeOrgId);
+  const selectedOrg = organizations.find((org) => String(org._id) === currentFeeOrgId);
+  const selectedFees = {
+    customerFee:
+      selectedOrgConfig?.customerMonthlyFee ??
+      globalConfig?.customerMonthlyFee ??
+      activeFees?.customerFee ??
+      defaults?.customerFee ??
+      500,
+    adminFee:
+      selectedOrgConfig?.adminMonthlyFee ??
+      globalConfig?.adminMonthlyFee ??
+      activeFees?.adminFee ??
+      defaults?.adminFee ??
+      1000,
+  };
+  const selectedScopeLabel =
+    !isSuperAdmin
+      ? "Your Organization"
+      : currentFeeOrgId === "global"
+      ? "Global Default"
+      : selectedOrg?.name || selectedOrgConfig?.orgId?.name || "Selected Organization";
+  const selectedScopeHasOwnConfig = currentFeeOrgId === "global" || Boolean(selectedOrgConfig);
+
+  // Pre-fill fee inputs when selected config changes.
   useEffect(() => {
-    if (activeFees) {
-      setCustomerFeeInput(String(activeFees.customerFee ?? 500));
-      setAdminFeeInput(String(activeFees.adminFee ?? 1000));
-    }
-  }, [activeFees?.customerFee, activeFees?.adminFee]);
+    setCustomerFeeInput(String(selectedFees.customerFee));
+    setAdminFeeInput(String(selectedFees.adminFee));
+  }, [selectedFees.customerFee, selectedFees.adminFee]);
 
   const applyFilters = () => {
     fetchBillingOverview(currentOverviewParams());
@@ -132,7 +168,9 @@ export default function BillingOverview() {
       return;
     }
     setSavingConfig(true);
-    const orgId = feeOrgId === "global" ? null : feeOrgId;
+    const orgId = isSuperAdmin
+      ? feeOrgId === "global" ? null : feeOrgId
+      : user?.orgId;
     try {
       const result = await updateBillingConfig({
         orgId,
@@ -141,8 +179,10 @@ export default function BillingOverview() {
       });
       setSavingConfig(false);
       if (result.success) {
-        setConfigMsg({ type: "success", text: "Fees updated successfully" });
-        // Refresh billing overview to reflect new fees
+        setConfigMsg({
+          type: "success",
+          text: `Fees saved for ${isSuperAdmin ? selectedScopeLabel : "your organization"}. Generate bills to apply them to current unpaid bills.`,
+        });
         fetchBillingOverview(currentOverviewParams());
       } else {
         setConfigMsg({ type: "error", text: result.error || "Failed to save" });
@@ -210,15 +250,22 @@ export default function BillingOverview() {
             Monthly Fee Configuration
           </h3>
 
-          {/* Current active fees */}
+          {/* Current selected fees */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-xl bg-blue-50/60 border border-blue-200/40 px-4 py-3 text-center">
               <p className="text-[10px] font-medium text-primary/40 uppercase">Customer Fee</p>
-              <p className="text-xl font-bold text-blue-700">NPR {(activeFees?.customerFee ?? 500).toLocaleString()}</p>
+              <p className="text-xl font-bold text-blue-700">NPR {selectedFees.customerFee.toLocaleString()}</p>
             </div>
             <div className="rounded-xl bg-violet-50/60 border border-violet-200/40 px-4 py-3 text-center">
               <p className="text-[10px] font-medium text-primary/40 uppercase">Admin Fee</p>
-              <p className="text-xl font-bold text-violet-700">NPR {(activeFees?.adminFee ?? 1000).toLocaleString()}</p>
+              <p className="text-xl font-bold text-violet-700">NPR {selectedFees.adminFee.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl bg-emerald-50/60 border border-emerald-200/40 px-4 py-3 sm:col-span-2">
+              <p className="text-[10px] font-medium text-primary/40 uppercase">Editing Scope</p>
+              <p className="text-sm font-bold text-emerald-700 truncate">{selectedScopeLabel}</p>
+              <p className="text-xs text-primary/45 mt-0.5">
+                {selectedScopeHasOwnConfig ? "Uses its own saved fee settings" : "Currently inherits the global default"}
+              </p>
             </div>
           </div>
 
@@ -250,11 +297,9 @@ export default function BillingOverview() {
                   className="px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="global">Global Default</option>
-                  {billingConfigs
-                    .filter((c) => c.orgId)
-                    .map((c) => (
-                      <option key={c.orgId._id} value={c.orgId._id}>{c.orgId.name}</option>
-                    ))}
+                  {organizations.map((org) => (
+                    <option key={org._id} value={org._id}>{org.name}</option>
+                  ))}
                 </select>
               </div>
             )}

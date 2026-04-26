@@ -10,6 +10,7 @@ import { getRoute } from "../services/openRouteService.js";
 import { calculatePrice } from "../services/pricingEngine.js";
 import Area from "../models/Area.model.js";
 import Organization from "../models/Organization.model.js";
+import { expireStalePendingPickups } from "../services/pickupExpiry.js";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -448,6 +449,8 @@ export const getMyPickups = async (req, res) => {
   try {
     const { _id, role } = req.user;
     if (role !== "customer_admin") return res.status(403).json({ message: "Access denied" });
+
+    await expireStalePendingPickups({ customerId: _id });
 
     const pickups = await PickupRequest.find({ customerId: _id })
       .sort({ createdAt: -1 })

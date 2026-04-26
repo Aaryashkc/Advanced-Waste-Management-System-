@@ -180,7 +180,7 @@ export const payBill = async (req, res) => {
  */
 export const esewaBillingSuccess = async (req, res) => {
   try {
-    const { data } = req.query;
+    const data = req.query.data || req.body?.data;
 
     let decoded;
     try {
@@ -250,7 +250,7 @@ export const esewaBillingSuccess = async (req, res) => {
  */
 export const esewaBillingFailure = async (req, res) => {
   try {
-    const { data } = req.query;
+    const data = req.query.data || req.body?.data;
     if (data) {
       try {
         const decoded = decodeAndVerifyCallback(data);

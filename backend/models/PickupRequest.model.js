@@ -179,8 +179,9 @@ const pickupRequestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// TTL index so MongoDB removes expired PENDING docs automatically
-pickupRequestSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Lookup index only. Do not use a TTL index here because pickup records must
+// remain available for dashboards, payment callbacks, and history.
+pickupRequestSchema.index({ expiresAt: 1 });
 
 // Compound indexes for analytics queries
 pickupRequestSchema.index({ status: 1, createdAt: -1 });

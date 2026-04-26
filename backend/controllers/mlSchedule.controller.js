@@ -160,6 +160,60 @@ function buildExtraAreas(allAreas = []) {
     }));
 }
 
+function normalizeScheduleAreaName(name) {
+  return (name || "").trim().toLowerCase();
+}
+
+function idsMatch(left, right) {
+  return left != null && right != null && left.toString() === right.toString();
+}
+
+function buildScopedSchedule(schedule, orgId, orgAreaNames) {
+  if (!orgId) return schedule;
+
+  const filteredAreas = (schedule.areas || []).filter((area) => {
+    if (idsMatch(area.orgId, orgId)) return true;
+
+    // Older schedules do not have areas[].orgId, so fall back to Area.name.
+    return orgAreaNames.has(normalizeScheduleAreaName(area.area));
+  });
+
+  if (filteredAreas.length === 0) return null;
+
+  const assignedTruckIds = new Set();
+  for (const area of filteredAreas) {
+    for (const truck of area.assignedTrucks || []) {
+      if (truck.truckId) assignedTruckIds.add(truck.truckId);
+    }
+  }
+
+  return {
+    ...schedule,
+    areas: filteredAreas,
+    totalPredictedWasteKg: Math.round(
+      filteredAreas.reduce((sum, area) => sum + Number(area.predictedWasteKg || 0), 0)
+    ),
+    summary: {
+      ...(schedule.summary || {}),
+      totalAreas: filteredAreas.length,
+      dispatched: filteredAreas.filter((area) => area.action === "dispatch").length,
+      reduced: filteredAreas.filter((area) => area.action === "reduced").length,
+      skipped: filteredAreas.filter((area) => area.action === "skip").length,
+      totalTrucksAssigned: assignedTruckIds.size,
+    },
+  };
+}
+
+async function getOrgAreaNames(orgId) {
+  if (!orgId) return new Set();
+
+  const areas = await Area.find({ isActive: true, orgId })
+    .select("name")
+    .lean();
+
+  return new Set(areas.map((area) => normalizeScheduleAreaName(area.name)));
+}
+
 /**
  * Org-aware truck assignment: assigns trucks to areas based on predicted waste,
  * ensuring trucks only go to areas within the SAME org.
@@ -241,6 +295,7 @@ function assignTrucksToAreas(mlPredictions, trucksWithDrivers, areaOrgMap, areaO
       isHoliday: d.is_holiday,
       holidayName: d.holiday_name || null,
       skipReason,
+      orgId: areaOrgId,
       orgName: areaOrgNameMap[d.district?.toLowerCase()] || null,
       assignedTrucks: assigned.map((t) => ({
         truckId: t.id,
@@ -631,6 +686,13 @@ export const getMLSchedules = async (req, res) => {
       ? req.user.orgId?.toString()
       : req.query.orgId || null;
 
+    if (req.user.role === "admin" && !orgId) {
+      return res.status(403).json({
+        success: false,
+        message: "Admin account is not assigned to an organization",
+      });
+    }
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     let schedules = await MLSchedule.find(filter)
@@ -641,16 +703,13 @@ export const getMLSchedules = async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
-    // If org-scoped, filter areas to only those with trucks from the org
+    // If org-scoped, filter areas by the area's organization. Do not use
+    // assignedTrucks[].orgId here: skipped areas have no trucks, and fallback
+    // dispatch can assign a truck from another org to this org's area.
     if (orgId) {
+      const orgAreaNames = await getOrgAreaNames(orgId);
       schedules = schedules
-        .map((schedule) => {
-          const filteredAreas = schedule.areas.filter((d) =>
-            d.assignedTrucks.some((t) => t.orgId === orgId)
-          );
-          if (filteredAreas.length === 0) return null;
-          return { ...schedule, areas: filteredAreas };
-        })
+        .map((schedule) => buildScopedSchedule(schedule, orgId, orgAreaNames))
         .filter(Boolean);
     }
 
@@ -684,15 +743,37 @@ export const getMLScheduleById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const schedule = await MLSchedule.findById(id)
+    let schedule = await MLSchedule.findById(id)
       .populate("generatedBy", "name email")
-      .populate("confirmedBy", "name email");
+      .populate("confirmedBy", "name email")
+      .lean();
 
     if (!schedule) {
       return res.status(404).json({
         success: false,
         message: "ML schedule not found",
       });
+    }
+
+    if (req.user.role === "admin") {
+      const orgId = req.user.orgId?.toString();
+
+      if (!orgId) {
+        return res.status(403).json({
+          success: false,
+          message: "Admin account is not assigned to an organization",
+        });
+      }
+
+      const orgAreaNames = await getOrgAreaNames(orgId);
+      schedule = buildScopedSchedule(schedule, orgId, orgAreaNames);
+
+      if (!schedule) {
+        return res.status(404).json({
+          success: false,
+          message: "ML schedule not found for your organization",
+        });
+      }
     }
 
     res.status(200).json({

@@ -238,7 +238,7 @@ function CustomerDashboard() {
   useEffect(() => {
     fetchDashboard.current({ showLoader: true });
     fetchMyBills();
-  }, []);
+  }, [fetchMyBills]);
 
   // ── Realtime: keep dashboard in sync via WebSocket ───────────────────────
   // Any pickup event that could affect this customer's stats triggers a full
@@ -269,9 +269,15 @@ function CustomerDashboard() {
   // hosted checkout, comes back to /payment-success, then to the dashboard.
   // Without this, any cached dashboard state would look stale ("reset").
   useEffect(() => {
-    const onFocus = () => fetchDashboard.current();
+    const onFocus = () => {
+      fetchDashboard.current();
+      fetchMyBills();
+    };
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchDashboard.current();
+      if (document.visibilityState === "visible") {
+        fetchDashboard.current();
+        fetchMyBills();
+      }
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
@@ -279,7 +285,7 @@ function CustomerDashboard() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [fetchMyBills]);
 
   const stats = data?.stats;
   const pickups = data?.pickups || [];
