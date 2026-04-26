@@ -1,58 +1,64 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
-import Dashboard from "../pages/Dashboard";
 import DashboardLayout from "../components/layout/DashboardLayout";
-import HomePage from "../pages/HomePage";
 import { Footer } from "../components/Headers/Footer";
-import CustomerLoginPage from "../components/auth/CustomerLogin";
 import { Header } from "../components/Headers/Header";
-import CustomerSignUpPage from "../components/auth/CustomerSignup";
 // OTP is now handled via modal inside Login/Signup pages
 import ProtectedRoute from "../components/auth/ProtectedRoute";
-import Unauthorized from "../pages/Unauthorized";
-import AboutUs from "../pages/AboutUs";
-import OurTeam from "../pages/OurTeam";
-import ContactUs from "../pages/ContactUs";
-import Profile from "../pages/Profile";
-import CustomerDashboard from "../components/users/CustomerDashboard";
-import SchedulePage from "../components/users/SchedulePage";
-import UploadWastePage from "../components/users/UploadWastePage";
-import SearchPage from "../components/sub-components/Searching";
-import PaymentSuccessPage from "../components/sub-components/PaymentSuccessPage";
-import DriverDashboard from "../components/Driver/DriverDashboard";
-import AcceptTaskPage from "../components/Driver/AcceptTaskPage";
-import TaskRoutePage from "../components/Driver/TaskRoutePage";
-import TaskFlow from "../components/Driver/TaskFlow";
-import TestAnimationPage from "../pages/TestAnimationPage";
-import MLScheduleDashboard from "../components/ml/MLScheduleDashboard";
-import MLScheduleHistory from "../components/ml/MLScheduleHistory";
-import DriverMLAssignments from "../components/ml/DriverMLAssignments";
-import Vehicles from "../pages/Vehicles";
-import Drivers from "../pages/Drivers";
-import Organizations from "../pages/Organizations";
-import OrgDetail from "../pages/OrgDetail";
-import DriverDetail from "../pages/DriverDetail";
-import Admins from "../pages/Admins";
-import Areas from "../pages/Areas";
-import Notifications from "../pages/Notifications";
-import Reports from "../pages/Reports";
-import Users from "../pages/Users";
-import PickupStats from "../pages/PickupStats";
-import History from "../pages/History";
-import PricingConfig from "../pages/PricingConfig";
-import BillingPage from "../components/users/BillingPage";
-import BillingOverview from "../pages/BillingOverview";
-import AdminBilling from "../pages/AdminBilling";
-import AdminContact from "../pages/AdminContact";
-import PickupStatusToast from "../components/users/PickupStatusToast";
-import DriverStatusToast from "../components/Driver/DriverStatusToast";
-import DriverNavbar from "../components/Driver/DriverNavbar";
-import DriverNotifications from "../components/Driver/DriverNotifications";
-import ScheduleToast from "../components/ml/ScheduleToast";
 import useAuthStore from "../stores/useAuthStore";
-import DebugScheduleData from "../components/debug/DebugScheduleData";
-import HelpSupportPage from "../pages/HelpandSupport";
+
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const HomePage = lazy(() => import("../pages/HomePage"));
+const CustomerLoginPage = lazy(() => import("../components/auth/CustomerLogin"));
+const CustomerSignUpPage = lazy(() => import("../components/auth/CustomerSignup"));
+const Unauthorized = lazy(() => import("../pages/Unauthorized"));
+const AboutUs = lazy(() => import("../pages/AboutUs"));
+const OurTeam = lazy(() => import("../pages/OurTeam"));
+const ContactUs = lazy(() => import("../pages/ContactUs"));
+const Profile = lazy(() => import("../pages/Profile"));
+const CustomerDashboard = lazy(() => import("../components/users/CustomerDashboard"));
+const SchedulePage = lazy(() => import("../components/users/SchedulePage"));
+const UploadWastePage = lazy(() => import("../components/users/UploadWastePage"));
+const SearchPage = lazy(() => import("../components/sub-components/Searching"));
+const PaymentSuccessPage = lazy(() => import("../components/sub-components/PaymentSuccessPage"));
+const DriverDashboard = lazy(() => import("../components/Driver/DriverDashboard"));
+const AcceptTaskPage = lazy(() => import("../components/Driver/AcceptTaskPage"));
+const TaskRoutePage = lazy(() => import("../components/Driver/TaskRoutePage"));
+const TaskFlow = lazy(() => import("../components/Driver/TaskFlow"));
+const MLScheduleDashboard = lazy(() => import("../components/ml/MLScheduleDashboard"));
+const MLScheduleHistory = lazy(() => import("../components/ml/MLScheduleHistory"));
+const DriverMLAssignments = lazy(() => import("../components/ml/DriverMLAssignments"));
+const Vehicles = lazy(() => import("../pages/Vehicles"));
+const Drivers = lazy(() => import("../pages/Drivers"));
+const Organizations = lazy(() => import("../pages/Organizations"));
+const OrgDetail = lazy(() => import("../pages/OrgDetail"));
+const DriverDetail = lazy(() => import("../pages/DriverDetail"));
+const Admins = lazy(() => import("../pages/Admins"));
+const Areas = lazy(() => import("../pages/Areas"));
+const Notifications = lazy(() => import("../pages/Notifications"));
+const Reports = lazy(() => import("../pages/Reports"));
+const Users = lazy(() => import("../pages/Users"));
+const PickupStats = lazy(() => import("../pages/PickupStats"));
+const History = lazy(() => import("../pages/History"));
+const PricingConfig = lazy(() => import("../pages/PricingConfig"));
+const BillingPage = lazy(() => import("../components/users/BillingPage"));
+const BillingOverview = lazy(() => import("../pages/BillingOverview"));
+const AdminBilling = lazy(() => import("../pages/AdminBilling"));
+const AdminContact = lazy(() => import("../pages/AdminContact"));
+const PickupStatusToast = lazy(() => import("../components/users/PickupStatusToast"));
+const DriverStatusToast = lazy(() => import("../components/Driver/DriverStatusToast"));
+const DriverNavbar = lazy(() => import("../components/Driver/DriverNavbar"));
+const DriverNotifications = lazy(() => import("../components/Driver/DriverNotifications"));
+const ScheduleToast = lazy(() => import("../components/ml/ScheduleToast"));
+const DebugScheduleData = lazy(() => import("../components/debug/DebugScheduleData"));
+const HelpSupportPage = lazy(() => import("../pages/HelpandSupport"));
+
+const RouteFallback = () => (
+  <div className="flex min-h-[50vh] items-center justify-center px-4 text-sm text-primary">
+    Loading...
+  </div>
+);
 
 const AdminRedirect = () => {
   const { isAuthenticated, user } = useAuthStore();
@@ -88,6 +94,7 @@ const AppRoutes = () => {
     <>
       {!isAdminRoute && !isDriverRoute && <Header />}
 
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* Public Routes - admins get redirected to dashboard */}
         <Route path="/" element={<AdminRedirect />} />
@@ -276,9 +283,11 @@ const AppRoutes = () => {
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
 
       {!isAdminRoute && !isDriverRoute && <Footer />}
 
+      <Suspense fallback={null}>
       {/* Persistent status toast for customers */}
       {isAuthenticated && user?.role === "customer_admin" && <PickupStatusToast />}
       
@@ -288,6 +297,7 @@ const AppRoutes = () => {
 
       {/* Schedule toast — works for drivers, admins, and super_admins */}
       {isAuthenticated && <ScheduleToast />}
+      </Suspense>
     </>
   );
 };
