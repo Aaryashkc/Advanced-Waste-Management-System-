@@ -1,15 +1,64 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Edit3,
+  MapPin,
+  Plus,
+  ShieldPlus,
+  Truck,
+  UserRoundCog,
+  UsersRound,
+} from "lucide-react";
 import useOrganizationStore from "../stores/useOrganizationStore";
 import LocationPickerMap from "../components/shared/LocationPickerMap";
+import StatsCard from "../components/dashboard/StatsCard";
 
 const ORG_COLORS = [
-  "from-blue-500/20 to-blue-600/5",
-  "from-emerald-500/20 to-emerald-600/5",
-  "from-purple-500/20 to-purple-600/5",
-  "from-amber-500/20 to-amber-600/5",
-  "from-rose-500/20 to-rose-600/5",
-  "from-cyan-500/20 to-cyan-600/5",
+  {
+    accent: "bg-blue-500",
+    ring: "ring-blue-500/15",
+    soft: "bg-blue-500/10",
+    text: "text-blue-600",
+    wash: "from-blue-500/16 via-transparent to-cyan-500/10",
+  },
+  {
+    accent: "bg-emerald-500",
+    ring: "ring-emerald-500/15",
+    soft: "bg-emerald-500/10",
+    text: "text-emerald-600",
+    wash: "from-emerald-500/16 via-transparent to-teal-500/10",
+  },
+  {
+    accent: "bg-violet-500",
+    ring: "ring-violet-500/15",
+    soft: "bg-violet-500/10",
+    text: "text-violet-600",
+    wash: "from-violet-500/16 via-transparent to-fuchsia-500/10",
+  },
+  {
+    accent: "bg-amber-500",
+    ring: "ring-amber-500/15",
+    soft: "bg-amber-500/10",
+    text: "text-amber-600",
+    wash: "from-amber-500/16 via-transparent to-orange-500/10",
+  },
+  {
+    accent: "bg-rose-500",
+    ring: "ring-rose-500/15",
+    soft: "bg-rose-500/10",
+    text: "text-rose-600",
+    wash: "from-rose-500/16 via-transparent to-red-500/10",
+  },
+  {
+    accent: "bg-cyan-500",
+    ring: "ring-cyan-500/15",
+    soft: "bg-cyan-500/10",
+    text: "text-cyan-600",
+    wash: "from-cyan-500/16 via-transparent to-sky-500/10",
+  },
 ];
 
 const Organizations = () => {
@@ -70,6 +119,25 @@ const Organizations = () => {
 
   const totalAdmins = organizations.reduce((sum, o) => sum + (o.admins?.length || 0), 0);
   const totalFleet = organizations.reduce((sum, o) => sum + (o.fleet?.length || 0), 0);
+  const totalDrivers = organizations.reduce((sum, o) => sum + (o.driverCount || 0), 0);
+  const gpsReady = organizations.filter((o) => o.location?.latitude && o.location?.longitude).length;
+
+  const openEditOrganization = (org) => {
+    setEditOrg(org);
+    setEditForm({
+      name: org.name,
+      latitude: org.location?.latitude || null,
+      longitude: org.location?.longitude || null,
+      address: org.location?.address || "",
+    });
+    setFormError("");
+  };
+
+  const openAddAdmin = (org) => {
+    setAdminOrg(org);
+    setFormError("");
+    setAdminForm({ name: "", email: "", phone: "", password: "" });
+  };
 
   return (
     <div className="space-y-6">
@@ -80,40 +148,44 @@ const Organizations = () => {
           <p className="text-sm text-primary/60 mt-1">Manage waste management organizations and their resources</p>
         </div>
         <button onClick={() => { setShowCreate(true); setFormError(""); }} className="px-5 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-sm hover:shadow-md hover:bg-primary/90 transition-all flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          <Plus className="h-5 w-5" />
           New Organization
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-primary/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-            <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-          </div>
-          <div>
-            <p className="text-xs text-primary/50 uppercase tracking-wider font-medium">Organizations</p>
-            <p className="text-2xl font-bold text-primary">{organizations.length}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-primary/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-            <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-          </div>
-          <div>
-            <p className="text-xs text-primary/50 uppercase tracking-wider font-medium">Total Admins</p>
-            <p className="text-2xl font-bold text-blue-600">{totalAdmins}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-primary/10 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-            <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h8m-8 4h8m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
-          </div>
-          <div>
-            <p className="text-xs text-primary/50 uppercase tracking-wider font-medium">Total Fleet</p>
-            <p className="text-2xl font-bold text-amber-600">{totalFleet}</p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatsCard
+          title="Organizations"
+          value={organizations.length}
+          label="Registered partners"
+          icon={<Building2 className="w-5 h-5 text-primary" />}
+          iconBg="bg-primary/8"
+        />
+        <StatsCard
+          title="Admins"
+          value={totalAdmins}
+          label="Operational owners"
+          icon={<UserRoundCog className="w-5 h-5 text-blue-600" />}
+          iconBg="bg-blue-100"
+          valueColor="text-blue-600"
+        />
+        <StatsCard
+          title="Fleet"
+          value={totalFleet}
+          label={`${totalDrivers} driver${totalDrivers !== 1 ? "s" : ""} assigned`}
+          icon={<Truck className="w-5 h-5 text-amber-600" />}
+          iconBg="bg-amber-100"
+          valueColor="text-amber-600"
+        />
+        <StatsCard
+          title="GPS Ready"
+          value={gpsReady}
+          label="Depot locations set"
+          icon={<MapPin className="w-5 h-5 text-emerald-600" />}
+          iconBg="bg-emerald-100"
+          valueColor="text-emerald-600"
+        />
       </div>
 
       {/* Org Grid */}
@@ -132,106 +204,139 @@ const Organizations = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {organizations.map((org, i) => (
-            <div
-              key={org._id}
-              onClick={() => navigate(`/admin-dashboard/organizations/${org._id}`)}
-              className="bg-white rounded-2xl border border-primary/10 shadow-sm overflow-hidden hover:shadow-lg hover:border-accent/30 transition-all cursor-pointer group"
-            >
-              {/* Color Top Band */}
-              <div className={`h-2 bg-linear-to-r ${ORG_COLORS[i % ORG_COLORS.length]}`} />
+          {organizations.map((org, i) => {
+            const tone = ORG_COLORS[i % ORG_COLORS.length];
+            const admins = org.admins || [];
+            const trucks = org.fleet?.length || 0;
+            const drivers = org.driverCount || 0;
+            const isMapped = Boolean(org.location?.latitude && org.location?.longitude);
+            const detailPath = `/admin-dashboard/organizations/${org._id}`;
 
-              <div className="p-5">
-                {/* Org Name & Location */}
-                <div className="flex items-start gap-3 mb-4">
-                  <div className={`w-12 h-12 rounded-xl bg-linear-to-br ${ORG_COLORS[i % ORG_COLORS.length]} flex items-center justify-center text-xl font-bold text-primary shrink-0`}>
-                    {org.name?.charAt(0)?.toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-lg font-bold text-primary truncate group-hover:text-accent transition-colors">
-                      {org.name}
-                    </h3>
-                    <p className="text-xs text-primary/50 truncate">
-                      {org.location?.address || "No address"}
-                    </p>
-                    {org.location?.latitude && org.location?.longitude && (
-                      <p className="text-[10px] text-emerald-500 flex items-center gap-1 mt-0.5">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        GPS location set
-                      </p>
-                    )}
-                  </div>
-                </div>
+            return (
+              <article
+                key={org._id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(detailPath)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    navigate(detailPath);
+                  }
+                }}
+                className="dash-interactive-card group min-h-[230px] cursor-pointer rounded-2xl border bg-[var(--dash-card)] shadow-sm shadow-primary/5"
+              >
+                <div className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-br ${tone.wash}`} />
+                <div className={`absolute left-0 top-0 h-full w-1 ${tone.accent} opacity-80 transition-all duration-200 group-hover:w-1.5`} />
 
-                {/* Resource Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="p-3 rounded-xl bg-primary/3 text-center">
-                    <p className="text-xl font-bold text-primary">{org.admins?.length || 0}</p>
-                    <p className="text-[11px] text-primary/50 font-medium uppercase tracking-wide">Admins</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-primary/3 text-center">
-                    <p className="text-xl font-bold text-primary">{org.fleet?.length || 0}</p>
-                    <p className="text-[11px] text-primary/50 font-medium uppercase tracking-wide">Trucks</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-primary/3 text-center">
-                    <p className="text-xl font-bold text-purple-600">{org.driverCount || 0}</p>
-                    <p className="text-[11px] text-primary/50 font-medium uppercase tracking-wide">Drivers</p>
-                  </div>
-                </div>
-
-                {/* Admin Avatars */}
-                {org.admins?.length > 0 && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex -space-x-2">
-                      {org.admins.slice(0, 4).map(admin => (
-                        <div key={admin._id} className="w-7 h-7 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-700" title={admin.name}>
-                          {admin.name?.charAt(0)?.toUpperCase()}
+                <div className="relative h-full min-h-[230px]">
+                  <div className="flex h-full min-h-[230px] flex-col p-5 transition-all duration-200 group-hover:-translate-y-2 group-hover:opacity-0 group-focus-within:-translate-y-2 group-focus-within:opacity-0">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${tone.soft} ${tone.text} ring-8 ${tone.ring} text-lg font-bold transition-transform duration-200 group-hover:scale-105`}>
+                        {org.name?.charAt(0)?.toUpperCase() || "O"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-lg font-bold leading-tight text-primary">
+                              {org.name}
+                            </h3>
+                            <p className="mt-1 flex items-center gap-1.5 truncate text-xs font-medium text-primary/50">
+                              <MapPin className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{org.location?.address || "Depot address not set"}</span>
+                            </p>
+                          </div>
+                          <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-primary/30 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary/70" />
                         </div>
-                      ))}
-                      {org.admins.length > 4 && (
-                        <div className="w-7 h-7 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-gray-500">
-                          +{org.admins.length - 4}
-                        </div>
-                      )}
+                      </div>
                     </div>
-                    <span className="text-xs text-primary/40">{org.admins.length} admin{org.admins.length !== 1 ? "s" : ""}</span>
-                  </div>
-                )}
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-3 border-t border-primary/5">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); navigate(`/admin-dashboard/organizations/${org._id}`); }}
-                    className="flex-1 py-2 text-xs font-semibold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition text-center"
-                  >
-                    View Details
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditOrg(org);
-                      setEditForm({
-                        name: org.name,
-                        latitude: org.location?.latitude || null,
-                        longitude: org.location?.longitude || null,
-                        address: org.location?.address || "",
-                      });
-                      setFormError("");
-                    }}
-                    className="py-2 px-3 text-xs font-semibold text-primary/60 bg-primary/5 rounded-lg hover:bg-primary/10 transition"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setAdminOrg(org); setFormError(""); setAdminForm({ name: "", email: "", phone: "", password: "" }); }}
-                    className="py-2 px-3 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
-                  >
-                    + Admin
-                  </button>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${isMapped ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                        {isMapped ? <CheckCircle2 className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+                        {isMapped ? "GPS ready" : "Needs GPS"}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-[11px] font-bold text-primary/55">
+                        <Building2 className="h-3.5 w-3.5" />
+                        Partner organization
+                      </span>
+                    </div>
+
+                    <div className="mt-auto flex items-center justify-between gap-3 pt-6">
+                      {admins.length > 0 ? (
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex -space-x-2">
+                            {admins.slice(0, 4).map((admin) => (
+                              <div key={admin._id} className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--dash-card)] bg-blue-100 text-[10px] font-bold text-blue-700 shadow-sm" title={admin.name}>
+                                {admin.name?.charAt(0)?.toUpperCase() || "A"}
+                              </div>
+                            ))}
+                            {admins.length > 4 && (
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--dash-card)] bg-primary/8 text-[10px] font-bold text-primary/60 shadow-sm">
+                                +{admins.length - 4}
+                              </div>
+                            )}
+                          </div>
+                          <span className="truncate text-xs font-medium text-primary/45">
+                            {admins.length} admin{admins.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-medium text-primary/40">No admins assigned</span>
+                      )}
+                      <span className="shrink-0 text-xs font-bold text-primary/40">
+                        {trucks} truck{trucks !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="absolute inset-0 flex translate-y-2 flex-col justify-between rounded-2xl bg-[color-mix(in_srgb,var(--dash-card)_96%,transparent)] p-5 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                    <div>
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold uppercase tracking-wide text-primary/45">Organization Stats</p>
+                          <h3 className="truncate text-base font-bold text-primary">{org.name}</h3>
+                        </div>
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone.soft} ${tone.text}`}>
+                          <Building2 className="h-5 w-5" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <OrgMetric icon={<UserRoundCog className="h-4 w-4" />} label="Admins" value={admins.length} />
+                        <OrgMetric icon={<Truck className="h-4 w-4" />} label="Trucks" value={trucks} />
+                        <OrgMetric icon={<UsersRound className="h-4 w-4" />} label="Drivers" value={drivers} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate(detailPath); }}
+                        className="flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white shadow-sm shadow-primary/15 transition hover:bg-primary/90"
+                      >
+                        Details
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        aria-label={`Edit ${org.name}`}
+                        title="Edit organization"
+                        onClick={(e) => { e.stopPropagation(); openEditOrganization(org); }}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary/65 transition hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        aria-label={`Add admin to ${org.name}`}
+                        title="Add admin"
+                        onClick={(e) => { e.stopPropagation(); openAddAdmin(org); }}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-600 transition hover:bg-blue-500/15"
+                      >
+                        <ShieldPlus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
 
@@ -326,5 +431,15 @@ const Organizations = () => {
     </div>
   );
 };
+
+const OrgMetric = ({ icon, label, value }) => (
+  <div className="rounded-xl border border-primary/8 bg-[color-mix(in_srgb,var(--dash-card-soft)_72%,transparent)] px-3 py-3 transition-colors group-hover:border-primary/14">
+    <div className="mb-2 flex items-center justify-between gap-2 text-primary/45">
+      {icon}
+      <span className="text-lg font-bold leading-none text-primary">{value}</span>
+    </div>
+    <p className="truncate text-[11px] font-bold uppercase tracking-wide text-primary/45">{label}</p>
+  </div>
+);
 
 export default Organizations;

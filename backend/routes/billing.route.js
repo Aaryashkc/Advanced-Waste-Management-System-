@@ -6,7 +6,9 @@ import {
   payBill,
   getPaymentHistory,
   getBillingOverview,
+  getBillingAccountDetails,
   waiveBill,
+  confirmCashPayment,
   generateMonthlyBills,
   getBillingConfig,
   updateBillingConfig,
@@ -54,11 +56,25 @@ router.get(
   getBillingOverview
 );
 
+router.get(
+  "/admin/accounts/:customerId",
+  authMiddleware,
+  roleMiddleware("super_admin", "admin"),
+  getBillingAccountDetails
+);
+
 router.put(
   "/admin/:billingId/waive",
   authMiddleware,
   roleMiddleware("super_admin", "admin"),
   waiveBill
+);
+
+router.put(
+  "/admin/:billingId/confirm-cash",
+  authMiddleware,
+  roleMiddleware("super_admin", "admin"),
+  confirmCashPayment
 );
 
 // Generate current monthly bills. Super admin generates globally; admin is scoped to their org.

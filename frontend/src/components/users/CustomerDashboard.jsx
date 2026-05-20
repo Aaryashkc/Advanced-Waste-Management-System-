@@ -41,7 +41,7 @@ ChartJS.register(
   LineElement,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 );
 
 /* ── Viewport observer (same pattern as OurTeam / SchedulePage) ── */
@@ -73,7 +73,8 @@ function FadeIn({ children, className = "" }) {
 
 /* ── Constants ── */
 
-const DASHBOARD_BG = "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1920&auto=format&fit=crop";
+const DASHBOARD_BG =
+  "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1920&auto=format&fit=crop";
 
 const STATUS_COLORS = {
   PAYMENT_REQUIRED: "#f97316",
@@ -104,9 +105,7 @@ const LEVEL_COLORS = {
 
 function StatCard({ icon: Icon, label, value, accent }) {
   return (
-    <div
-      className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center hover:bg-white/10 hover:border-white/20 transition-all duration-300"
-    >
+    <div className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center hover:bg-white/10 hover:border-white/20 transition-all duration-300">
       <div
         className="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center"
         style={{ backgroundColor: `${accent}20` }}
@@ -123,7 +122,9 @@ function StatCard({ icon: Icon, label, value, accent }) {
 
 function ChartCard({ title, children, className = "" }) {
   return (
-    <div className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 sm:p-6 hover:border-white/15 transition-all duration-300 ${className}`}>
+    <div
+      className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 sm:p-6 hover:border-white/15 transition-all duration-300 ${className}`}
+    >
       <h3 className="mb-4 text-xs font-semibold text-white/40 uppercase tracking-widest flex items-center gap-2">
         {title}
       </h3>
@@ -139,7 +140,8 @@ function RecentPickupRow({ pickup, onCancel, onCompletePayment }) {
   const [cancelling, setCancelling] = useState(false);
   const pickupId = pickup.id || pickup._id;
   const needsPayment = pickup.status === "PAYMENT_REQUIRED";
-  const canCancel = needsPayment || pickup.status === "PENDING" || pickup.status === "ASSIGNED";
+  const canCancel =
+    needsPayment || pickup.status === "PENDING" || pickup.status === "ASSIGNED";
 
   const handleCancel = async (e) => {
     e.stopPropagation();
@@ -212,7 +214,9 @@ function RecentPickupRow({ pickup, onCancel, onCompletePayment }) {
 function EmptyChart({ message }) {
   return (
     <div className="flex h-52 items-center justify-center">
-      <p className="text-sm text-white/30 font-['Outfit',sans-serif]">{message}</p>
+      <p className="text-sm text-white/30 font-['Outfit',sans-serif]">
+        {message}
+      </p>
     </div>
   );
 }
@@ -222,7 +226,12 @@ function EmptyChart({ message }) {
 function CustomerDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { bills, summary: billingSummary, fetchMyBills, payBill } = useBillingStore();
+  const {
+    bills,
+    summary: billingSummary,
+    fetchMyBills,
+    payBill,
+  } = useBillingStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -329,7 +338,9 @@ function CustomerDashboard() {
       datasets: [
         {
           data: entries.map(([, v]) => v),
-          backgroundColor: entries.map(([k]) => CATEGORY_COLORS[k] || "#9ca3af"),
+          backgroundColor: entries.map(
+            ([k]) => CATEGORY_COLORS[k] || "#9ca3af",
+          ),
           borderWidth: 0,
           spacing: 3,
         },
@@ -357,7 +368,9 @@ function CustomerDashboard() {
     if (!stats?.monthly?.length) return null;
     const months = stats.monthly.map((m) => {
       const [y, mo] = m.month.split("-");
-      return new Date(y, mo - 1).toLocaleDateString("en-US", { month: "short" });
+      return new Date(y, mo - 1).toLocaleDateString("en-US", {
+        month: "short",
+      });
     });
     return {
       labels: months,
@@ -432,11 +445,18 @@ function CustomerDashboard() {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { size: 12, family: "'Outfit', sans-serif" }, color: "rgba(255,255,255,0.35)" },
+        ticks: {
+          font: { size: 12, family: "'Outfit', sans-serif" },
+          color: "rgba(255,255,255,0.35)",
+        },
       },
       y: {
         beginAtZero: true,
-        ticks: { stepSize: 1, font: { size: 12, family: "'Outfit', sans-serif" }, color: "rgba(255,255,255,0.35)" },
+        ticks: {
+          stepSize: 1,
+          font: { size: 12, family: "'Outfit', sans-serif" },
+          color: "rgba(255,255,255,0.35)",
+        },
         grid: { color: "rgba(255,255,255,0.05)" },
       },
     },
@@ -454,7 +474,9 @@ function CustomerDashboard() {
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
             <TruckLoader />
-            <p className="text-sm text-white/50 font-medium">Loading your dashboard...</p>
+            <p className="text-sm text-white/50 font-medium">
+              Loading your dashboard...
+            </p>
           </div>
         </div>
       </div>
@@ -475,7 +497,9 @@ function CustomerDashboard() {
             <AlertTriangle className="w-7 h-7 text-red-400" />
           </div>
           <div className="text-center">
-            <p className="text-red-300 text-lg font-semibold mb-1">Could not load dashboard</p>
+            <p className="text-red-300 text-lg font-semibold mb-1">
+              Could not load dashboard
+            </p>
             <p className="text-red-400/60 text-sm max-w-sm">{error}</p>
           </div>
         </div>
@@ -555,11 +579,36 @@ function CustomerDashboard() {
         <section className="pb-8 px-6 md:px-16 lg:px-24">
           <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
-              { icon: Package, value: stats?.total || 0, label: "Total Requests", accent: "#3b82f6" },
-              { icon: CheckCircle2, value: completed, label: "Completed", accent: "#22c55e" },
-              { icon: Truck, value: active, label: "Active", accent: "#6366f1" },
-              { icon: Clock, value: pending, label: "Pending", accent: "#f59e0b" },
-              { icon: XCircle, value: cancelled, label: "Cancelled", accent: "#ef4444" },
+              {
+                icon: Package,
+                value: stats?.total || 0,
+                label: "Total Requests",
+                accent: "#3b82f6",
+              },
+              {
+                icon: CheckCircle2,
+                value: completed,
+                label: "Completed",
+                accent: "#22c55e",
+              },
+              {
+                icon: Truck,
+                value: active,
+                label: "Active",
+                accent: "#6366f1",
+              },
+              {
+                icon: Clock,
+                value: pending,
+                label: "Pending",
+                accent: "#f59e0b",
+              },
+              {
+                icon: XCircle,
+                value: cancelled,
+                label: "Cancelled",
+                accent: "#ef4444",
+              },
             ].map((stat, i) => (
               <FadeIn key={stat.label} delay={300 + i * 80}>
                 <StatCard {...stat} />
@@ -588,11 +637,17 @@ function CustomerDashboard() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-bold text-amber-400">{billingSummary.unpaid}</p>
-                      <p className="text-xs text-white/40 mt-0.5">Unpaid Bills</p>
+                      <p className="text-2xl font-bold text-amber-400">
+                        {billingSummary.unpaid}
+                      </p>
+                      <p className="text-xs text-white/40 mt-0.5">
+                        Unpaid Bills
+                      </p>
                     </div>
                     <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-bold text-red-400">NPR {(billingSummary.totalDue || 0).toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-red-400">
+                        NPR {(billingSummary.totalDue || 0).toLocaleString()}
+                      </p>
                       <p className="text-xs text-white/40 mt-0.5">Total Due</p>
                     </div>
                   </div>
@@ -600,10 +655,13 @@ function CustomerDashboard() {
                   {/* Show up to 3 unpaid bills with quick-pay */}
                   <div className="space-y-2">
                     {bills
-                      .filter((b) => b.status === "UNPAID" || b.status === "OVERDUE")
+                      .filter(
+                        (b) => ["UNPAID", "OVERDUE", "CASH_PENDING"].includes(b.status),
+                      )
                       .slice(0, 3)
                       .map((bill) => {
                         const isOverdue = bill.status === "OVERDUE";
+                        const isCashPending = bill.status === "CASH_PENDING";
                         const isPaying = billingPayingId === bill._id;
                         return (
                           <div
@@ -612,29 +670,60 @@ function CustomerDashboard() {
                           >
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-white">
-                                {new Date(bill.billingYear, bill.billingMonth - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                                {new Date(
+                                  bill.billingYear,
+                                  bill.billingMonth - 1,
+                                ).toLocaleDateString("en-US", {
+                                  month: "long",
+                                  year: "numeric",
+                                })}
                               </p>
                               <p className="text-xs text-white/40 mt-0.5">
-                                Due: {new Date(bill.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                                {isOverdue && <span className="text-red-400 ml-2 font-semibold">OVERDUE</span>}
+                                Due:{" "}
+                                {new Date(bill.dueDate).toLocaleDateString(
+                                  "en-US",
+                                  { month: "short", day: "numeric" },
+                                )}
+                                {isOverdue && (
+                                  <span className="text-red-400 ml-2 font-semibold">
+                                    OVERDUE
+                                  </span>
+                                )}
+                                {isCashPending && (
+                                  <span className="text-blue-300 ml-2 font-semibold">
+                                    CASH PENDING
+                                  </span>
+                                )}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-white font-bold text-sm">NPR {bill.amount.toLocaleString()}</span>
-                              <button
-                                onClick={async () => {
-                                  setBillingPayingId(bill._id);
-                                  const result = await payBill(bill._id, "esewa");
-                                  if (result.redirecting) return;
-                                  setBillingPayingId(null);
-                                  if (!result.success) alert(result.error || "Payment failed");
-                                  else fetchMyBills();
-                                }}
-                                disabled={isPaying}
-                                className="rounded-lg px-3 py-1.5 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {isPaying ? "Processing..." : "Pay eSewa"}
-                              </button>
+                              <span className="text-white font-bold text-sm">
+                                NPR {bill.amount.toLocaleString()}
+                              </span>
+                              {isCashPending ? (
+                                <span className="rounded-lg px-3 py-1.5 text-[11px] font-semibold bg-blue-500/20 text-blue-200">
+                                  Awaiting Admin
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    setBillingPayingId(bill._id);
+                                    const result = await payBill(
+                                      bill._id,
+                                      "esewa",
+                                    );
+                                    if (result.redirecting) return;
+                                    setBillingPayingId(null);
+                                    if (!result.success)
+                                      alert(result.error || "Payment failed");
+                                    else fetchMyBills();
+                                  }}
+                                  disabled={isPaying}
+                                  className="rounded-lg px-3 py-1.5 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isPaying ? "Processing..." : "Pay eSewa"}
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
@@ -665,7 +754,10 @@ function CustomerDashboard() {
               <ChartCard title="Status Breakdown">
                 {statusChartData ? (
                   <div className="h-64 flex items-center justify-center">
-                    <Doughnut data={statusChartData} options={doughnutOptions} />
+                    <Doughnut
+                      data={statusChartData}
+                      options={doughnutOptions}
+                    />
                   </div>
                 ) : (
                   <EmptyChart message="No pickups yet" />
@@ -682,7 +774,10 @@ function CustomerDashboard() {
               <ChartCard title="By Category">
                 {categoryChartData ? (
                   <div className="h-52 flex items-center justify-center">
-                    <Doughnut data={categoryChartData} options={doughnutOptions} />
+                    <Doughnut
+                      data={categoryChartData}
+                      options={doughnutOptions}
+                    />
                   </div>
                 ) : (
                   <EmptyChart message="No data" />
@@ -711,7 +806,9 @@ function CustomerDashboard() {
                   <p className="text-3xl font-bold text-white">
                     NPR {(stats?.totalSpent || 0).toLocaleString()}
                   </p>
-                  <p className="text-sm text-white/40 mt-1">on completed pickups</p>
+                  <p className="text-sm text-white/40 mt-1">
+                    on completed pickups
+                  </p>
                 </div>
               </ChartCard>
             </FadeIn>
@@ -730,7 +827,11 @@ function CustomerDashboard() {
                         key={p.id}
                         pickup={p}
                         onCancel={() => fetchDashboard.current()}
-                        onCompletePayment={(id) => navigate(`/searching?pickupId=${encodeURIComponent(id)}`)}
+                        onCompletePayment={(id) =>
+                          navigate(
+                            `/searching?pickupId=${encodeURIComponent(id)}`,
+                          )
+                        }
                       />
                     ))}
                   </div>
@@ -739,7 +840,9 @@ function CustomerDashboard() {
                     <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center mb-4">
                       <Package size={32} className="text-white/30" />
                     </div>
-                    <p className="text-white/60 font-semibold text-lg mb-1">No pickups yet</p>
+                    <p className="text-white/60 font-semibold text-lg mb-1">
+                      No pickups yet
+                    </p>
                     <p className="text-sm text-white/40 mb-6 max-w-md">
                       Request your first pickup to see activity here.
                     </p>

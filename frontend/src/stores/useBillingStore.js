@@ -10,10 +10,13 @@ const useBillingStore = create((set, get) => ({
 
   // Admin state
   adminBills: [],
+  billingAccounts: [],
+  accountDetails: {},
   adminSummary: null,
   defaulters: [],
   adminPagination: null,
   adminLoading: false,
+  accountDetailsLoading: {},
 
   // Config state
   billingConfigs: [],
@@ -102,6 +105,7 @@ const useBillingStore = create((set, get) => ({
       const res = await api.get(`/billing/admin/overview?${query}`);
       set({
         adminBills: res.data.bills,
+        billingAccounts: res.data.accounts || [],
         adminSummary: res.data.summary,
         defaulters: res.data.defaulters,
         adminPagination: res.data.pagination,
@@ -113,11 +117,38 @@ const useBillingStore = create((set, get) => ({
     }
   },
 
+  fetchBillingAccountDetails: async (customerId, params = {}) => {
+    if (!customerId) return { success: false, error: "Missing account id" };
+    set((state) => ({
+      accountDetailsLoading: { ...state.accountDetailsLoading, [customerId]: true },
+    }));
+    try {
+      const query = new URLSearchParams(params).toString();
+      const res = await api.get(`/billing/admin/accounts/${customerId}?${query}`);
+      set((state) => ({
+        accountDetails: {
+          ...state.accountDetails,
+          [customerId]: res.data,
+        },
+        accountDetailsLoading: { ...state.accountDetailsLoading, [customerId]: false },
+      }));
+      return { success: true, ...res.data };
+    } catch (err) {
+      set((state) => ({
+        accountDetailsLoading: { ...state.accountDetailsLoading, [customerId]: false },
+      }));
+      return {
+        success: false,
+        error: err.response?.data?.message || "Failed to fetch account details",
+      };
+    }
+  },
+
   // ── Admin dashboard: waive a bill ──
-  waiveBill: async (billingId, notes) => {
+  waiveBill: async (billingId, notes, params = {}) => {
     try {
       await api.put(`/billing/admin/${billingId}/waive`, { notes });
-      get().fetchBillingOverview();
+      get().fetchBillingOverview(params);
       return { success: true };
     } catch (err) {
       return {
@@ -128,6 +159,19 @@ const useBillingStore = create((set, get) => ({
   },
 
   // ── Super admin: generate bills ──
+  confirmCashPayment: async (billingId, params = {}) => {
+    try {
+      await api.put(`/billing/admin/${billingId}/confirm-cash`);
+      get().fetchBillingOverview(params);
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || "Failed to confirm cash payment",
+      };
+    }
+  },
+
   generateBills: async (params = {}) => {
     try {
       const res = await api.post("/billing/admin/generate");

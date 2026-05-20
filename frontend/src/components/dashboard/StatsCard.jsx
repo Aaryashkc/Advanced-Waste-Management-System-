@@ -1,8 +1,9 @@
 import React from "react";
+import { CircleHelp } from "lucide-react";
 
-const StatsCard = ({ title, value, label, icon, iconBg, valueColor }) => {
+const StatsCard = ({ title, value, label, icon, iconBg, valueColor, hint }) => {
   return (
-    <div className="bg-white rounded-2xl border border-primary/10 p-5 hover:shadow-sm transition-shadow">
+    <div className="dash-interactive-card group bg-[var(--dash-card)] rounded-2xl border p-5 shadow-sm shadow-primary/5">
       <div className="flex items-start gap-4">
         {icon && (
           <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${iconBg || "bg-primary/8"}`}>
@@ -14,13 +15,23 @@ const StatsCard = ({ title, value, label, icon, iconBg, valueColor }) => {
           </div>
         )}
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-primary/50">
-            {title}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary/60">
+              {title}
+            </p>
+            {hint && (
+              <span className="group/help relative inline-flex">
+                <CircleHelp className="h-3.5 w-3.5 text-primary/35 transition-colors group-hover/help:text-primary/60" aria-hidden />
+                <span className="pointer-events-none absolute left-1/2 top-5 z-20 w-48 -translate-x-1/2 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-card)] px-3 py-2 text-[11px] font-medium leading-relaxed text-primary/75 opacity-0 shadow-lg shadow-black/10 transition-opacity group-hover/help:opacity-100">
+                  {hint}
+                </span>
+              </span>
+            )}
+          </div>
           <h3 className={`mt-1 text-2xl font-bold leading-tight ${valueColor || "text-primary"}`}>
             {value}
           </h3>
-          {label && <p className="mt-1 text-xs text-primary/40">{label}</p>}
+          {label && <p className="mt-1 text-xs text-primary/50">{label}</p>}
         </div>
       </div>
     </div>

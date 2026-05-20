@@ -40,7 +40,7 @@ const billingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["UNPAID", "PAID", "OVERDUE", "WAIVED"],
+      enum: ["UNPAID", "CASH_PENDING", "PAID", "OVERDUE", "WAIVED"],
       default: "UNPAID",
       index: true,
     },

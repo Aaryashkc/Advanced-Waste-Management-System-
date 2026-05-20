@@ -21,6 +21,7 @@ const DASHBOARD_BG =
 
 const STATUS_CONFIG = {
   UNPAID: { color: "#f59e0b", bg: "bg-amber-500/15", border: "border-amber-500/30", label: "Unpaid", icon: Clock },
+  CASH_PENDING: { color: "#3b82f6", bg: "bg-blue-500/15", border: "border-blue-500/30", label: "Cash Pending", icon: Wallet },
   OVERDUE: { color: "#ef4444", bg: "bg-red-500/15", border: "border-red-500/30", label: "Overdue", icon: AlertTriangle },
   PAID: { color: "#22c55e", bg: "bg-emerald-500/15", border: "border-emerald-500/30", label: "Paid", icon: CheckCircle2 },
   WAIVED: { color: "#8b5cf6", bg: "bg-violet-500/15", border: "border-violet-500/30", label: "Waived", icon: Ban },
@@ -62,20 +63,26 @@ function BillingPage() {
   useEffect(() => {
     const payment = searchParams.get("payment");
     if (payment === "success") {
-      setPaymentNotice({ type: "success", message: "eSewa payment successful! Your bill has been marked as paid." });
-      setActiveTab("history");
+      queueMicrotask(() => {
+        setPaymentNotice({ type: "success", message: "eSewa payment successful! Your bill has been marked as paid." });
+        setActiveTab("history");
+      });
       fetchMyBills();
       // Clean up URL params
-      searchParams.delete("payment");
-      searchParams.delete("billingId");
-      setSearchParams(searchParams, { replace: true });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("payment");
+      nextParams.delete("billingId");
+      setSearchParams(nextParams, { replace: true });
     } else if (payment === "failed") {
       const reason = searchParams.get("reason");
-      setPaymentNotice({ type: "error", message: `eSewa payment failed${reason ? ` (${reason.replace(/_/g, " ")})` : ""}. Please try again.` });
+      queueMicrotask(() => {
+        setPaymentNotice({ type: "error", message: `eSewa payment failed${reason ? ` (${reason.replace(/_/g, " ")})` : ""}. Please try again.` });
+      });
       fetchMyBills();
-      searchParams.delete("payment");
-      searchParams.delete("reason");
-      setSearchParams(searchParams, { replace: true });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("payment");
+      nextParams.delete("reason");
+      setSearchParams(nextParams, { replace: true });
     }
   }, [fetchMyBills, searchParams, setSearchParams]);
 
@@ -92,7 +99,7 @@ function BillingPage() {
     }
   };
 
-  const unpaidBills = bills.filter((b) => b.status === "UNPAID" || b.status === "OVERDUE");
+  const unpaidBills = bills.filter((b) => ["UNPAID", "OVERDUE", "CASH_PENDING"].includes(b.status));
   const paidBills = bills.filter((b) => b.status === "PAID" || b.status === "WAIVED");
 
   return (
@@ -273,14 +280,16 @@ function BillingPage() {
   );
 }
 
-function SummaryCard({ icon: Icon, label, value, accent }) {
+function SummaryCard({ icon, label, value, accent }) {
+  const IconComponent = icon;
+
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center hover:bg-white/10 transition-all">
       <div
         className="w-9 h-9 rounded-xl mx-auto mb-2 flex items-center justify-center"
         style={{ backgroundColor: `${accent}20` }}
       >
-        <Icon size={18} style={{ color: accent }} />
+        <IconComponent size={18} style={{ color: accent }} />
       </div>
       <p className="text-xl font-bold text-white">{value}</p>
       <p className="text-white/40 text-xs mt-0.5">{label}</p>
@@ -345,6 +354,13 @@ function BillCard({ bill, onPay, payingId, payMethod }) {
           </button>
         </div>
       )}
+      {bill.status === "CASH_PENDING" && (
+        <div className="pt-3 border-t border-white/10">
+          <p className="rounded-xl border border-blue-500/25 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-200">
+            Cash payment submitted. Waiting for admin confirmation.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -391,11 +407,13 @@ function HistoryRow({ bill }) {
   );
 }
 
-function EmptyState({ icon: Icon, title, message }) {
+function EmptyState({ icon, title, message }) {
+  const IconComponent = icon;
+
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center mb-4">
-        <Icon size={32} className="text-white/30" />
+        <IconComponent size={32} className="text-white/30" />
       </div>
       <p className="text-white/60 font-semibold text-lg mb-1">{title}</p>
       <p className="text-sm text-white/40 max-w-md">{message}</p>

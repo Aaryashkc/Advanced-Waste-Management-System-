@@ -13,6 +13,7 @@ import useAnalyticsStore from "../stores/useAnalyticsStore";
 import useAuthStore from "../stores/useAuthStore";
 import useMLScheduleStore from "../stores/useMLScheduleStore";
 import AdminAnalyticsCharts from "../components/dashboard/AdminAnalyticsCharts";
+import useBillingStore from "../stores/useBillingStore";
 import { getSocket } from "../utils/socket";
 import { useDashboardTheme } from "../hooks/useDashboardTheme";
 import {
@@ -24,15 +25,26 @@ import {
   TrendingDown,
   AlertTriangle,
   CheckCircle2,
+  CircleHelp,
   Users,
 } from "lucide-react";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
+const InfoHint = ({ text }) => (
+  <span className="group/help relative inline-flex">
+    <CircleHelp className="h-4 w-4 text-primary/35 transition-colors hover:text-primary/65" aria-hidden />
+    <span className="pointer-events-none absolute right-0 top-6 z-30 w-56 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-card)] px-3 py-2 text-xs font-medium leading-relaxed text-primary/75 opacity-0 shadow-xl shadow-black/10 transition-opacity group-hover/help:opacity-100">
+      {text}
+    </span>
+  </span>
+);
+
 const Dashboard = () => {
   const { data, isLoading, error, fetchAnalytics } = useAnalyticsStore();
   const { user } = useAuthStore();
   const { schedules, fetchSchedules, loading: mlLoading } = useMLScheduleStore();
+  const { adminSummary: billingSummary, fetchBillingOverview } = useBillingStore();
   const { theme } = useDashboardTheme();
   const role = user?.role;
   const isSuperAdmin = role === "super_admin";
@@ -42,7 +54,8 @@ const Dashboard = () => {
     if (!user) return;
     fetchAnalytics();
     fetchSchedules();
-  }, [user, fetchAnalytics, fetchSchedules]);
+    fetchBillingOverview({ limit: 1 });
+  }, [user, fetchAnalytics, fetchSchedules, fetchBillingOverview]);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -51,6 +64,7 @@ const Dashboard = () => {
     const refreshDashboardData = () => {
       fetchAnalytics();
       fetchSchedules();
+      fetchBillingOverview({ limit: 1 });
     };
     const events = [
       "pickup:created",
@@ -66,7 +80,7 @@ const Dashboard = () => {
     return () => {
       events.forEach((event) => socket.off(event, refreshDashboardData));
     };
-  }, [user, fetchAnalytics, fetchSchedules]);
+  }, [user, fetchAnalytics, fetchSchedules, fetchBillingOverview]);
 
   const todayStr = new Date().toISOString().split("T")[0];
   const todaySchedule = useMemo(() => {
@@ -132,7 +146,7 @@ const Dashboard = () => {
     },
   };
 
-  const ecosystemStats = data?.ecosystemStats || {};
+  const ecosystemStats = useMemo(() => data?.ecosystemStats || {}, [data?.ecosystemStats]);
 
   // Build stats from data the backend actually populates from PickupRequest
   // (the Task collection used to back totalWasteCollected / activeRoutes is
@@ -154,6 +168,9 @@ const Dashboard = () => {
           ? <Building2 className="w-5 h-5 text-primary" />
           : <Users className="w-5 h-5 text-primary" />,
         iconBg: "bg-primary/8",
+        hint: isSuperAdmin
+          ? "All active partner organizations registered in the platform."
+          : "Drivers currently attached to your organization.",
       },
       {
         title: "Total Pickups",
@@ -161,6 +178,7 @@ const Dashboard = () => {
         label: "All Time",
         icon: <Trash2 className="w-5 h-5 text-emerald-600" />,
         iconBg: "bg-emerald-100",
+        hint: "Every pickup request created across the selected admin scope.",
       },
       {
         title: "Completed Pickups",
@@ -168,6 +186,7 @@ const Dashboard = () => {
         label: `${completionRate}% completion rate`,
         icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
         iconBg: "bg-green-100",
+        hint: "Requests that reached completed status, compared with total pickups.",
       },
       {
         title: "Active Now",
@@ -175,6 +194,7 @@ const Dashboard = () => {
         label: "Pending + In Progress",
         icon: <Route className="w-5 h-5 text-amber-600" />,
         iconBg: "bg-amber-100",
+        hint: "Live work that still needs attention, including pending and in-progress pickups.",
       },
     ],
     [ecosystemStats, isSuperAdmin, totalPickups, completedPickups, activePickups, completionRate]
@@ -205,14 +225,20 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-primary tracking-tight">
-          {isSuperAdmin ? "Super Admin Analytics" : "Organization Analytics"}
-        </h2>
-        <p className="text-sm text-primary/50 mt-1">
-          High-level overview of{" "}
-          {isSuperAdmin ? "ecosystem" : "your organization's"} performance.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-primary tracking-tight">
+            {isSuperAdmin ? "Super Admin Analytics" : "Organization Analytics"}
+          </h2>
+          <p className="text-sm text-primary/60 mt-1">
+            High-level overview of{" "}
+            {isSuperAdmin ? "ecosystem" : "your organization's"} performance.
+          </p>
+        </div>
+        <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card-soft)] px-3 py-2 text-xs font-semibold text-primary/65">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/40" />
+          Live analytics
+        </div>
       </div>
 
       {/* Stats */}
@@ -223,15 +249,18 @@ const Dashboard = () => {
       </div>
 
       {/* Single ML Schedule Card - merged insights + schedule */}
-      <div className="bg-white rounded-2xl border border-primary/10 p-6">
+      <div className="dash-interactive-card bg-[var(--dash-card)] rounded-2xl border p-6 shadow-sm shadow-primary/5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
               <BrainCircuit className="w-4.5 h-4.5 text-violet-600" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-primary">ML Schedule - Today</h3>
-              <p className="text-xs text-primary/40">AI-powered waste prediction & dispatch</p>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-semibold text-primary">ML Schedule - Today</h3>
+                <InfoHint text="Shows today's AI-generated route guidance, predicted waste, and dispatch coverage." />
+              </div>
+              <p className="text-xs text-primary/55">AI-powered waste prediction and dispatch</p>
             </div>
           </div>
           {todaySchedule && (
@@ -254,69 +283,69 @@ const Dashboard = () => {
             <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
           </div>
         ) : !todaySchedule || !mlInsights ? (
-          <p className="text-sm text-primary/40 text-center py-6">
+          <p className="text-sm text-primary/50 text-center py-6">
             No ML schedule generated for today yet.
           </p>
         ) : (
           <div className="space-y-4">
             {/* Insight metrics row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="rounded-xl bg-emerald-50/60 border border-emerald-200/40 px-3.5 py-3 text-center">
+              <div className="dash-metric-card rounded-xl px-3.5 py-3 text-center" data-tone="green">
                 <p className="text-lg font-bold text-emerald-700">{mlInsights.coverageRate}%</p>
-                <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Coverage Rate</p>
+                <p className="text-[10px] font-semibold text-primary/55 uppercase mt-0.5">Coverage Rate</p>
               </div>
-              <div className="rounded-xl bg-blue-50/60 border border-blue-200/40 px-3.5 py-3 text-center">
+              <div className="dash-metric-card rounded-xl px-3.5 py-3 text-center" data-tone="blue">
                 <p className="text-lg font-bold text-blue-700">{mlInsights.totalWaste.toLocaleString()}</p>
-                <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Predicted kg</p>
+                <p className="text-[10px] font-semibold text-primary/55 uppercase mt-0.5">Predicted kg</p>
               </div>
-              <div className="rounded-xl bg-amber-50/60 border border-amber-200/40 px-3.5 py-3 text-center">
+              <div className="dash-metric-card rounded-xl px-3.5 py-3 text-center" data-tone="amber">
                 <p className="text-lg font-bold text-amber-700">{mlInsights.avgWaste}</p>
-                <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">Avg kg/Area</p>
+                <p className="text-[10px] font-semibold text-primary/55 uppercase mt-0.5">Avg kg/Area</p>
               </div>
-              <div className="rounded-xl bg-red-50/60 border border-red-200/40 px-3.5 py-3 text-center">
+              <div className="dash-metric-card rounded-xl px-3.5 py-3 text-center" data-tone="red">
                 <p className="text-lg font-bold text-red-600">{mlInsights.highWasteAreas}</p>
-                <p className="text-[10px] font-medium text-primary/40 uppercase mt-0.5">High Waste Areas</p>
+                <p className="text-[10px] font-semibold text-primary/55 uppercase mt-0.5">High Waste Areas</p>
               </div>
             </div>
 
             {/* Schedule details + chart side by side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-5 items-start">
               <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl bg-green-50/50 border border-green-200/40 px-3 py-2 text-center">
+                  <div className="dash-metric-card rounded-xl px-3 py-2 text-center" data-tone="green">
                     <p className="text-lg font-bold text-green-700">{mlInsights.dispatched}</p>
-                    <p className="text-[10px] font-medium text-primary/40 uppercase">Dispatched</p>
+                    <p className="text-[10px] font-semibold text-primary/55 uppercase">Dispatched</p>
                   </div>
-                  <div className="rounded-xl bg-amber-50/50 border border-amber-200/40 px-3 py-2 text-center">
+                  <div className="dash-metric-card rounded-xl px-3 py-2 text-center" data-tone="amber">
                     <p className="text-lg font-bold text-amber-600">{mlInsights.reduced}</p>
-                    <p className="text-[10px] font-medium text-primary/40 uppercase">Reduced</p>
+                    <p className="text-[10px] font-semibold text-primary/55 uppercase">Reduced</p>
                   </div>
-                  <div className="rounded-xl bg-gray-50 border border-gray-200/40 px-3 py-2 text-center">
+                  <div className="dash-metric-card rounded-xl px-3 py-2 text-center">
                     <p className="text-lg font-bold text-gray-500">{mlInsights.skipped}</p>
-                    <p className="text-[10px] font-medium text-primary/40 uppercase">Skipped</p>
+                    <p className="text-[10px] font-semibold text-primary/55 uppercase">Skipped</p>
                   </div>
                 </div>
                 {/* Quick insight badges */}
                 <div className="flex flex-wrap gap-2">
                   {mlInsights.skipped > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200/60 text-xs font-medium text-amber-700">
+                    <span className="dash-metric-card inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-700" data-tone="amber">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       {mlInsights.skipped} skipped
                     </span>
                   )}
                   {Number(mlInsights.coverageRate) >= 80 ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 text-xs font-medium text-emerald-700">
+                    <span className="dash-metric-card inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700" data-tone="green">
                       <TrendingUp className="w-3.5 h-3.5" />
                       Good coverage
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200/60 text-xs font-medium text-red-600">
+                    <span className="dash-metric-card inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600" data-tone="red">
                       <TrendingDown className="w-3.5 h-3.5" />
                       Low coverage
                     </span>
                   )}
                   {mlInsights.highWasteAreas > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 border border-violet-200/60 text-xs font-medium text-violet-700">
+                    <span className="dash-metric-card inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-violet-700" data-tone="violet">
                       <BrainCircuit className="w-3.5 h-3.5" />
                       {mlInsights.highWasteAreas} high-waste
                     </span>
@@ -325,14 +354,17 @@ const Dashboard = () => {
               </div>
               {/* Top 5 areas chart */}
               <div>
-                <p className="text-xs font-medium text-primary/50 uppercase tracking-wide mb-2">
-                  Top 5 Areas by Predicted Waste
-                </p>
+                <div className="mb-2 flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-primary/60 uppercase tracking-wide">
+                    Top 5 Areas by Predicted Waste
+                  </p>
+                  <InfoHint text="Ranks today's areas by estimated waste load so dispatchers can prioritize capacity." />
+                </div>
                 <div className="h-36">
                   {top5Areas.length > 0 ? (
                     <Bar data={top5ChartData} options={top5ChartOptions} />
                   ) : (
-                    <p className="text-sm text-primary/40 text-center py-6">
+                    <p className="text-sm text-primary/50 text-center py-6">
                       No area data
                     </p>
                   )}
@@ -346,19 +378,19 @@ const Dashboard = () => {
       {/* Analytics Charts */}
       <section>
         {isLoading ? (
-          <div className="flex items-center justify-center h-64 bg-white rounded-2xl border border-primary/10">
+          <div className="flex items-center justify-center h-64 bg-[var(--dash-card)] rounded-2xl border border-[var(--dash-border)]">
             <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center p-8 bg-white rounded-2xl border border-primary/10">
-            <p className="text-primary/50 text-sm text-center">
+          <div className="flex items-center justify-center p-8 bg-[var(--dash-card)] rounded-2xl border border-[var(--dash-border)]">
+            <p className="text-primary/60 text-sm text-center">
               Unable to load analytics data.
             </p>
           </div>
         ) : isSuperAdmin ? (
-          <AnalyticsCharts analyticsData={data} mode="super_admin" />
+          <AnalyticsCharts analyticsData={data} billingSummary={billingSummary} mode="super_admin" />
         ) : (
-          <AdminAnalyticsCharts analyticsData={data} />
+          <AdminAnalyticsCharts analyticsData={data} billingSummary={billingSummary} />
         )}
       </section>
     </div>

@@ -19,26 +19,26 @@
  * Child pages inherit a lighter --color-primary on dark surfaces so text-primary / borders stay readable.
  */
 .admin-dashboard-root {
-  --dash-shell: #faf8f3;
-  --dash-page: #f5f3ed;
-  --dash-card: #ffffff;
-  --dash-card-soft: #f7f5ef;
-  --dash-border: rgb(53 79 82 / 0.12);
-  --dash-muted: rgb(53 79 82 / 0.58);
+  --dash-shell: #f7f4ea;
+  --dash-page: #f1eee4;
+  --dash-card: #fbfaf4;
+  --dash-card-soft: #eee9dc;
+  --dash-border: rgb(53 79 82 / 0.14);
+  --dash-muted: rgb(53 79 82 / 0.62);
   --dash-overlay: rgb(0 0 0 / 0.3);
 }
 
 .admin-dashboard-root.dark {
   color-scheme: dark;
-  --dash-shell: #1b1d24;
-  --dash-page: #11131a;
-  --dash-card: #20232c;
-  --dash-card-soft: #272b34;
-  --dash-border: rgb(231 239 236 / 0.13);
-  --dash-muted: rgb(231 239 236 / 0.66);
-  --dash-overlay: rgb(0 0 0 / 0.55);
+  --dash-shell: #050505;
+  --dash-page: #000000;
+  --dash-card: #0d0f12;
+  --dash-card-soft: #15181d;
+  --dash-border: rgb(231 239 236 / 0.14);
+  --dash-muted: rgb(231 239 236 / 0.68);
+  --dash-overlay: rgb(0 0 0 / 0.68);
   /* Muted sage-tinted foreground for text-primary / border-primary / bg-primary/* on dark UI */
-  --color-primary: #e7efec;
+  --color-primary: #edf5f2;
   --color-accent: #f5f1e8;
 }
 
@@ -48,7 +48,7 @@
 }
 
 .admin-dashboard-root.dark .bg-primary {
-  background-color: #3f6468;
+  background-color: #315b5f;
 }
 
 /* Dark-mode repair layer for older dashboard pages that hard-code light panels. */
@@ -252,6 +252,101 @@
 .admin-dashboard-root.dark input::placeholder,
 .admin-dashboard-root.dark textarea::placeholder {
   color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.dash-metric-card {
+  background-color: color-mix(in srgb, var(--dash-card-soft) 82%, transparent);
+  border: 1px solid var(--dash-border);
+  color: var(--color-primary);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.dash-metric-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-primary) 22%, var(--dash-border));
+}
+
+.dash-metric-card[data-tone="green"] {
+  background-color: color-mix(in srgb, #10b981 11%, var(--dash-card));
+  border-color: color-mix(in srgb, #10b981 28%, var(--dash-border));
+}
+
+.dash-metric-card[data-tone="blue"] {
+  background-color: color-mix(in srgb, #3b82f6 10%, var(--dash-card));
+  border-color: color-mix(in srgb, #3b82f6 26%, var(--dash-border));
+}
+
+.dash-metric-card[data-tone="amber"] {
+  background-color: color-mix(in srgb, #f59e0b 11%, var(--dash-card));
+  border-color: color-mix(in srgb, #f59e0b 28%, var(--dash-border));
+}
+
+.dash-metric-card[data-tone="red"] {
+  background-color: color-mix(in srgb, #ef4444 10%, var(--dash-card));
+  border-color: color-mix(in srgb, #ef4444 26%, var(--dash-border));
+}
+
+.dash-metric-card[data-tone="violet"] {
+  background-color: color-mix(in srgb, #8b5cf6 10%, var(--dash-card));
+  border-color: color-mix(in srgb, #8b5cf6 26%, var(--dash-border));
+}
+
+.dash-interactive-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--dash-border);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.dash-interactive-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: color-mix(in srgb, #10b981 72%, var(--color-primary));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms ease;
+}
+
+.dash-interactive-card:hover,
+.dash-interactive-card:focus-within {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--dash-border));
+  box-shadow: 0 18px 42px rgb(0 0 0 / 0.12);
+}
+
+.admin-dashboard-root.dark .dash-interactive-card:hover,
+.admin-dashboard-root.dark .dash-interactive-card:focus-within {
+  box-shadow: 0 18px 42px rgb(0 0 0 / 0.42);
+}
+
+.dash-interactive-card:hover::before,
+.dash-interactive-card:focus-within::before {
+  transform: scaleX(1);
+}
+
+.admin-dashboard-root button,
+.admin-dashboard-root a,
+.admin-dashboard-root input,
+.admin-dashboard-root select,
+.admin-dashboard-root textarea {
+  outline-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.admin-dashboard-root ::selection {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.admin-dashboard-root * {
+  scrollbar-color: color-mix(in srgb, var(--color-primary) 28%, transparent) transparent;
 }
 
 @keyframes truckMove {

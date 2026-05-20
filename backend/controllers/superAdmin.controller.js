@@ -299,6 +299,7 @@ export const getSuperAdminAnalytics = async (req, res) => {
         categoryDistribution: pickupAnalytics.categoryDistribution,
         levelDistribution: pickupAnalytics.levelDistribution,
         dailyTrend: pickupAnalytics.dailyTrend,
+        monthlyRevenue: pickupAnalytics.monthlyRevenue,
         hourlyDistribution: pickupAnalytics.hourlyDistribution,
         topDrivers: pickupAnalytics.topDrivers,
         scheduleAnalytics,

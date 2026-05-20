@@ -1,25 +1,57 @@
 import React, { useState } from "react";
-import useMLScheduleStore from "../../stores/useMLScheduleStore";
+import { X, RefreshCcw, Truck, UserRound } from "lucide-react";
 import useAuthStore from "../../stores/useAuthStore";
+import useMLScheduleStore from "../../stores/useMLScheduleStore";
 
-const WASTE_COLORS = {
-  low: "bg-emerald-100 text-emerald-700",
-  medium: "bg-amber-100 text-amber-700",
-  high: "bg-orange-100 text-orange-700",
-  critical: "bg-red-100 text-red-700",
-  none: "bg-gray-100 text-gray-600",
+const STATUS = {
+  dispatch: {
+    label: "Ready",
+    dot: "bg-emerald-500",
+    card: "border-emerald-200 bg-emerald-50/45",
+    text: "text-emerald-700",
+    help: "This area has truck coverage and is ready for collection.",
+  },
+  reduced: {
+    label: "Reduced",
+    dot: "bg-amber-500",
+    card: "border-amber-200 bg-amber-50/45",
+    text: "text-amber-700",
+    help: "This area has partial coverage. Check assigned trucks before dispatch.",
+  },
+  skip: {
+    label: "Needs action",
+    dot: "bg-rose-500",
+    card: "border-rose-200 bg-rose-50/45",
+    text: "text-rose-700",
+    help: "This area is not covered yet. Assign resources or redispatch.",
+  },
 };
+
+const WASTE_DOTS = {
+  none: "bg-slate-400",
+  low: "bg-emerald-500",
+  medium: "bg-sky-500",
+  high: "bg-amber-500",
+  critical: "bg-rose-500",
+};
+
+const formatNumber = (value) =>
+  Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 const AreaPredictionCard = ({ area, scheduleId }) => {
   const user = useAuthStore((s) => s.user);
   const redispatchArea = useMLScheduleStore((s) => s.redispatchArea);
+  const [showHelp, setShowHelp] = useState(false);
   const [redispatching, setRedispatching] = useState(false);
   const [redispatchError, setRedispatchError] = useState(null);
 
-  const isSkipped = area.action === "skip";
-  const isReduced = area.action === "reduced";
-  const hasTrucks = area.assignedTrucks && area.assignedTrucks.length > 0;
-  const canRedispatch = (isSkipped || (isReduced && !hasTrucks)) && scheduleId && (user?.role === "admin" || user?.role === "super_admin");
+  const style = STATUS[area.action] || STATUS.dispatch;
+  const trucks = area.assignedTrucks || [];
+  const firstTruck = trucks[0];
+  const canRedispatch =
+    (area.action === "skip" || (area.action === "reduced" && trucks.length === 0)) &&
+    scheduleId &&
+    (user?.role === "admin" || user?.role === "super_admin");
 
   const handleRedispatch = async () => {
     setRedispatching(true);
@@ -31,117 +63,115 @@ const AreaPredictionCard = ({ area, scheduleId }) => {
     }
   };
 
-  const wasteBadge = WASTE_COLORS[area.wasteCategory] || WASTE_COLORS.none;
-
   return (
-    <div className={`rounded-2xl border p-4 transition-all hover:shadow-sm ${
-      isSkipped ? "border-red-200 bg-red-50/40" :
-      isReduced ? "border-amber-200 bg-amber-50/40" :
-      "border-primary/10 bg-white"
-    }`}>
-      {/* Top Row: Name + Waste Level */}
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h3 className="font-semibold text-primary text-base leading-tight">
-            {area.area}
-          </h3>
-          <p className="text-[11px] text-primary/40 mt-0.5 capitalize">
-            {area.areaType}{area.orgName ? ` · ${area.orgName}` : ""}
+    <article
+      className={`relative rounded-lg border p-4 ${style.card} dark:border-[var(--dash-border)] dark:bg-[var(--dash-card)]`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
+            <h3 className="truncate text-base font-semibold text-primary">{area.area}</h3>
+          </div>
+          <p className="mt-1 truncate text-xs text-primary/50">
+            {[area.areaType, area.orgName].filter(Boolean).join(" / ") || "Collection area"}
           </p>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${wasteBadge}`}>
-          {area.wasteCategory || "N/A"}
-        </span>
+
+        <button
+          type="button"
+          onClick={() => setShowHelp((value) => !value)}
+          className="shrink-0 rounded-lg border border-primary/10 bg-white/70 px-3 py-1.5 text-xs font-semibold text-primary/60 transition hover:bg-white hover:text-primary dark:bg-primary/5 dark:hover:bg-primary/10"
+          aria-label="Show status help"
+          aria-expanded={showHelp}
+        >
+          Help
+        </button>
       </div>
 
-      {/* Predicted Waste */}
-      <p className="text-2xl font-bold text-primary mb-3">
-        {area.predictedWasteKg?.toLocaleString()}{" "}
-        <span className="text-sm font-normal text-primary/40">kg</span>
-      </p>
+      {showHelp && (
+        <div className="absolute right-4 top-14 z-20 w-[min(20rem,calc(100%-2rem))] rounded-lg border border-primary/12 bg-white p-4 shadow-xl dark:bg-[var(--dash-card-soft)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-primary">{style.label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-primary/60">{style.help}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHelp(false)}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-primary/45 transition hover:bg-primary/8 hover:text-primary"
+              aria-label="Close help"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-      {/* Holiday */}
+          {area.recommendation && (
+            <div className="mt-3 rounded-lg border border-primary/8 bg-primary/[0.03] px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/45">Recommendation</p>
+              <p className="mt-1 text-xs leading-relaxed text-primary/60">{area.recommendation}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-primary/45">Waste</p>
+          <p className="mt-1 text-lg font-bold text-primary">
+            {formatNumber(area.predictedWasteKg)}
+            <span className="ml-1 text-xs font-medium text-primary/45">kg</span>
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-primary/45">Trucks</p>
+          <p className="mt-1 text-lg font-bold text-primary">{trucks.length}</p>
+        </div>
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-primary/45">Level</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold capitalize text-primary">
+            <span className={`h-2 w-2 rounded-full ${WASTE_DOTS[area.wasteCategory] || WASTE_DOTS.none}`} />
+            {area.wasteCategory || "none"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2 rounded-lg border border-primary/8 bg-white/55 p-3 text-xs text-primary/60 dark:border-[var(--dash-border)] dark:bg-[var(--dash-card-soft)] dark:text-primary/70">
+        <p className="flex items-center gap-2">
+          <Truck className="h-3.5 w-3.5" />
+          {firstTruck ? `${firstTruck.licensePlate} / ${formatNumber(firstTruck.capacity)} kg` : "No truck assigned"}
+        </p>
+        <p className="flex items-center gap-2">
+          <UserRound className="h-3.5 w-3.5" />
+          {firstTruck?.driverName && firstTruck.driverName !== "Unassigned" ? firstTruck.driverName : "No driver assigned"}
+        </p>
+      </div>
+
+      {area.skipReason && (
+        <p className={`mt-3 text-xs font-medium ${style.text}`}>{area.skipReason}</p>
+      )}
+
       {area.isHoliday && (
-        <p className="text-xs text-red-600 font-medium mb-2 px-2 py-1 bg-red-50 rounded-lg border border-red-100">
+        <p className="mt-3 rounded-lg border border-rose-100 bg-white/65 px-3 py-2 text-xs text-rose-700">
           Holiday: {area.holidayName || "Holiday"}
         </p>
       )}
 
-      {/* Assigned Trucks */}
-      {hasTrucks && (
-        <div className="space-y-1.5 mb-3">
-          {area.assignedTrucks.map((truck, idx) => {
-            const noDriver = !truck.driverId || truck.driverName === "Unassigned";
-            return (
-              <div
-                key={idx}
-                className={`flex items-center justify-between text-xs rounded-lg px-3 py-2 ${
-                  noDriver ? "bg-red-50 border border-red-200" : "bg-primary/3"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">🚛</span>
-                  <span className="font-semibold text-primary">{truck.licensePlate}</span>
-                  <span className="text-primary/40">{truck.capacity}kg</span>
-                </div>
-                <div className="text-right">
-                  {noDriver ? (
-                    <span className="text-red-600 font-semibold">No Driver</span>
-                  ) : (
-                    <span className="text-primary/70">{truck.driverName}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Skip Reason */}
-      {isSkipped && (
-        <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3 border border-red-100">
-          {area.skipReason || "No truck/driver available"}
-        </div>
-      )}
-
-      {/* No trucks message for non-skipped */}
-      {!hasTrucks && !isSkipped && (
-        <p className="text-xs text-primary/40 mb-3">No trucks assigned</p>
-      )}
-
-      {/* Recommendation */}
-      {area.recommendation && (
-        <p className="text-[11px] text-primary/50 leading-relaxed mb-3">
-          {area.recommendation}
-        </p>
-      )}
-
-      {/* Re-dispatch Button */}
       {canRedispatch && (
-        <div className="pt-2 border-t border-primary/5">
-          {redispatchError && (
-            <p className="text-xs text-red-600 mb-2">{redispatchError}</p>
-          )}
+        <div className="mt-4">
+          {redispatchError && <p className="mb-2 text-xs text-rose-600">{redispatchError}</p>}
           <button
+            type="button"
             onClick={handleRedispatch}
             disabled={redispatching}
-            className="w-full py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 transition flex items-center justify-center gap-1.5"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {redispatching ? (
-              <>
-                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Re-dispatching...
-              </>
-            ) : (
-              "Re-dispatch Truck"
-            )}
+            <RefreshCcw className={`h-3.5 w-3.5 ${redispatching ? "animate-spin" : ""}`} />
+            {redispatching ? "Redispatching..." : "Redispatch"}
           </button>
         </div>
       )}
-    </div>
+    </article>
   );
 };
 

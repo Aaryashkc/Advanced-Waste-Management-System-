@@ -14,6 +14,7 @@ import {
 } from "chart.js";
 import { Bar, Line, Doughnut } from "react-chartjs-2";
 import { useDashboardTheme } from "../../hooks/useDashboardTheme";
+import { CircleHelp } from "lucide-react";
 
 ChartJS.register(
   CategoryScale,
@@ -53,6 +54,9 @@ const LEVEL_COLORS = {
   medium: "#f59e0b",
   hard: "#ef4444",
 };
+
+const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
 
 /* ── Shared chart options ── */
 
@@ -102,12 +106,29 @@ const doughnutOptions = {
 
 /* ── Card wrapper (same look as Dashboard.jsx cards) ── */
 
-function ChartCard({ title, subtitle, children, className = "" }) {
+function InfoHint({ text }) {
+  if (!text) return null;
   return (
-    <div className={`bg-white rounded-3xl border border-primary/15 shadow-sm p-6 hover:shadow-md transition-shadow ${className}`}>
+    <span className="group/help relative inline-flex">
+      <CircleHelp className="h-4 w-4 text-primary/35 transition-colors hover:text-primary/65" aria-hidden />
+      <span className="pointer-events-none absolute right-0 top-6 z-30 w-56 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-card)] px-3 py-2 text-xs font-medium leading-relaxed text-primary/75 opacity-0 shadow-xl shadow-black/10 transition-opacity group-hover/help:opacity-100">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function ChartCard({ title, subtitle, hint, children, className = "" }) {
+  return (
+    <div className={`dash-interactive-card bg-[var(--dash-card)] rounded-2xl border shadow-sm shadow-primary/5 p-6 ${className}`}>
       <div className="mb-4">
-        <h3 className="text-lg font-bold text-primary">{title}</h3>
-        {subtitle && <p className="text-sm text-primary/60">{subtitle}</p>}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-primary">{title}</h3>
+            {subtitle && <p className="text-sm text-primary/60">{subtitle}</p>}
+          </div>
+          <InfoHint text={hint} />
+        </div>
       </div>
       {children}
     </div>
@@ -117,7 +138,19 @@ function ChartCard({ title, subtitle, children, className = "" }) {
 function EmptyState({ message }) {
   return (
     <div className="flex h-full min-h-[200px] items-center justify-center">
-      <p className="text-sm text-primary/40">{message}</p>
+      <p className="text-sm text-primary/50">{message}</p>
+    </div>
+  );
+}
+
+function KpiCard({ label, value, valueClass = "text-primary", hint }) {
+  return (
+    <div className="dash-interactive-card bg-[var(--dash-card)] rounded-2xl border p-4 shadow-sm shadow-primary/5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold text-primary/55 uppercase tracking-wider">{label}</p>
+        <InfoHint text={hint} />
+      </div>
+      <p className={`text-2xl font-bold mt-1 ${valueClass}`}>{value}</p>
     </div>
   );
 }
@@ -140,6 +173,17 @@ function shortDate(iso) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function shortMonth(monthKey) {
+  const d = new Date(`${monthKey}-01T00:00:00`);
+  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+}
+
+function formatBillingRole(role) {
+  if (role === "customer_admin") return "Customers";
+  if (role === "admin") return "Admins";
+  return "Unknown";
+}
+
 /* ── Main component ──
  *
  * `mode` = "super_admin" | "admin"
@@ -151,7 +195,7 @@ function shortDate(iso) {
  *   - dailyTrend, hourlyDistribution, topDrivers
  *   - orgBreakdown OR areaBreakdown
  */
-function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
+function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = "super_admin" }) {
   const { theme } = useDashboardTheme();
   const isDark = theme === "dark";
   const chartText = isDark ? "#dfe9e6" : "#2d3748";
@@ -159,24 +203,27 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
   const chartGrid = isDark ? "rgba(231,239,236,0.12)" : "#e2e8f0";
 
   const {
-    statusDistribution = [],
-    categoryDistribution = [],
-    levelDistribution = [],
-    dailyTrend = [],
-    hourlyDistribution = [],
-    topDrivers = [],
-    orgBreakdown = [],
-    areaBreakdown = [],
-    ecosystemStats = {},
-    scheduleAnalytics = {},
-  } = analyticsData || {};
+    statusDistribution = EMPTY_ARRAY,
+    categoryDistribution = EMPTY_ARRAY,
+    levelDistribution = EMPTY_ARRAY,
+    dailyTrend = EMPTY_ARRAY,
+    monthlyRevenue = EMPTY_ARRAY,
+    hourlyDistribution = EMPTY_ARRAY,
+    topDrivers = EMPTY_ARRAY,
+    orgBreakdown = EMPTY_ARRAY,
+    areaBreakdown = EMPTY_ARRAY,
+    ecosystemStats = EMPTY_OBJECT,
+    scheduleAnalytics = EMPTY_OBJECT,
+  } = analyticsData || EMPTY_OBJECT;
 
   const isSuperAdmin = mode === "super_admin";
   const breakdown = isSuperAdmin ? orgBreakdown : areaBreakdown;
-  const scheduleSummary = scheduleAnalytics.summary || {};
-  const scheduleTrend = scheduleAnalytics.dailyTrend || [];
-  const scheduledAreas = scheduleAnalytics.areaBreakdown || [];
-  const scheduledDrivers = scheduleAnalytics.topDrivers || [];
+  const monthlyBillRevenue = billingSummary?.monthlyRevenue || EMPTY_ARRAY;
+  const billRoleRevenue = billingSummary?.roleRevenue || EMPTY_ARRAY;
+  const scheduleSummary = scheduleAnalytics.summary || EMPTY_OBJECT;
+  const scheduleTrend = scheduleAnalytics.dailyTrend || EMPTY_ARRAY;
+  const scheduledAreas = scheduleAnalytics.areaBreakdown || EMPTY_ARRAY;
+  const scheduledDrivers = scheduleAnalytics.topDrivers || EMPTY_ARRAY;
   const hasScheduleData = (scheduleSummary.totalAssignments || 0) > 0 || scheduleTrend.length > 0;
 
   /* ── Daily trend (line) ── */
@@ -292,6 +339,153 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
     ],
   }), [breakdown]);
 
+  const orgRevenueData = useMemo(() => ({
+    labels: orgBreakdown.map((org) => org.name || "Unknown"),
+    datasets: [
+      {
+        label: "Revenue",
+        data: orgBreakdown.map((org) => org.revenue || 0),
+        backgroundColor: "#10b981",
+        borderRadius: 6,
+      },
+    ],
+  }), [orgBreakdown]);
+
+  const monthlyRevenueData = useMemo(() => ({
+    labels: monthlyRevenue.map((row) => shortMonth(row.month)),
+    datasets: [
+      {
+        label: "Revenue",
+        data: monthlyRevenue.map((row) => row.revenue || 0),
+        borderColor: "#10b981",
+        backgroundColor: "rgba(16,185,129,0.14)",
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+      },
+    ],
+  }), [monthlyRevenue]);
+
+  const revenueComparisonData = useMemo(() => {
+    const monthKeys = Array.from(
+      new Set([
+        ...monthlyRevenue.map((row) => row.month),
+        ...monthlyBillRevenue.map((row) => row.month),
+      ])
+    ).sort();
+    const pickupByMonth = new Map(monthlyRevenue.map((row) => [row.month, row.revenue || 0]));
+    const billByMonth = new Map(monthlyBillRevenue.map((row) => [row.month, row.revenue || 0]));
+
+    return {
+      labels: monthKeys.map((month) => shortMonth(month)),
+      datasets: [
+        {
+          label: "Pickup Revenue",
+          data: monthKeys.map((month) => pickupByMonth.get(month) || 0),
+          borderColor: "#10b981",
+          backgroundColor: "rgba(16,185,129,0.12)",
+          fill: true,
+          tension: 0.35,
+          pointRadius: 3,
+        },
+        {
+          label: "Monthly Bills",
+          data: monthKeys.map((month) => billByMonth.get(month) || 0),
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59,130,246,0.10)",
+          fill: true,
+          tension: 0.35,
+          pointRadius: 3,
+        },
+      ],
+    };
+  }, [monthlyRevenue, monthlyBillRevenue]);
+
+  const billRoleRevenueData = useMemo(() => ({
+    labels: billRoleRevenue.map((row) => formatBillingRole(row.role)),
+    datasets: [
+      {
+        label: "Monthly Bill Revenue",
+        data: billRoleRevenue.map((row) => row.revenue || 0),
+        backgroundColor: ["#3b82f6", "#8b5cf6", "#9ca3af"],
+        borderRadius: 6,
+      },
+    ],
+  }), [billRoleRevenue]);
+
+  const revenueOptions = {
+    ...cartesianOptions,
+    plugins: {
+      ...cartesianOptions.plugins,
+      legend: {
+        ...cartesianOptions.plugins.legend,
+        labels: {
+          ...cartesianOptions.plugins.legend.labels,
+          color: chartText,
+        },
+      },
+      tooltip: {
+        ...cartesianOptions.plugins.tooltip,
+        callbacks: {
+          label: (ctx) => `Revenue: NPR ${Number(ctx.raw || 0).toLocaleString()}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        ...cartesianOptions.scales.x,
+        ticks: { ...cartesianOptions.scales.x.ticks, color: chartMuted },
+      },
+      y: {
+        ...cartesianOptions.scales.y,
+        grid: { ...cartesianOptions.scales.y.grid, color: chartGrid },
+        ticks: {
+          ...cartesianOptions.scales.y.ticks,
+          color: chartMuted,
+          callback: (value) => `NPR ${Number(value).toLocaleString()}`,
+        },
+      },
+    },
+  };
+
+  const orgRevenueOptions = {
+    ...revenueOptions,
+    indexAxis: "y",
+    scales: {
+      x: {
+        ...revenueOptions.scales.x,
+        grid: { ...cartesianOptions.scales.y.grid, color: chartGrid },
+        ticks: {
+          ...revenueOptions.scales.x.ticks,
+          color: chartMuted,
+          callback: (value) => `NPR ${Number(value).toLocaleString()}`,
+        },
+      },
+      y: {
+        ...revenueOptions.scales.y,
+        grid: { display: false },
+        ticks: { ...cartesianOptions.scales.y.ticks, color: chartMuted },
+      },
+    },
+  };
+
+  const billRoleRevenueOptions = {
+    ...orgRevenueOptions,
+    plugins: {
+      ...orgRevenueOptions.plugins,
+      tooltip: {
+        ...orgRevenueOptions.plugins.tooltip,
+        callbacks: {
+          label: (ctx) => {
+            const row = billRoleRevenue[ctx.dataIndex];
+            const paidBills = row?.paidBills || 0;
+            return `Revenue: NPR ${Number(ctx.raw || 0).toLocaleString()} (${paidBills} paid bills)`;
+          },
+        },
+      },
+    },
+  };
+
   const horizontalBarOptions = {
     ...cartesianOptions,
     plugins: {
@@ -399,66 +593,59 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
     <div className="space-y-6">
       {/* Headline KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-primary/10 p-4">
-          <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Revenue (Completed)</p>
-          <p className="text-2xl font-bold text-primary mt-1">
-            NPR {(ecosystemStats.totalRevenue || 0).toLocaleString()}
-          </p>
-        </div>
-        <div className="bg-white rounded-2xl border border-primary/10 p-4">
-          <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Completion Rate</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">
-            {ecosystemStats.completionRate || 0}%
-          </p>
-        </div>
-        <div className="bg-white rounded-2xl border border-primary/10 p-4">
-          <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Avg Response</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
-            {formatDuration(ecosystemStats.avgResponseMs)}
-          </p>
-        </div>
-        <div className="bg-white rounded-2xl border border-primary/10 p-4">
-          <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Avg Task Duration</p>
-          <p className="text-2xl font-bold text-violet-600 mt-1">
-            {formatDuration(ecosystemStats.avgTaskDurationMs)}
-          </p>
-        </div>
+        <KpiCard label="Revenue (Completed)" value={`NPR ${(ecosystemStats.totalRevenue || 0).toLocaleString()}`} hint="Revenue counted only from pickups that were completed." />
+        <KpiCard label="Monthly Bill Revenue" value={`NPR ${(billingSummary?.totalRevenue || 0).toLocaleString()}`} valueClass="text-blue-600" hint="Revenue collected from paid monthly bills." />
+        <KpiCard label="Outstanding Bills" value={`NPR ${(billingSummary?.totalOutstanding || 0).toLocaleString()}`} valueClass="text-amber-600" hint="Total amount still open across unpaid, overdue, and cash-pending monthly bills." />
+        <KpiCard label="Completion Rate" value={`${ecosystemStats.completionRate || 0}%`} valueClass="text-emerald-600" hint="Completed pickups divided by total created pickups." />
+        <KpiCard label="Avg Response" value={formatDuration(ecosystemStats.avgResponseMs)} valueClass="text-violet-600" hint="Average time from pickup creation until a driver responds." />
+        <KpiCard label="Avg Task Duration" value={formatDuration(ecosystemStats.avgTaskDurationMs)} valueClass="text-cyan-600" hint="Average time spent from accepted work to completion." />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)] gap-6">
+        <ChartCard
+          title="Revenue by Pickup and Monthly Bills"
+          subtitle="Paid pickup revenue compared with paid monthly billing revenue"
+          hint="Compares the two dashboard revenue streams by month."
+        >
+          <div className="h-72">
+            {monthlyRevenue.length > 0 || monthlyBillRevenue.length > 0 ? (
+              <Line data={revenueComparisonData} options={revenueOptions} />
+            ) : (
+              <EmptyState message="No pickup or monthly bill revenue yet" />
+            )}
+          </div>
+        </ChartCard>
+
+        <ChartCard
+          title="Monthly Bill Revenue"
+          subtitle="Paid bills by customer/admin role"
+          hint="Shows where paid monthly billing revenue is coming from."
+        >
+          <div className="h-72">
+            {billRoleRevenue.some((row) => (row.revenue || 0) > 0) ? (
+              <Bar data={billRoleRevenueData} options={billRoleRevenueOptions} />
+            ) : (
+              <EmptyState message="No paid monthly bills yet" />
+            )}
+          </div>
+        </ChartCard>
       </div>
 
       {/* Scheduled collection work from ML schedule assignments */}
       {hasScheduleData && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-2xl border border-primary/10 p-4">
-              <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Scheduled Jobs</p>
-              <p className="text-2xl font-bold text-primary mt-1">
-                {(scheduleSummary.totalAssignments || 0).toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-primary/10 p-4">
-              <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Schedule Done</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">
-                {(scheduleSummary.completedAssignments || 0).toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-primary/10 p-4">
-              <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Schedule Rate</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">
-                {scheduleSummary.completionRate || 0}%
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-primary/10 p-4">
-              <p className="text-xs font-semibold text-primary/40 uppercase tracking-wider">Predicted Waste</p>
-              <p className="text-2xl font-bold text-violet-600 mt-1">
-                {(scheduleSummary.predictedWasteKg || 0).toLocaleString()} kg
-              </p>
-            </div>
+            <KpiCard label="Scheduled Jobs" value={(scheduleSummary.totalAssignments || 0).toLocaleString()} hint="Driver assignments created from the ML schedule." />
+            <KpiCard label="Schedule Done" value={(scheduleSummary.completedAssignments || 0).toLocaleString()} valueClass="text-emerald-600" hint="Scheduled assignments marked completed." />
+            <KpiCard label="Schedule Rate" value={`${scheduleSummary.completionRate || 0}%`} valueClass="text-blue-600" hint="Completed scheduled assignments compared with total scheduled assignments." />
+            <KpiCard label="Predicted Waste" value={`${(scheduleSummary.predictedWasteKg || 0).toLocaleString()} kg`} valueClass="text-violet-600" hint="Total predicted waste from scheduled ML areas." />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard
               title="Scheduled Collection Trend"
               subtitle="Assigned vs completed ML schedule work"
+              hint="Compares work generated by ML scheduling with the amount finished each day."
             >
               <div className="h-72">
                 {scheduleTrend.length > 0 ? (
@@ -472,6 +659,7 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
             <ChartCard
               title="Scheduled Areas"
               subtitle="Where assigned schedule work is getting completed"
+              hint="Shows which areas receive scheduled work and how much of it is completed."
             >
               <div className="h-72">
                 {scheduledAreas.length > 0 ? (
@@ -484,11 +672,11 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
           </div>
 
           {scheduledDrivers.length > 0 && topDrivers.length === 0 && (
-            <ChartCard title="Schedule Driver Completions" subtitle="By completed scheduled areas">
+            <ChartCard title="Schedule Driver Completions" subtitle="By completed scheduled areas" hint="Ranks drivers by scheduled areas completed when pickup driver data is not available.">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs font-semibold text-primary/40 uppercase tracking-wider border-b border-primary/10">
+                    <tr className="text-left text-xs font-semibold text-primary/50 uppercase tracking-wider border-b border-primary/10">
                       <th className="pb-3 pr-4">#</th>
                       <th className="pb-3 pr-4">Driver</th>
                       <th className="pb-3 pr-4 text-right">Assigned</th>
@@ -498,7 +686,7 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
                   <tbody>
                     {scheduledDrivers.map((d, i) => (
                       <tr key={d.driverId || d.name || i} className="border-b border-primary/5 last:border-0">
-                        <td className="py-3 pr-4 text-primary/40 font-medium">{i + 1}</td>
+                        <td className="py-3 pr-4 text-primary/50 font-medium">{i + 1}</td>
                         <td className="py-3 pr-4 font-semibold text-primary">{d.name}</td>
                         <td className="py-3 pr-4 text-right text-primary/70">{d.assigned || 0}</td>
                         <td className="py-3 text-right font-semibold text-primary">{d.completed || 0}</td>
@@ -513,22 +701,55 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
       )}
 
       {/* Daily trend (full width) */}
-      <ChartCard
-        title="Daily Pickup Trend"
-        subtitle="Created vs Completed vs Cancelled — last 30 days"
-      >
-        <div className="h-72 w-full">
-          {dailyTrend.length > 0 ? (
-            <Line data={trendData} options={themedCartesianOptions} />
-          ) : (
-            <EmptyState message="No pickup activity in the last 30 days" />
-          )}
-        </div>
-      </ChartCard>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <ChartCard
+          title="Daily Pickup Trend"
+          subtitle="Created vs Completed vs Cancelled - last 30 days"
+          hint="Tracks daily pickup volume and outcomes so sudden dips or cancellations are easier to spot."
+        >
+          <div className="h-72 w-full">
+            {dailyTrend.length > 0 ? (
+              <Line data={trendData} options={themedCartesianOptions} />
+            ) : (
+              <EmptyState message="No pickup activity in the last 30 days" />
+            )}
+          </div>
+        </ChartCard>
+
+        {isSuperAdmin ? (
+          <ChartCard
+            title="Revenue by Organization"
+            subtitle="Completed paid pickup revenue per organization"
+            hint="Ranks organizations by revenue generated from completed paid pickups."
+          >
+            <div className="h-72">
+              {orgBreakdown.some((org) => (org.revenue || 0) > 0) ? (
+                <Bar data={orgRevenueData} options={orgRevenueOptions} />
+              ) : (
+                <EmptyState message="No organization revenue yet" />
+              )}
+            </div>
+          </ChartCard>
+        ) : (
+          <ChartCard
+            title="Monthly Revenue"
+            subtitle="Your organization's completed paid pickup revenue"
+            hint="Shows your organization's revenue generated month by month."
+          >
+            <div className="h-72">
+              {monthlyRevenue.length > 0 ? (
+                <Line data={monthlyRevenueData} options={revenueOptions} />
+              ) : (
+                <EmptyState message="No monthly revenue yet" />
+              )}
+            </div>
+          </ChartCard>
+        )}
+      </div>
 
       {/* Status + Category + Level doughnuts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ChartCard title="Status Breakdown" subtitle="Where pickups currently are">
+        <ChartCard title="Status Breakdown" subtitle="Where pickups currently are" hint="Distribution of pickups by their current workflow status.">
           <div className="h-60">
             {statusDistribution.length > 0 ? (
               <Doughnut data={statusData} options={themedDoughnutOptions} />
@@ -538,7 +759,7 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
           </div>
         </ChartCard>
 
-        <ChartCard title="By Category" subtitle="Recyclable vs non-recyclable">
+        <ChartCard title="By Category" subtitle="Recyclable vs non-recyclable" hint="How customers classify waste during pickup requests.">
           <div className="h-60">
             {categoryDistribution.length > 0 ? (
               <Doughnut data={categoryData} options={themedDoughnutOptions} />
@@ -548,7 +769,7 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
           </div>
         </ChartCard>
 
-        <ChartCard title="By Difficulty" subtitle="Easy / medium / hard">
+        <ChartCard title="By Difficulty" subtitle="Easy / medium / hard" hint="Pickup difficulty mix, useful for workload and driver planning.">
           <div className="h-60">
             {levelDistribution.length > 0 ? (
               <Doughnut data={levelData} options={themedDoughnutOptions} />
@@ -564,6 +785,7 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
         <ChartCard
           title="Hourly Activity"
           subtitle="When customers request pickups (24h)"
+          hint="Highlights the busiest request hours across the day."
         >
           <div className="h-72">
             {hourlyDistribution.length > 0 ? (
@@ -577,6 +799,7 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
         <ChartCard
           title={isSuperAdmin ? "Top Organizations" : "Top Areas"}
           subtitle={isSuperAdmin ? "Pickup volume per org" : "Pickup volume per area"}
+          hint={isSuperAdmin ? "Ranks organizations by pickup activity." : "Ranks service areas by pickup activity."}
         >
           <div className="h-72">
             {breakdown.length > 0 ? (
@@ -589,12 +812,12 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
       </div>
 
       {/* Top drivers leaderboard */}
-      <ChartCard title="Top Drivers" subtitle="By completed pickups">
+      <ChartCard title="Top Drivers" subtitle="By completed pickups" hint="Drivers with the highest completed pickup counts, including revenue and timing averages.">
         {topDrivers.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs font-semibold text-primary/40 uppercase tracking-wider border-b border-primary/10">
+                <tr className="text-left text-xs font-semibold text-primary/50 uppercase tracking-wider border-b border-primary/10">
                   <th className="pb-3 pr-4">#</th>
                   <th className="pb-3 pr-4">Driver</th>
                   <th className="pb-3 pr-4 text-right">Completed</th>
@@ -606,10 +829,10 @@ function AnalyticsCharts({ analyticsData, mode = "super_admin" }) {
               <tbody>
                 {topDrivers.map((d, i) => (
                   <tr key={d.driverId || i} className="border-b border-primary/5 last:border-0">
-                    <td className="py-3 pr-4 text-primary/40 font-medium">{i + 1}</td>
+                    <td className="py-3 pr-4 text-primary/50 font-medium">{i + 1}</td>
                     <td className="py-3 pr-4">
                       <p className="font-semibold text-primary">{d.name}</p>
-                      {d.email && <p className="text-xs text-primary/40">{d.email}</p>}
+                      {d.email && <p className="text-xs text-primary/50">{d.email}</p>}
                     </td>
                     <td className="py-3 pr-4 text-right font-semibold text-primary">{d.completed}</td>
                     <td className="py-3 pr-4 text-right text-primary/70">NPR {(d.revenue || 0).toLocaleString()}</td>

@@ -1,7 +1,133 @@
-import React, { useState, useEffect } from "react";
-import useMLScheduleStore from "../../stores/useMLScheduleStore";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  BrainCircuit,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  CircleOff,
+  HelpCircle,
+  RefreshCcw,
+  Sparkles,
+  Truck,
+  X,
+} from "lucide-react";
 import useAuthStore from "../../stores/useAuthStore";
+import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import AreaPredictionCard from "./AreaPredictionCard";
+
+const STATUS_STYLES = {
+  draft: "border-slate-200 bg-slate-50 text-slate-700",
+  confirmed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  completed: "border-sky-200 bg-sky-50 text-sky-700",
+  cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+const PLAN_LEGEND = [
+  { label: "Ready", dot: "bg-emerald-500", text: "Area has assigned collection coverage." },
+  { label: "Reduced", dot: "bg-amber-500", text: "Area has partial or limited coverage." },
+  { label: "Needs action", dot: "bg-rose-500", text: "Area needs resources or redispatch." },
+];
+
+const WASTE_LEGEND = [
+  { label: "Low", dot: "bg-emerald-500" },
+  { label: "Medium", dot: "bg-sky-500" },
+  { label: "High", dot: "bg-amber-500" },
+  { label: "Critical", dot: "bg-rose-500" },
+];
+
+const formatDate = (date) =>
+  date
+    ? new Date(date).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "No date";
+
+const formatNumber = (value) =>
+  Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+const StatCard = ({ label, value, detail, tone = "default" }) => (
+  <div className="rounded-lg border border-primary/10 bg-white p-4">
+    <p className="text-xs font-medium uppercase tracking-wide text-primary/45">{label}</p>
+    <p className={`mt-2 text-2xl font-bold text-primary ${tone !== "default" ? tone : ""}`}>{value}</p>
+    {detail && <p className="mt-2 text-xs text-primary/50">{detail}</p>}
+  </div>
+);
+
+const Guide = () => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <section className="relative rounded-lg border border-primary/10 bg-white p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-primary">Schedule guide</h2>
+          <p className="mt-1 text-sm text-primary/50">Use the Help button to see what the dots and card colors mean.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-primary/10 bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+          aria-expanded={open}
+        >
+          <HelpCircle className="h-4 w-4" />
+          Help
+        </button>
+      </div>
+
+      {open && (
+        <div className="absolute right-4 top-[calc(100%-0.5rem)] z-30 w-[min(42rem,calc(100vw-3rem))] rounded-lg border border-primary/12 bg-white p-4 shadow-2xl dark:bg-[var(--dash-card-soft)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-primary">How to read this schedule</h3>
+              <p className="mt-1 text-sm leading-relaxed text-primary/55">
+                Each card is one pickup area. The main dot shows dispatch status, the level dot shows predicted waste level, and each card Help button explains what action is needed.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-primary/45 transition hover:bg-primary/8 hover:text-primary"
+              aria-label="Close schedule guide"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-lg border border-primary/8 bg-primary/[0.025] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary/45">Status colors</p>
+              <div className="mt-2 space-y-2">
+                {PLAN_LEGEND.map((item) => (
+                  <div key={item.label} className="flex items-start gap-2 text-sm text-primary/60">
+                    <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${item.dot}`} />
+                    <span>
+                      <span className="font-semibold text-primary">{item.label}</span>: {item.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-primary/8 bg-primary/[0.025] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary/45">Waste level colors</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {WASTE_LEGEND.map((item) => (
+                  <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-white px-3 py-1.5 text-xs font-semibold text-primary/65 dark:bg-primary/5">
+                    <span className={`h-2 w-2 rounded-full ${item.dot}`} />
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
 
 const MLScheduleDashboard = () => {
   const {
@@ -11,7 +137,6 @@ const MLScheduleDashboard = () => {
     loading,
     error,
     generateSchedule,
-    fetchSchedules,
     confirmSchedule,
     checkMLHealth,
     clearCurrentSchedule,
@@ -21,430 +146,306 @@ const MLScheduleDashboard = () => {
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
 
-  const [selectedDate, setSelectedDate] = useState(() => {
-    return new Date().toISOString().split("T")[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [showGenerator, setShowGenerator] = useState(false);
   const [previewSchedule, setPreviewSchedule] = useState(null);
 
-  useEffect(() => {
-    checkMLHealth();
-    const today = new Date().toISOString().split("T")[0];
-    loadTodaySchedule(today);
-  }, []);
-
-  const loadTodaySchedule = async (date) => {
+  const loadTodaySchedule = useCallback(async (date) => {
     try {
       const response = await import("../../utils/api").then((m) => m.default);
       const res = await response.get(`/ml-schedule?date=${date}&limit=1`);
-      const schedules = res.data.data || [];
-      if (schedules.length > 0) {
-        useMLScheduleStore.setState({ currentSchedule: schedules[0], schedules });
+      const todaySchedules = res.data.data || [];
+      if (todaySchedules.length > 0) {
+        useMLScheduleStore.setState({ currentSchedule: todaySchedules[0], schedules: todaySchedules });
       } else {
-        // No schedule for today — clear current so we don't show stale data
         useMLScheduleStore.setState({ currentSchedule: null, schedules: [] });
       }
     } catch {
       useMLScheduleStore.setState({ currentSchedule: null, schedules: [] });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkMLHealth();
+    loadTodaySchedule(new Date().toISOString().split("T")[0]);
+  }, [checkMLHealth, loadTodaySchedule]);
+
+  const displaySchedule = currentSchedule;
+  const summary = displaySchedule?.summary || {};
+  const areas = useMemo(() => displaySchedule?.areas || [], [displaySchedule]);
+  const isOnline = mlHealth?.status === "ok";
+
+  const groupedAreas = useMemo(
+    () => ({
+      dispatch: areas.filter((area) => area.action === "dispatch"),
+      reduced: areas.filter((area) => area.action === "reduced"),
+      skip: areas.filter((area) => area.action === "skip"),
+    }),
+    [areas]
+  );
+
+  const totalAreas = summary.totalAreas || areas.length;
+  const coveredAreas = (summary.dispatched || groupedAreas.dispatch.length) + (summary.reduced || groupedAreas.reduced.length);
+  const coveragePercent = totalAreas ? Math.round((coveredAreas / totalAreas) * 100) : 0;
 
   const handleGenerate = async () => {
     clearError();
     const result = await generateSchedule(selectedDate);
-    if (result) {
-      const today = new Date().toISOString().split("T")[0];
-      if (selectedDate === today) {
-        // Generated for today — show as main schedule
-        setPreviewSchedule(null);
-      } else {
-        // Generated for future date — show as preview
-        setPreviewSchedule(result);
-        // Restore today's schedule as main
-        loadTodaySchedule(today);
-      }
+    if (!result) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    if (selectedDate === today) {
+      setPreviewSchedule(null);
+    } else {
+      setPreviewSchedule(result);
+      loadTodaySchedule(today);
     }
   };
 
-  const handleConfirm = async () => {
-    if (!currentSchedule?._id) return;
-    await confirmSchedule(currentSchedule._id);
+  const handleConfirmCurrent = async () => {
+    if (!displaySchedule?._id) return;
+    await confirmSchedule(displaySchedule._id);
   };
 
-  const isOnline = mlHealth?.status === "ok";
-
-  // The schedule to display in main view (today's)
-  const displaySchedule = currentSchedule;
-  const s = displaySchedule?.summary;
-
-  // Separate dispatched and skipped areas
-  const dispatchedAreas = displaySchedule?.areas?.filter(d => d.action === "dispatch") || [];
-  const skippedAreas = displaySchedule?.areas?.filter(d => d.action === "skip") || [];
-  const reducedAreas = displaySchedule?.areas?.filter(d => d.action === "reduced") || [];
-
-  // Preview schedule areas (for future date generation)
-  const previewDispatched = previewSchedule?.areas?.filter(d => d.action === "dispatch") || [];
-  const previewSkipped = previewSchedule?.areas?.filter(d => d.action === "skip") || [];
-  const previewReduced = previewSchedule?.areas?.filter(d => d.action === "reduced") || [];
-  const ps = previewSchedule?.summary;
+  const handleConfirmPreview = async () => {
+    if (!previewSchedule?._id) return;
+    await confirmSchedule(previewSchedule._id);
+    setPreviewSchedule(null);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header Row */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-primary tracking-tight">
-            ML Schedule
-          </h1>
-          <p className="text-sm text-primary/60 mt-0.5">
-            AI-powered waste collection scheduling
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
-            isOnline
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-              : "bg-red-50 border border-red-200 text-red-600"
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-400"}`} />
-            {isOnline ? "ML Online" : "ML Offline"}
+      <section className="rounded-lg border border-primary/10 bg-white p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/8 text-primary">
+                <BrainCircuit className="h-5 w-5" />
+              </span>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-primary">ML Schedule</h1>
+                <p className="text-sm text-primary/55">Simple daily pickup cards generated from predicted waste and fleet availability.</p>
+              </div>
+            </div>
+
+            {displaySchedule && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-primary/10 bg-primary/[0.03] px-3 py-1.5 text-sm font-medium text-primary/70">
+                  <CalendarDays className="h-4 w-4" />
+                  {displaySchedule.dayName}, {formatDate(displaySchedule.date)}
+                </span>
+                <span className={`inline-flex rounded-lg border px-3 py-1.5 text-xs font-semibold capitalize ${STATUS_STYLES[displaySchedule.status] || STATUS_STYLES.draft}`}>
+                  {displaySchedule.status || "draft"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                isOnline
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-rose-200 bg-rose-50 text-rose-700"
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-emerald-500" : "bg-rose-500"}`} />
+              {isOnline ? "ML online" : "Fallback mode"}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => checkMLHealth()}
+              className="grid h-9 w-9 place-items-center rounded-lg border border-primary/10 text-primary/60 transition hover:bg-primary/5 hover:text-primary"
+              aria-label="Refresh ML health"
+            >
+              <RefreshCcw className="h-4 w-4" />
+            </button>
+
+            {displaySchedule?.status === "draft" && (
+              <button
+                type="button"
+                onClick={handleConfirmCurrent}
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Confirm
+              </button>
+            )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Error */}
+      <Guide />
+
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
-          <p className="text-sm text-red-700">{error}</p>
-          <button onClick={clearError} className="text-xs text-red-500 hover:text-red-700 underline ml-3">
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+          <p className="text-sm text-rose-700">{error}</p>
+          <button type="button" onClick={clearError} className="text-xs font-semibold text-rose-700 underline">
             Dismiss
           </button>
         </div>
       )}
 
-      {/* ====== TODAY'S SCHEDULE (Main View) ====== */}
       {displaySchedule && (
         <>
-          {/* Schedule Header + Key Stats */}
-          <div className="bg-white rounded-2xl border border-primary/10 p-5">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <h2 className="text-lg font-bold text-primary">
-                {displaySchedule.dayName}, {new Date(displaySchedule.date).toLocaleDateString("en-US", {
-                  year: "numeric", month: "long", day: "numeric"
-                })}
-              </h2>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                displaySchedule.status === "draft" ? "bg-gray-100 text-gray-700" :
-                displaySchedule.status === "confirmed" ? "bg-emerald-100 text-emerald-700" :
-                displaySchedule.status === "completed" ? "bg-blue-100 text-blue-700" :
-                "bg-red-100 text-red-700"
-              }`}>
-                {displaySchedule.status}
-              </span>
-              {displaySchedule.status === "draft" && (
-                <button
-                  onClick={handleConfirm}
-                  disabled={loading}
-                  className="ml-auto px-4 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition"
-                >
-                  Confirm & Dispatch
-                </button>
-              )}
-            </div>
-
-            {/* Simple 4-stat row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="rounded-xl bg-primary/4 p-3 text-center">
-                <p className="text-2xl font-bold text-primary">
-                  {displaySchedule.totalPredictedWasteKg?.toLocaleString()} <span className="text-xs font-normal text-primary/50">kg</span>
-                </p>
-                <p className="text-[11px] text-primary/50 font-medium mt-0.5">Total Predicted Waste</p>
-              </div>
-              <div className="rounded-xl bg-emerald-50 p-3 text-center">
-                <p className="text-2xl font-bold text-emerald-700">{s?.dispatched || 0}</p>
-                <p className="text-[11px] text-emerald-600/70 font-medium mt-0.5">Areas Covered</p>
-              </div>
-              <div className="rounded-xl bg-blue-50 p-3 text-center">
-                <p className="text-2xl font-bold text-blue-700">
-                  {s?.totalTrucksAssigned || 0} <span className="text-xs font-normal text-blue-500">/ {(s?.totalTrucksAvailable || 0) + (s?.driverlessTrucks || 0)}</span>
-                </p>
-                <p className="text-[11px] text-blue-600/70 font-medium mt-0.5">Trucks Used</p>
-              </div>
-              <div className="rounded-xl bg-red-50 p-3 text-center">
-                <p className="text-2xl font-bold text-red-600">{s?.skipped || 0}</p>
-                <p className="text-[11px] text-red-500/70 font-medium mt-0.5">Areas Skipped</p>
-              </div>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Predicted waste" value={`${formatNumber(displaySchedule.totalPredictedWasteKg)} kg`} detail={`${totalAreas} pickup areas`} />
+            <StatCard label="Coverage" value={`${coveragePercent}%`} detail={`${coveredAreas} of ${totalAreas} areas covered`} tone={coveragePercent < 80 ? "text-amber-700" : "text-emerald-700"} />
+            <StatCard label="Trucks assigned" value={summary.totalTrucksAssigned || 0} detail={`${summary.totalTrucksAvailable || 0} trucks available`} />
+            <StatCard label="Needs action" value={(summary.skipped || groupedAreas.skip.length) + Number(summary.driverlessTrucks || 0)} detail={`${summary.driverlessTrucks || 0} trucks without drivers`} tone="text-rose-700" />
           </div>
 
-          {/* Resource Warning */}
-          {(s?.driverlessTrucks > 0 || s?.skipped > 0) && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="text-sm font-semibold text-amber-800 mb-1">Resource Alert</p>
-              <div className="text-xs text-amber-700 space-y-1">
-                {s?.driverlessTrucks > 0 && (
-                  <p>
-                    <span className="font-bold">{s.driverlessTrucks} truck(s)</span> have no driver assigned and were excluded.
-                    You have {(s?.totalTrucksAvailable || 0) + (s?.driverlessTrucks || 0)} trucks total but only {s?.totalTrucksAvailable || 0} have drivers.
-                  </p>
-                )}
-                {s?.skipped > 0 && (
-                  <p>
-                    <span className="font-bold">{s.skipped} area(s)</span> couldn't be covered due to insufficient trucks/drivers.
-                    Assign more drivers to trucks, then use the Re-dispatch button on skipped areas.
-                  </p>
-                )}
+          {(summary.skipped > 0 || summary.driverlessTrucks > 0) && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+                <p className="text-sm text-amber-700">
+                  {summary.skipped || groupedAreas.skip.length} area(s) need attention.
+                  {summary.driverlessTrucks > 0 ? ` ${summary.driverlessTrucks} truck(s) have no driver assigned.` : ""}
+                </p>
               </div>
             </div>
           )}
 
-          {/* Dispatched Areas */}
-          {dispatchedAreas.length > 0 && (
-            <div>
-              <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                Dispatched ({dispatchedAreas.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {dispatchedAreas.map((areaItem) => (
-                  <AreaPredictionCard
-                    key={areaItem.area}
-                    area={areaItem}
-                    scheduleId={displaySchedule._id}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Reduced Areas */}
-          {reducedAreas.length > 0 && (
-            <div>
-              <h3 className="text-sm font-bold text-amber-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                Reduced Coverage ({reducedAreas.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {reducedAreas.map((areaItem) => (
-                  <AreaPredictionCard
-                    key={areaItem.area}
-                    area={areaItem}
-                    scheduleId={displaySchedule._id}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Skipped Areas */}
-          {skippedAreas.length > 0 && (
-            <div>
-              <h3 className="text-sm font-bold text-red-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500" />
-                Skipped - No Coverage ({skippedAreas.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {skippedAreas.map((areaItem) => (
-                  <AreaPredictionCard
-                    key={areaItem.area}
-                    area={areaItem}
-                    scheduleId={displaySchedule._id}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          <section className="space-y-5">
+            {[
+              { title: "Ready", icon: CheckCircle2, areas: groupedAreas.dispatch },
+              { title: "Reduced", icon: AlertCircle, areas: groupedAreas.reduced },
+              { title: "Needs action", icon: CircleOff, areas: groupedAreas.skip },
+            ].map(({ title, icon, areas: sectionAreas }) => (
+              sectionAreas.length > 0 && (
+                <div key={title}>
+                  <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-primary/65">
+                    {React.createElement(icon, { className: "h-4 w-4" })}
+                    {title} ({sectionAreas.length})
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {sectionAreas.map((areaItem) => (
+                      <AreaPredictionCard key={`${areaItem.area}-${areaItem.action}`} area={areaItem} scheduleId={displaySchedule._id} />
+                    ))}
+                  </div>
+                </div>
+              )
+            ))}
+          </section>
         </>
       )}
 
-      {/* No schedule loaded */}
       {!displaySchedule && !loading && schedules.length > 0 && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
           <p className="text-sm text-emerald-700">
-            <span className="font-semibold">Latest schedule:</span>{" "}
-            {new Date(schedules[0].date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-            {" — "}
-            {schedules[0].areas?.length || 0} areas, {schedules[0].totalPredictedWasteKg?.toLocaleString() || 0} kg predicted
+            Latest schedule: {formatDate(schedules[0].date)} / {schedules[0].areas?.length || 0} areas /{" "}
+            {formatNumber(schedules[0].totalPredictedWasteKg)} kg predicted.
           </p>
         </div>
       )}
 
-      {/* Empty State */}
       {!displaySchedule && !loading && schedules.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-2xl border border-primary/10">
-          <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        <section className="rounded-lg border border-primary/10 bg-white py-14 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-lg bg-primary/8 text-primary/50">
+            <BrainCircuit className="h-7 w-7" />
           </div>
-          <h3 className="text-lg font-semibold text-primary/70 mb-1">No Schedule Yet</h3>
-          <p className="text-sm text-primary/50 max-w-sm mx-auto">
-            Generate a schedule to get AI-powered waste predictions and truck assignments.
-          </p>
-        </div>
+          <h3 className="mt-4 text-lg font-semibold text-primary">No schedule for today</h3>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-primary/50">Generate a schedule to create simple pickup cards.</p>
+        </section>
       )}
 
-      {/* ====== SCHEDULE GENERATOR (Collapsible Section) ====== */}
       {isSuperAdmin && (
-        <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden">
+        <section className="rounded-lg border border-primary/10 bg-white">
           <button
-            onClick={() => setShowGenerator(!showGenerator)}
-            className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition"
+            type="button"
+            onClick={() => setShowGenerator((value) => !value)}
+            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-primary/[0.03]"
           >
             <div>
-              <h3 className="text-sm font-bold text-primary">Schedule Generator</h3>
-              <p className="text-xs text-primary/50 mt-0.5">
-                Generate or regenerate schedules for any date
-              </p>
+              <h3 className="text-sm font-semibold text-primary">Schedule generator</h3>
+              <p className="mt-0.5 text-sm text-primary/50">Create or regenerate a plan for any date.</p>
             </div>
-            <svg
-              className={`w-5 h-5 text-primary/40 transition-transform ${showGenerator ? "rotate-180" : ""}`}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDown className={`h-5 w-5 text-primary/45 transition-transform ${showGenerator ? "rotate-180" : ""}`} />
           </button>
 
           {showGenerator && (
-            <div className="px-5 pb-5 border-t border-primary/5 pt-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-primary/60 uppercase tracking-wider mb-1.5">
-                    Date
-                  </label>
+            <div className="space-y-4 border-t border-primary/8 p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-primary/45">Date</span>
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl border border-primary/15 text-sm focus:outline-none focus:ring-2 focus:ring-black/30 text-primary"
+                    className="h-10 rounded-lg border border-primary/10 bg-white px-3 text-sm text-primary outline-none transition focus:border-primary/30"
                   />
-                </div>
+                </label>
 
-                <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={loading}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {loading ? "Generating..." : "Generate schedule"}
+                </button>
+
+                {displaySchedule && (
                   <button
-                    onClick={handleGenerate}
-                    disabled={loading}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-primary text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-2"
+                    type="button"
+                    onClick={() => {
+                      clearCurrentSchedule();
+                      setPreviewSchedule(null);
+                    }}
+                    className="h-10 rounded-lg border border-primary/10 px-4 text-sm font-medium text-primary/60 transition hover:bg-primary/5 hover:text-primary"
                   >
-                    {loading && (
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                    )}
-                    {loading ? "Generating..." : "Generate Schedule"}
+                    Clear view
                   </button>
-
-                  {currentSchedule && (
-                    <button
-                      onClick={() => {
-                        clearCurrentSchedule();
-                        setPreviewSchedule(null);
-                      }}
-                      className="px-4 py-2.5 rounded-xl text-sm font-medium text-primary/50 border border-primary/10 hover:bg-gray-50 transition"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
 
               {!isOnline && (
-                <p className="mt-3 text-sm text-amber-700">
-                  ML service is offline; generation will use backend fallback predictions.
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  ML service is offline, so the backend fallback will generate the plan.
                 </p>
               )}
 
-              {/* Preview Schedule (for future dates) */}
               {previewSchedule && (
-                <div className="mt-5 pt-4 border-t border-primary/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <h4 className="text-sm font-bold text-primary">
-                      Preview: {previewSchedule.dayName}, {new Date(previewSchedule.date).toLocaleDateString("en-US", {
-                        year: "numeric", month: "long", day: "numeric"
-                      })}
-                    </h4>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                      previewSchedule.status === "draft" ? "bg-gray-100 text-gray-700" :
-                      "bg-emerald-100 text-emerald-700"
-                    }`}>
-                      {previewSchedule.status}
-                    </span>
-                    {previewSchedule.status === "draft" && (
+                <div className="rounded-lg border border-primary/10 bg-primary/[0.025] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-primary/45">Preview</p>
+                      <h3 className="mt-1 text-base font-semibold text-primary">
+                        {previewSchedule.dayName}, {formatDate(previewSchedule.date)}
+                      </h3>
+                      <p className="mt-1 text-sm text-primary/55">
+                        {previewSchedule.areas?.length || 0} areas / {formatNumber(previewSchedule.totalPredictedWasteKg)} kg predicted.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {previewSchedule.status === "draft" && (
+                        <button
+                          type="button"
+                          onClick={handleConfirmPreview}
+                          disabled={loading}
+                          className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          Confirm
+                        </button>
+                      )}
                       <button
-                        onClick={async () => {
-                          await confirmSchedule(previewSchedule._id);
-                          setPreviewSchedule(null);
-                        }}
-                        disabled={loading}
-                        className="ml-auto px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition"
+                        type="button"
+                        onClick={() => setPreviewSchedule(null)}
+                        className="rounded-lg border border-primary/10 px-3 py-2 text-sm font-medium text-primary/60 transition hover:bg-white"
                       >
-                        Confirm
+                        Close
                       </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                    <div className="rounded-lg bg-primary/4 p-2">
-                      <p className="text-lg font-bold text-primary">{previewSchedule.totalPredictedWasteKg?.toLocaleString()} <span className="text-[10px] font-normal text-primary/50">kg</span></p>
-                      <p className="text-[10px] text-primary/50">Predicted Waste</p>
-                    </div>
-                    <div className="rounded-lg bg-emerald-50 p-2">
-                      <p className="text-lg font-bold text-emerald-700">{ps?.dispatched || 0}</p>
-                      <p className="text-[10px] text-emerald-600/70">Areas Covered</p>
-                    </div>
-                    <div className="rounded-lg bg-blue-50 p-2">
-                      <p className="text-lg font-bold text-blue-700">{ps?.totalTrucksAssigned || 0}</p>
-                      <p className="text-[10px] text-blue-600/70">Trucks Used</p>
-                    </div>
-                    <div className="rounded-lg bg-red-50 p-2">
-                      <p className="text-lg font-bold text-red-600">{ps?.skipped || 0}</p>
-                      <p className="text-[10px] text-red-500/70">Skipped</p>
                     </div>
                   </div>
-
-                  {/* Preview area cards */}
-                  {previewDispatched.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs font-semibold text-primary/60 mb-2">Dispatched ({previewDispatched.length})</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {previewDispatched.map((d) => (
-                          <div key={d.area} className="rounded-xl border border-primary/10 p-3 text-xs">
-                            <div className="flex justify-between">
-                              <span className="font-semibold text-primary">{d.area}</span>
-                              <span className="text-primary/50">{d.predictedWasteKg?.toLocaleString()} kg</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {previewSkipped.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold text-red-600/70 mb-2">Skipped ({previewSkipped.length})</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {previewSkipped.map((d) => (
-                          <div key={d.area} className="rounded-xl border border-red-200 bg-red-50/50 p-3 text-xs">
-                            <span className="font-semibold text-red-700">{d.area}</span>
-                            <span className="text-red-500 ml-2">{d.predictedWasteKg?.toLocaleString()} kg</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => setPreviewSchedule(null)}
-                    className="mt-3 text-xs text-primary/40 hover:text-primary/60 underline"
-                  >
-                    Close preview
-                  </button>
                 </div>
               )}
             </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   );

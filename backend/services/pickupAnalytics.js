@@ -25,6 +25,7 @@ export async function buildPickupAnalytics(match) {
     categoryAgg,
     levelAgg,
     dailyAgg,
+    monthlyRevenueAgg,
     hourlyAgg,
     topDriversAgg,
   ] = await Promise.all([
@@ -89,6 +90,20 @@ export async function buildPickupAnalytics(match) {
           cancelled: { $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] } },
         },
       },
+      { $sort: { _id: 1 } },
+    ]),
+
+    PickupRequest.aggregate([
+      { $match: { ...match, status: "COMPLETED", paymentStatus: "PAID" } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          revenue: { $sum: { $ifNull: ["$estimatedPrice", 0] } },
+          completed: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: -1 } },
+      { $limit: 12 },
       { $sort: { _id: 1 } },
     ]),
 
@@ -164,6 +179,11 @@ export async function buildPickupAnalytics(match) {
       created: d.created,
       completed: d.completed,
       cancelled: d.cancelled,
+    })),
+    monthlyRevenue: monthlyRevenueAgg.map((d) => ({
+      month: d._id,
+      revenue: Math.round(d.revenue || 0),
+      completed: d.completed,
     })),
     hourlyDistribution: hourlyAgg.map((h) => ({ hour: h._id, count: h.count })),
     topDrivers: topDriversAgg,

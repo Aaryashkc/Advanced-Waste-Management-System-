@@ -30,7 +30,9 @@ export default function Profile() {
       try {
         const res = await api.get("/driver/me");
         setDriverProfile(res.data.driver);
-      } catch (_) {}
+      } catch (error) {
+        console.warn("Failed to load driver profile", error);
+      }
     })();
   }, [isDriver]);
 
@@ -40,26 +42,32 @@ export default function Profile() {
     fetchPaymentHistory();
   }, [isCustomer, activeTab, fetchPaymentHistory]);
 
-  // Fetch pickup history for drivers
+  // Fetch pickup history for drivers and customers
   useEffect(() => {
-    if (!isDriver || activeTab !== "history") return;
+    if ((!isDriver && !isCustomer) || activeTab !== "history") return;
     if (pickupHistory.length > 0) return;
     (async () => {
       setHistoryLoading(true);
       try {
-        const res = await api.get("/pickups/my-history");
+        const endpoint = isCustomer ? "/pickups/my-pickups" : "/pickups/my-history";
+        const res = await api.get(endpoint);
         setPickupHistory(res.data.pickups || []);
-      } catch (_) {
-        // Fallback: try to fetch active pickup at least
-        try {
-          const res = await api.get("/pickups/active");
-          if (res.data.pickup) setPickupHistory([res.data.pickup]);
-        } catch (_) {}
+      } catch (error) {
+        console.warn("Failed to load pickup history", error);
+        if (isDriver) {
+          // Fallback: try to fetch active pickup at least
+          try {
+            const res = await api.get("/pickups/active");
+            if (res.data.pickup) setPickupHistory([res.data.pickup]);
+          } catch (fallbackError) {
+            console.warn("Failed to load active pickup fallback", fallbackError);
+          }
+        }
       } finally {
         setHistoryLoading(false);
       }
     })();
-  }, [isDriver, activeTab]);
+  }, [isDriver, isCustomer, activeTab, pickupHistory.length]);
 
   const handleLogout = () => {
     logout();
@@ -91,6 +99,7 @@ export default function Profile() {
     : isCustomer
     ? [
         { key: "info", label: "Info", Icon: User },
+        { key: "history", label: "History", Icon: History },
         { key: "billing", label: "Payments", Icon: Receipt },
       ]
     : [];
@@ -235,7 +244,6 @@ export default function Profile() {
             {billingHistory.length > 0 ? (
               billingHistory.map((bill) => {
                 const isPaid = bill.status === "PAID";
-                const isWaived = bill.status === "WAIVED";
                 return (
                   <div key={bill._id} className="bg-white rounded-2xl shadow-sm border border-primary/8 p-4">
                     <div className="flex items-start gap-3">
@@ -348,8 +356,8 @@ export default function Profile() {
           </div>
         )}
 
-        {/* HISTORY TAB (drivers only) */}
-        {isDriver && activeTab === "history" && (
+        {/* HISTORY TAB (drivers and customers) */}
+        {(isDriver || isCustomer) && activeTab === "history" && (
           <div className="space-y-4">
             {historyLoading && (
               <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-sm">
@@ -360,16 +368,21 @@ export default function Profile() {
 
             {!historyLoading && pickupHistory.length > 0 && (
               pickupHistory.map((p, idx) => {
-                const isCompleted = p.status === "completed";
-                const isCancelled = p.status === "cancelled";
+                const status = p.status || "PENDING";
+                const isCompleted = status === "COMPLETED";
+                const isCancelled = status === "CANCELLED";
+                const isPaymentRequired = status === "PAYMENT_REQUIRED";
+                const pickupDate = p.completedAt || p.cancelledAt || p.createdAt;
+                const driverName = p.driverInfo?.name || p.driver?.name;
                 return (
                   <div key={p._id || p.id || idx} className="bg-white rounded-2xl shadow-sm border border-primary/8 p-4">
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                        isCompleted ? "bg-emerald-50" : isCancelled ? "bg-red-50" : "bg-amber-50"
+                        isCompleted ? "bg-emerald-50" : isCancelled ? "bg-red-50" : isPaymentRequired ? "bg-orange-50" : "bg-amber-50"
                       }`}>
                         {isCompleted ? <CheckCircle size={18} className="text-emerald-600" /> :
                          isCancelled ? <XCircle size={18} className="text-red-500" /> :
+                         isPaymentRequired ? <Receipt size={18} className="text-orange-500" /> :
                          <Clock size={18} className="text-amber-600" />}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -380,12 +393,13 @@ export default function Profile() {
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             isCompleted ? "bg-emerald-100 text-emerald-700" :
                             isCancelled ? "bg-red-100 text-red-700" :
+                            isPaymentRequired ? "bg-orange-100 text-orange-700" :
                             "bg-amber-100 text-amber-700"
                           }`}>
-                            {p.status}
+                            {status.replace("_", " ")}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1.5 text-xs text-primary/45">
+                        <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-primary/45">
                           <span className="flex items-center gap-1">
                             <Package size={11} /> {p.category || "waste"}
                           </span>
@@ -397,7 +411,19 @@ export default function Profile() {
                           {p.createdAt && (
                             <span className="flex items-center gap-1">
                               <Clock size={11} />
-                              {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              {new Date(pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </span>
+                          )}
+                          {driverName && (
+                            <span className="flex items-center gap-1">
+                              <Truck size={11} />
+                              {driverName}
+                            </span>
+                          )}
+                          {p.estimatedPrice && (
+                            <span className="flex items-center gap-1 font-semibold text-primary/60">
+                              NPR {p.estimatedPrice.toLocaleString()}
+                              {p.paymentStatus ? ` (${p.paymentStatus})` : ""}
                             </span>
                           )}
                         </div>
@@ -415,7 +441,7 @@ export default function Profile() {
                 </div>
                 <h3 className="text-base font-semibold text-primary/70 mb-1">No history yet</h3>
                 <p className="text-sm text-primary/40 max-w-xs mx-auto">
-                  Your completed and past pickup requests will appear here.
+                  Your pickup requests will appear here after you create one.
                 </p>
               </div>
             )}
