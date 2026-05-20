@@ -1,18 +1,15 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../../stores/useAuthStore";
 import useBillingStore from "../../stores/useBillingStore";
-import { getSocket } from "../../utils/socket";
-import axios from "axios";
+import { useAdminNotificationCounts } from "../../hooks/useAdminNotificationCounts";
 import { AlertTriangle, Bell, CreditCard, LogOut, Menu } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 const Topbar = ({ onMenuToggle }) => {
   const navigate = useNavigate();
-  const { logout, user, token } = useAuthStore();
+  const { logout, user } = useAuthStore();
   const { bills, summary: billingSummary, fetchMyBills } = useBillingStore();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { totalUnread } = useAdminNotificationCounts();
 
   const displayName = user?.name || "Admin User";
   const displayRole = user?.role || "admin";
@@ -23,52 +20,6 @@ const Topbar = ({ onMenuToggle }) => {
   const unpaidBillCount = shouldShowAdminBilling ? billingSummary?.unpaid || 0 : 0;
   const hasBillingAlert = shouldShowAdminBilling && unpaidBillCount > 0;
   const billingAlertLabel = overdueBills.length > 0 ? "Payment overdue" : "Payment due";
-
-  // Fetch aggregated unread count across all notification types
-  const fetchTotalUnread = useCallback(async () => {
-    if (!token) return;
-    try {
-      const [alertsRes, contactRes, orgAdminRes, driverRes] = await Promise.all([
-        axios.get(`${API_URL}/notifications/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/contact/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/internal-messages/org_admin/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/internal-messages/driver/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      const total =
-        (alertsRes.data.count || 0) +
-        (contactRes.data.count || 0) +
-        (orgAdminRes.data.count || 0) +
-        (driverRes.data.count || 0);
-      setUnreadCount(total);
-    } catch (err) {
-      console.error("Failed to fetch unread counts:", err);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchTotalUnread();
-
-    const socket = getSocket();
-
-    // Listen for real-time events that affect unread count
-    const incrementCount = () => setUnreadCount(prev => prev + 1);
-
-    socket.on("notification:new", incrementCount);
-    socket.on("new_contact_message", incrementCount);
-    socket.on("update_unread_count", (count) => setUnreadCount(count));
-    socket.on("notification:counts", () => fetchTotalUnread());
-
-    // Periodically sync unread count (every 60 seconds)
-    const interval = setInterval(fetchTotalUnread, 60000);
-
-    return () => {
-      socket.off("notification:new", incrementCount);
-      socket.off("new_contact_message", incrementCount);
-      socket.off("update_unread_count");
-      socket.off("notification:counts");
-      clearInterval(interval);
-    };
-  }, [fetchTotalUnread]);
 
   useEffect(() => {
     if (!shouldShowAdminBilling) return;
@@ -174,10 +125,10 @@ const Topbar = ({ onMenuToggle }) => {
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5 text-primary/70" />
-            {unreadCount > 0 && (
+            {totalUnread > 0 && (
               <>
                 <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-[var(--dash-shell)]">
-                  {unreadCount > 99 ? "99+" : unreadCount}
+                  {totalUnread > 99 ? "99+" : totalUnread}
                 </span>
                 {/* Pulse ring for attention */}
                 <span className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-red-400 opacity-30 animate-ping" />

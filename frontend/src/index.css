@@ -19,13 +19,22 @@
  * Child pages inherit a lighter --color-primary on dark surfaces so text-primary / borders stay readable.
  */
 .admin-dashboard-root {
-  --dash-shell: #f7f4ea;
-  --dash-page: #f1eee4;
-  --dash-card: #fbfaf4;
-  --dash-card-soft: #eee9dc;
+  color-scheme: light;
+  --color-accent: #e2e8f0;
+  --color-secondary: #f8fafc;
+  --dash-shell: #ffffff;
+  --dash-page: #f8fafc;
+  --dash-card: #ffffff;
+  --dash-card-soft: #f1f5f9;
   --dash-border: rgb(53 79 82 / 0.14);
   --dash-muted: rgb(53 79 82 / 0.62);
   --dash-overlay: rgb(0 0 0 / 0.3);
+}
+
+.admin-dashboard-root [class*="bg-[#f7f5ef]"],
+.admin-dashboard-root [class*="bg-[#f5f3ee]"],
+.admin-dashboard-root [class*="bg-[#f5f1e8]"] {
+  background-color: var(--dash-card-soft);
 }
 
 .admin-dashboard-root.dark {

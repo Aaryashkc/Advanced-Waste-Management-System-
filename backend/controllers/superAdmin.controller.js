@@ -6,6 +6,7 @@ import Driver from "../models/Driver.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
 import { buildPickupAnalytics, buildScheduleAnalytics } from "../services/pickupAnalytics.js";
 import DeletionRequest from "../models/DeletionRequest.model.js";
+import { getIO } from "../socket/socketServer.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
@@ -656,6 +657,18 @@ export const reviewDeletionRequest = async (req, res) => {
           if (driver.userId) await User.findByIdAndDelete(driver.userId);
         }
       }
+    }
+
+    try {
+      const totalPending = await DeletionRequest.countDocuments({ status: "pending" });
+      const orgPending = await DeletionRequest.countDocuments({ orgId: request.orgId, status: "pending" });
+      const io = getIO();
+      io.to("super_admins").emit("deletion-request:counts", { deletions: totalPending });
+      if (request.orgId) {
+        io.to(`org:${request.orgId}`).emit("deletion-request:counts", { deletions: orgPending });
+      }
+    } catch (socketErr) {
+      console.error("Socket error on deletion request review emission:", socketErr.message);
     }
 
     res.status(200).json({ success: true, message: `Request ${action}` });

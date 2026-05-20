@@ -24,12 +24,16 @@ function getToken() {
 
 /** Lazily creates and returns the socket singleton. */
 export function getSocket() {
-    if (socket && (socket.connected || socket.connecting)) return socket;
-
     const token = getToken();
 
     if (!token) {
         console.warn("[socket] No auth token — socket will not authenticate");
+    }
+
+    if (socket) {
+        socket.auth = { token };
+        if (socket.disconnected) socket.connect();
+        return socket;
     }
 
     socket = io(SOCKET_URL, {

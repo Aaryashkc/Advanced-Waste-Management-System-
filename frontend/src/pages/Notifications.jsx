@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import useAuthStore from "../stores/useAuthStore";
 import { getSocket } from "../utils/socket";
@@ -37,7 +37,6 @@ const Notifications = () => {
     driver: 0,
     deletions: 0
   });
-  const socketListenersRef = useRef(false);
 
   const totalUnread = counts.alerts + counts.clients + counts.org_admin + counts.driver + counts.deletions;
 
@@ -132,43 +131,79 @@ const Notifications = () => {
 
   // Socket listeners for real-time updates
   useEffect(() => {
-    if (socketListenersRef.current) return;
-    socketListenersRef.current = true;
-
     const socket = getSocket();
 
     // Real-time system notification
-    socket.on("notification:new", (notification) => {
+    const onSystemNotification = (notification) => {
       setSystemAlerts(prev => [{ ...notification, isRead: false }, ...prev]);
       setCounts(prev => ({ ...prev, alerts: prev.alerts + 1 }));
-    });
+    };
 
     // Real-time contact message
-    socket.on("new_contact_message", () => {
+    const onContactMessage = () => {
       setCounts(prev => ({ ...prev, clients: prev.clients + 1 }));
       if (activeTab === "clients") {
         fetchMessages("clients");
       }
-    });
+    };
 
     // General unread count update
-    socket.on("update_unread_count", (count) => {
+    const onContactCount = (count) => {
       setCounts(prev => ({ ...prev, clients: count }));
-    });
+    };
 
     // Real-time notification count sync
-    socket.on("notification:counts", (newCounts) => {
+    const onNotificationCounts = (newCounts) => {
+      setCounts(prev => ({
+        ...prev,
+        ...newCounts,
+        ...(typeof newCounts?.notifications === "number" ? { alerts: newCounts.notifications } : {}),
+      }));
+    };
+
+    const onInternalMessage = (message) => {
+      if (message?.type === "org_admin" || message?.type === "driver") {
+        setCounts(prev => ({ ...prev, [message.type]: prev[message.type] + 1 }));
+        if (activeTab === message.type) fetchMessages(message.type);
+      } else {
+        fetchCounts();
+      }
+    };
+
+    const onInternalCounts = (newCounts) => {
       setCounts(prev => ({ ...prev, ...newCounts }));
-    });
+    };
+
+    const onDeletionRequest = () => {
+      setCounts(prev => ({ ...prev, deletions: prev.deletions + 1 }));
+    };
+
+    const onDeletionCounts = (newCounts) => {
+      if (typeof newCounts?.deletions === "number") {
+        setCounts(prev => ({ ...prev, deletions: newCounts.deletions }));
+      }
+    };
+
+    socket.on("notification:new", onSystemNotification);
+    socket.on("new_contact_message", onContactMessage);
+    socket.on("update_unread_count", onContactCount);
+    socket.on("notification:counts", onNotificationCounts);
+    socket.on("internal-message:new", onInternalMessage);
+    socket.on("internal-message:counts", onInternalCounts);
+    socket.on("deletion-request:new", onDeletionRequest);
+    socket.on("deletion-request:counts", onDeletionCounts);
 
     return () => {
-      socket.off("notification:new");
-      socket.off("new_contact_message");
-      socket.off("update_unread_count");
-      socket.off("notification:counts");
-      socketListenersRef.current = false;
+      socket.off("notification:new", onSystemNotification);
+      socket.off("new_contact_message", onContactMessage);
+      socket.off("update_unread_count", onContactCount);
+      socket.off("notification:counts", onNotificationCounts);
+      socket.off("internal-message:new", onInternalMessage);
+      socket.off("internal-message:counts", onInternalCounts);
+      socket.off("deletion-request:new", onDeletionRequest);
+      socket.off("deletion-request:counts", onDeletionCounts);
     };
-  }, [activeTab]);
+  }, [activeTab, fetchCounts]);
 
   useEffect(() => {
     fetchCounts();

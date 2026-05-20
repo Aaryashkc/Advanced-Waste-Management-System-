@@ -25,7 +25,7 @@ import pricingConfigRoutes from "./routes/pricingConfig.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import billingRoutes from "./routes/billing.route.js";
 import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
-import { autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
+import { autoDispatchQualifiedMLSchedule, autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
 import { runBillGeneration } from "./controllers/billing.controller.js";
 import { ensurePickupRequestIndexes, expireStalePendingPickups } from "./services/pickupExpiry.js";
 import { ensurePaymentIndexes } from "./services/paymentIndexes.js";
@@ -38,8 +38,10 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 // Single cron schedule guard so hot reload (e.g. nodemon) does not register multiple jobs
 let cleanupCronScheduled = false;
 let mlScheduleCronScheduled = false;
+let mlAutoDispatchCronScheduled = false;
 let billingCronScheduled = false;
 let pickupExpiryCronScheduled = false;
+const ML_AUTO_DISPATCH_CRON = "0 5 * * *"; // 5:00 AM every day - dispatches qualified ML truck assignments
 const CRON_SCHEDULE = "0 2 * * *"; // 2:00 AM every day (server local time)
 const PICKUP_EXPIRY_CRON = "*/1 * * * *"; // every minute
 const ML_SCHEDULE_CRON = "0 0 * * *"; // 12:00 AM (midnight) every day — generates today's schedule
@@ -178,6 +180,15 @@ server.listen(PORT, async () => {
         .then((r) => console.log(`ML startup schedule: ${r.message}`))
         .catch((e) => console.error("ML startup schedule error:", e));
     }, 5000);
+  }
+
+  if (!mlAutoDispatchCronScheduled) {
+    mlAutoDispatchCronScheduled = true;
+    cron.schedule(ML_AUTO_DISPATCH_CRON, () => {
+      autoDispatchQualifiedMLSchedule()
+        .then((r) => console.log(`ML auto-dispatch: ${r.message}`))
+        .catch((e) => console.error("ML auto-dispatch error:", e));
+    });
   }
 
   if (!billingCronScheduled) {

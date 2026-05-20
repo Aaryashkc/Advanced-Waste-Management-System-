@@ -150,6 +150,120 @@ function buildBackendFallbackSchedule(dateStr, allAreas = [], unavailableDrivers
   };
 }
 
+function getAssignedDriverAreaMap(schedule) {
+  const driverDocIds = new Set();
+  const driverAreaMap = {};
+
+  for (const area of (schedule.areas || [])) {
+    for (const truck of (area.assignedTrucks || [])) {
+      if (truck.driverId) {
+        driverDocIds.add(truck.driverId);
+        if (!driverAreaMap[truck.driverId]) driverAreaMap[truck.driverId] = [];
+        driverAreaMap[truck.driverId].push(area.area);
+      }
+    }
+  }
+
+  return { driverDocIds, driverAreaMap };
+}
+
+async function notifyAssignedDrivers(schedule, source = "manual") {
+  const { driverDocIds, driverAreaMap } = getAssignedDriverAreaMap(schedule);
+  if (driverDocIds.size === 0) return 0;
+
+  const drivers = await Driver.find({ _id: { $in: [...driverDocIds] } }).select("userId").lean();
+  const dateLabel = schedule.dayName || schedule.date.toISOString().split("T")[0];
+  const io = getIO();
+  let notified = 0;
+
+  for (const d of drivers) {
+    if (!d.userId) continue;
+
+    const areas = driverAreaMap[d._id.toString()] || [];
+    const areasList = areas.join(", ");
+    const isAuto = source === "auto";
+
+    io.to(`driver:${d.userId}`).emit("schedule:confirmed", {
+      scheduleId: schedule._id,
+      date: schedule.date,
+      dayName: schedule.dayName,
+      message: isAuto
+        ? `Schedule auto-dispatched for ${dateLabel}. You are assigned to: ${areasList}`
+        : `Schedule confirmed for ${dateLabel}. You are assigned to: ${areasList}`,
+    });
+
+    await createSystemNotification({
+      type: "schedule_confirmed",
+      title: isAuto ? `Schedule Auto-Dispatched - ${dateLabel}` : `Schedule Confirmed - ${dateLabel}`,
+      message: `You have been assigned to ${areas.length} area${areas.length !== 1 ? "s" : ""}: ${areasList}. Check your daily schedule for details.`,
+      severity: "info",
+      targetRoles: ["driver"],
+      relatedData: {
+        scheduleId: schedule._id,
+        date: schedule.date.toISOString().split("T")[0],
+        areaName: areasList,
+      },
+      targetUserId: d.userId,
+    });
+    notified += 1;
+  }
+
+  io.to("drivers").emit("schedule:updated", {
+    scheduleId: schedule._id,
+    status: "confirmed",
+  });
+
+  return notified;
+}
+
+async function confirmMLScheduleDocument(schedule, confirmedBy = null, source = "manual") {
+  if (!schedule) {
+    return { success: false, statusCode: 404, message: "ML schedule not found" };
+  }
+
+  if (schedule.status !== "draft") {
+    return {
+      success: false,
+      statusCode: 400,
+      message: `Cannot confirm schedule with status '${schedule.status}'. Only 'draft' schedules can be confirmed.`,
+    };
+  }
+
+  const assignedTruckCount = (schedule.areas || []).reduce(
+    (sum, area) => sum + (area.assignedTrucks || []).length,
+    0
+  );
+
+  if (assignedTruckCount === 0) {
+    return {
+      success: false,
+      statusCode: 400,
+      message: "Cannot auto-dispatch schedule because no qualified trucks with assigned drivers were found.",
+    };
+  }
+
+  schedule.status = "confirmed";
+  if (confirmedBy) schedule.confirmedBy = confirmedBy;
+  schedule.confirmedAt = new Date();
+  await schedule.save();
+
+  let notifiedDrivers = 0;
+  try {
+    notifiedDrivers = await notifyAssignedDrivers(schedule, source);
+  } catch (notifyErr) {
+    console.error("Failed to notify assigned drivers:", notifyErr.message);
+  }
+
+  return {
+    success: true,
+    statusCode: 200,
+    message: source === "auto" ? "Schedule auto-dispatched" : "Schedule confirmed for dispatch",
+    schedule,
+    notifiedDrivers,
+    assignedTruckCount,
+  };
+}
+
 function buildExtraAreas(allAreas = []) {
   return allAreas
     .filter((a) => a.type && a.name)
@@ -887,6 +1001,80 @@ export const confirmSchedule = async (req, res) => {
       message: "Failed to confirm schedule",
       error: error.message,
     });
+  }
+};
+
+/**
+ * Auto-confirm today's generated ML schedule for dispatch (called by 5 AM cron).
+ * Qualified trucks are already filtered during generation: available trucks with
+ * assigned drivers are scheduled, while driverless/skipped resources remain for
+ * admin review and redispatch.
+ */
+export const autoDispatchQualifiedMLSchedule = async () => {
+  try {
+    const generationResult = await autoGenerateMLSchedule();
+    if (!generationResult.success) return generationResult;
+
+    const today = getLocalTodayUTC();
+    const tomorrow = new Date(today);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const dateStr = today.toISOString().slice(0, 10);
+
+    const schedule = await MLSchedule.findOne({
+      date: { $gte: today, $lt: tomorrow },
+    });
+
+    if (!schedule) {
+      return {
+        success: false,
+        message: `No ML schedule found for ${dateStr}; auto-dispatch skipped`,
+      };
+    }
+
+    if (schedule.status !== "draft") {
+      return {
+        success: true,
+        message: `Schedule for ${dateStr} is already ${schedule.status}; auto-dispatch skipped`,
+      };
+    }
+
+    const result = await confirmMLScheduleDocument(schedule, null, "auto");
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message,
+      };
+    }
+
+    const skipped = schedule.areas.filter((area) => area.action === "skip").length;
+    const reduced = schedule.areas.filter((area) => area.action === "reduced").length;
+
+    if (skipped > 0 || reduced > 0) {
+      await createSystemNotification({
+        type: "redispatch_needed",
+        title: "Auto-Dispatch Needs Admin Review",
+        message: `Auto-dispatch confirmed qualified truck assignments for ${dateStr}. ${skipped} skipped area(s) and ${reduced} partially covered area(s) still need admin review.`,
+        severity: skipped > 0 ? "critical" : "warning",
+        targetRoles: ["admin", "super_admin"],
+        relatedData: {
+          scheduleId: schedule._id,
+          date: dateStr,
+          reason: "manual_review_required",
+        },
+      });
+    }
+
+    return {
+      success: true,
+      message: `Auto-dispatched schedule for ${dateStr}: ${result.assignedTruckCount} truck assignment(s), ${result.notifiedDrivers} driver(s) notified`,
+    };
+  } catch (error) {
+    console.error("Auto-dispatch ML schedule error:", error);
+    return {
+      success: false,
+      message: `Auto-dispatch failed: ${error.message}`,
+    };
   }
 };
 

@@ -7,6 +7,7 @@ import DeletionRequest from "../models/DeletionRequest.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
 import Area from "../models/Area.model.js";
 import { buildPickupAnalytics, buildScheduleAnalytics } from "../services/pickupAnalytics.js";
+import { getIO } from "../socket/socketServer.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
@@ -781,6 +782,14 @@ export const requestDeletion = async (req, res) => {
       orgId
     });
     await request.save();
+
+    try {
+      const totalPending = await DeletionRequest.countDocuments({ status: "pending" });
+      getIO().to("super_admins").emit("deletion-request:new", request);
+      getIO().to("super_admins").emit("deletion-request:counts", { deletions: totalPending });
+    } catch (socketErr) {
+      console.error("Socket error on deletion request emission:", socketErr.message);
+    }
 
     res.status(201).json({ success: true, message: "Deletion request submitted for approval", data: request });
   } catch (error) {

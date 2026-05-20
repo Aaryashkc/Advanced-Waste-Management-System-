@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import useAuthStore from "../../stores/useAuthStore";
 import { useDashboardTheme } from "../../hooks/useDashboardTheme";
+import { useAdminNotificationCounts } from "../../hooks/useAdminNotificationCounts";
 import {
   LayoutDashboard,
   Building2,
@@ -27,6 +28,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
   const { theme, toggleTheme } = useDashboardTheme();
+  const { totalUnread } = useAdminNotificationCounts();
   const isDark = theme === "dark";
 
   const menuItems = [
@@ -89,7 +91,12 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                 }
               >
                 <item.icon className="w-4.5 h-4.5 shrink-0" />
-                <span>{item.name}</span>
+                <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                {item.path === "/admin-dashboard/notifications" && totalUnread > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-red-500/20">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}
