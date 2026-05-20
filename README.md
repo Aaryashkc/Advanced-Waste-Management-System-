@@ -1,6 +1,6 @@
-# SafaBin Nepal - Smart Waste Management Platform
+# Advance Waste Management System Nepal - Smart Waste Management Platform
 
-SafaBin is a full-stack waste-management system for Nepal-focused municipal and organizational waste collection. It combines customer pickup requests, driver task flow, admin fleet management, real-time Socket.IO updates, monthly billing, eSewa/cash payments, Cloudinary waste uploads, and a Python ML service that predicts area-wise waste volume and generates daily truck dispatch schedules.
+This system is a full-stack waste-management system for Nepal-focused municipal and organizational waste collection. It combines customer pickup requests, driver task flow, admin fleet management, real-time Socket.IO updates, monthly billing, eSewa/cash payments, Cloudinary waste uploads, and a Python ML service that predicts area-wise waste volume and generates daily truck dispatch schedules.
 
 The project is split into three running apps:
 
@@ -34,7 +34,7 @@ maskey-1/
 
 ## What This App Does
 
-SafaBin supports two collection styles:
+This system supports two collection styles:
 
 1. Scheduled municipal collection
    - The ML service predicts waste volume per area for a date.
