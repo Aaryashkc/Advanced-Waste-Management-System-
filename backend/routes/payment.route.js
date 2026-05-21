@@ -28,7 +28,7 @@ router.get("/esewa/failure", esewaFailure);
 router.post("/esewa/success", esewaSuccess);
 router.post("/esewa/failure", esewaFailure);
 
-// Driver settles a cash payment after completing a pickup
+// Driver settles a cash payment during collection, before completing a pickup
 router.post(
   "/:pickupId/cash-collected",
   authMiddleware,

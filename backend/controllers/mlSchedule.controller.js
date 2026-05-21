@@ -11,17 +11,23 @@ import {
 import { createSystemNotification } from "./notification.controller.js";
 import { getIO } from "../socket/socketServer.js";
 
+const SCHEDULE_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Kathmandu";
+
 /**
- * Get today's local date as a UTC midnight Date.
+ * Get today's schedule date in APP_TIMEZONE as a UTC midnight Date.
  * This ensures consistency: `new Date("2026-03-22")` and `getLocalTodayUTC()`
- * both produce `2026-03-22T00:00:00.000Z` when the local date is March 22.
+ * both produce `2026-03-22T00:00:00.000Z` when the schedule date is March 22.
  */
 function getLocalTodayUTC() {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: SCHEDULE_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return new Date(`${values.year}-${values.month}-${values.day}T00:00:00.000Z`);
 }
 
 const FALLBACK_AREA_TYPES = {

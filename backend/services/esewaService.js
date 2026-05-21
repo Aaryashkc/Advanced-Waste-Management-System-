@@ -15,8 +15,8 @@ import { randomUUID } from "crypto";
  *       b) we then call eSewa's transaction-status API server-to-server to
  *          confirm the payment is actually COMPLETE — we never trust the
  *          redirect alone
- *  4. The amount used in the signed payload is fetched from the database
- *     (PickupRequest.estimatedPrice), never from the client request body.
+ *  4. The amount used in the signed payload is recomputed server-side before
+ *     initiation and never taken from the client request body.
  *  5. `transaction_uuid` is a server-generated random UUID. It is unique per
  *     attempt and acts as the idempotency key, preventing replay attacks.
  *  6. The signed_field_names list is fixed; we never let the client choose
@@ -74,7 +74,7 @@ function safeCompareSignatures(a, b) {
  * Build the form data the customer's browser will POST to eSewa.
  *
  * IMPORTANT: `amount` MUST be the trusted server-side price. The caller is
- * responsible for fetching it from the PickupRequest, NOT from req.body.
+ * responsible for recomputing it from the PickupRequest, NOT from req.body.
  */
 export function buildEsewaInitiationPayload({ amount, pickupId }) {
   const { productCode, secretKey, baseUrl } = getConfig();

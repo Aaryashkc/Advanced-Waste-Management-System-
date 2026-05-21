@@ -47,6 +47,8 @@ const PICKUP_EXPIRY_CRON = "*/1 * * * *"; // every minute
 const ML_SCHEDULE_CRON = "0 0 * * *"; // 12:00 AM (midnight) every day — generates today's schedule
 const BILLING_CRON = "0 3 1 * *"; // 3:00 AM on the 1st of every month — generate monthly bills
 
+const LOCAL_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Kathmandu";
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -171,7 +173,7 @@ server.listen(PORT, async () => {
       autoGenerateMLSchedule()
         .then((r) => console.log(`ML auto-schedule: ${r.message}`))
         .catch((e) => console.error("ML auto-schedule error:", e));
-    });
+    }, { timezone: LOCAL_TIMEZONE });
 
     // Generate today's schedule on startup (if not already generated)
     // Delay slightly to ensure DB connection is ready
@@ -188,7 +190,7 @@ server.listen(PORT, async () => {
       autoDispatchQualifiedMLSchedule()
         .then((r) => console.log(`ML auto-dispatch: ${r.message}`))
         .catch((e) => console.error("ML auto-dispatch error:", e));
-    });
+    }, { timezone: LOCAL_TIMEZONE });
   }
 
   if (!billingCronScheduled) {

@@ -53,6 +53,54 @@ function pickupPayload(doc) {
   };
 }
 
+function sameId(a, b) {
+  return a != null && b != null && a.toString() === b.toString();
+}
+
+function driverIsAssignedToPickup(pickup, driverUser) {
+  return sameId(pickup.driverId, driverUser._id);
+}
+
+function driverIsMatchedToPickup(pickup, driverUser) {
+  return (pickup.matchedDriverIds || []).some((id) => sameId(id, driverUser._id));
+}
+
+function pickupMatchesPendingDriverVisibility(pickup, driverUser) {
+  const matchedDriverIds = pickup.matchedDriverIds || [];
+  const isBroadcast = matchedDriverIds.length === 0;
+  const isMatched = driverIsMatchedToPickup(pickup, driverUser);
+
+  const isOpenPendingPickup =
+    pickup.status === "PENDING" &&
+    ["cash", "esewa"].includes(pickup.paymentMethod) &&
+    ["PENDING", "PAID"].includes(pickup.paymentStatus) &&
+    pickup.expiresAt &&
+    pickup.expiresAt > new Date();
+
+  if (!isOpenPendingPickup) return false;
+  if (isMatched) return true;
+
+  return (
+    (sameId(pickup.orgId, driverUser.orgId) || pickup.orgId == null) &&
+    isBroadcast
+  );
+}
+
+async function canDriverViewPickup(pickup, driverUser) {
+  if (driverIsAssignedToPickup(pickup, driverUser)) return true;
+
+  const driverProfile = await Driver.findOne({ userId: driverUser._id }).select("assignedTruckId").lean();
+  if (!driverProfile?.assignedTruckId) return false;
+
+  const activePickup = await PickupRequest.findOne({
+    driverId: driverUser._id,
+    status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] },
+  }).select("_id").lean();
+  if (activePickup && !sameId(activePickup._id, pickup._id)) return false;
+
+  return pickupMatchesPendingDriverVisibility(pickup, driverUser);
+}
+
 /** Create a PickupEvent audit record (fire-and-forget, never blocks main flow) */
 function logEvent(pickupId, event, performer, fromStatus, toStatus, metadata = {}) {
   PickupEvent.create({
@@ -128,6 +176,108 @@ async function resolveOrgIdForLocation({ latitude, longitude, area }) {
   return areaDoc?.orgId || null;
 }
 
+async function findServiceAreaForLocation({ latitude, longitude, area }) {
+  let areaDoc = null;
+
+  if (area) {
+    areaDoc = await Area.findOne({ name: area, isActive: true });
+  }
+
+  if (!areaDoc) {
+    const allAreas = await Area.find({
+      isActive: true,
+      "coordinates.latitude": { $exists: true, $ne: null },
+      "coordinates.longitude": { $exists: true, $ne: null },
+      orgId: { $ne: null },
+    }).lean();
+
+    if (allAreas.length === 0) return null;
+
+    const custLat = Number(latitude);
+    const custLng = Number(longitude);
+    const toRad = (deg) => (deg * Math.PI) / 180;
+
+    let minDist = Infinity;
+    for (const a of allAreas) {
+      const dLat = toRad(a.coordinates.latitude - custLat);
+      const dLng = toRad(a.coordinates.longitude - custLng);
+      const sinLat = Math.sin(dLat / 2);
+      const sinLng = Math.sin(dLng / 2);
+      const h = sinLat * sinLat + Math.cos(toRad(custLat)) * Math.cos(toRad(a.coordinates.latitude)) * sinLng * sinLng;
+      const dist = 2 * 6371 * Math.asin(Math.sqrt(h));
+      if (dist < minDist) {
+        minDist = dist;
+        areaDoc = a;
+      }
+    }
+  }
+
+  return areaDoc;
+}
+
+export async function computePickupPricingAndRoute({ latitude, longitude, category, level, area, orgId = null }) {
+  const areaDoc = await findServiceAreaForLocation({ latitude, longitude, area });
+  const effectiveOrgId = orgId || areaDoc?.orgId || null;
+
+  if (!effectiveOrgId) {
+    if (!areaDoc) {
+      const hasAreas = await Area.exists({
+        isActive: true,
+        "coordinates.latitude": { $exists: true, $ne: null },
+        "coordinates.longitude": { $exists: true, $ne: null },
+        orgId: { $ne: null },
+      });
+      if (!hasAreas) {
+        const err = new Error("No service areas with coordinates are configured yet");
+        err.statusCode = 404;
+        throw err;
+      }
+
+      const err = new Error("No service area found near your location");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const err = new Error(`No organization is assigned to area "${areaDoc.name}" yet`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const org = await Organization.findById(effectiveOrgId);
+  if (!org) {
+    const err = new Error("Organization not found for this area");
+    err.statusCode = 404;
+    throw err;
+  }
+  if (!org.location?.latitude || !org.location?.longitude) {
+    const err = new Error(`Organization "${org.name}" has no depot coordinates configured`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const depot = { latitude: org.location.latitude, longitude: org.location.longitude };
+  const customer = { latitude: Number(latitude), longitude: Number(longitude) };
+  const route = await getRoute(depot, customer);
+  const pricing = await calculatePrice({
+    category: category || "non-recyclable",
+    level: level || "easy",
+    distanceKm: route.distanceKm,
+  });
+
+  return {
+    org,
+    orgId: org._id,
+    areaDoc,
+    pricing,
+    route,
+    depotLocation: {
+      latitude: depot.latitude,
+      longitude: depot.longitude,
+      address: org.location.address || null,
+    },
+  };
+}
+
 // ── POST /api/pickups/estimate ─────────────────────────────────────────────
 
 /**
@@ -168,74 +318,15 @@ export const estimatePickup = async (req, res) => {
     }
 
     // 1. Resolve area → organization
-    //    Strategy: if area name is given, match by name.
-    //    Otherwise, find the nearest area by GPS coordinates.
-    let areaDoc = null;
-
-    if (area) {
-      areaDoc = await Area.findOne({ name: area, isActive: true });
-    }
-
-    if (!areaDoc) {
-      // Find nearest area by coordinates (haversine approximation via sorting)
-      const allAreas = await Area.find({
-        isActive: true,
-        "coordinates.latitude": { $exists: true, $ne: null },
-        "coordinates.longitude": { $exists: true, $ne: null },
-        orgId: { $ne: null },
-      }).lean();
-
-      if (allAreas.length === 0) {
-        return res.status(404).json({ message: "No service areas with coordinates are configured yet" });
-      }
-
-      // Calculate distance to each area and pick the closest
-      const custLat = Number(latitude);
-      const custLng = Number(longitude);
-      const toRad = (deg) => (deg * Math.PI) / 180;
-
-      let minDist = Infinity;
-      for (const a of allAreas) {
-        const dLat = toRad(a.coordinates.latitude - custLat);
-        const dLng = toRad(a.coordinates.longitude - custLng);
-        const sinLat = Math.sin(dLat / 2);
-        const sinLng = Math.sin(dLng / 2);
-        const h = sinLat * sinLat + Math.cos(toRad(custLat)) * Math.cos(toRad(a.coordinates.latitude)) * sinLng * sinLng;
-        const dist = 2 * 6371 * Math.asin(Math.sqrt(h)); // km
-        if (dist < minDist) {
-          minDist = dist;
-          areaDoc = a;
-        }
-      }
-    }
-
-    if (!areaDoc) {
-      return res.status(404).json({ message: "No service area found near your location" });
-    }
-    if (!areaDoc.orgId) {
-      return res.status(400).json({ message: `No organization is assigned to area "${areaDoc.name}" yet` });
-    }
-
-    const org = await Organization.findById(areaDoc.orgId);
-    if (!org) {
-      return res.status(404).json({ message: "Organization not found for this area" });
-    }
-    if (!org.location?.latitude || !org.location?.longitude) {
-      return res.status(400).json({ message: `Organization "${org.name}" has no depot coordinates configured` });
-    }
-
-    // 2. Get route from depot → customer location
-    const depot = { latitude: org.location.latitude, longitude: org.location.longitude };
-    const customer = { latitude: Number(latitude), longitude: Number(longitude) };
-    const route = await getRoute(depot, customer);
-
-    // 3. Calculate price
-    const pricing = await calculatePrice({
-      category: category || "non-recyclable",
-      level: level || "easy",
-      distanceKm: route.distanceKm,
+    const { org, areaDoc, route, pricing, depotLocation } = await computePickupPricingAndRoute({
+      latitude,
+      longitude,
+      category,
+      level,
+      area,
     });
 
+    // 2. Get route from depot → customer location
     return res.status(200).json({
       success: true,
       estimatedPrice: pricing.estimatedPrice,
@@ -245,18 +336,17 @@ export const estimatePickup = async (req, res) => {
       durationMinutes: route.durationMinutes,
       routeGeometry: route.geometry,
       fallback: route.fallback || false,
-      depotLocation: {
-        latitude: depot.latitude,
-        longitude: depot.longitude,
-        address: org.location.address || null,
-      },
+      depotLocation,
       orgId: org._id,
       orgName: org.name,
-      areaName: areaDoc.name,
+      areaName: areaDoc?.name || null,
     });
   } catch (err) {
     console.error("estimatePickup error:", err);
-    return res.status(500).json({ message: "Failed to estimate pickup", error: err.message });
+    return res.status(err.statusCode || 500).json({
+      message: err.statusCode ? err.message : "Failed to estimate pickup",
+      ...(!err.statusCode && { error: err.message }),
+    });
   }
 };
 
@@ -271,7 +361,6 @@ export const createPickup = async (req, res) => {
   try {
     const {
       latitude, longitude, address, category, level, wasteUploadId, province, area,
-      estimatedPrice, priceBreakdown, routeDistanceKm, routeDurationMinutes, routeGeometry, depotLocation,
     } = req.body;
 
     // Whitelist payment method — never trust arbitrary client values
@@ -293,6 +382,16 @@ export const createPickup = async (req, res) => {
         area: area || null,
       });
     }
+
+    const quote = await computePickupPricingAndRoute({
+      latitude,
+      longitude,
+      category,
+      level,
+      area: area || null,
+      orgId: resolvedOrgId,
+    });
+    resolvedOrgId = quote.orgId;
 
     // Run the driver-matching algorithm (now area-aware)
     const matched = await findBestDrivers({
@@ -317,12 +416,13 @@ export const createPickup = async (req, res) => {
       level: level || "easy",
       matchedDriverIds: matchedUserIds,
       status: "PAYMENT_REQUIRED",
-      estimatedPrice: estimatedPrice || null,
-      priceBreakdown: priceBreakdown || null,
-      routeDistanceKm: routeDistanceKm || null,
-      routeDurationMinutes: routeDurationMinutes || null,
-      routeGeometry: routeGeometry || null,
-      depotLocation: depotLocation || null,
+      estimatedPrice: quote.pricing.estimatedPrice,
+      currency: quote.pricing.currency,
+      priceBreakdown: quote.pricing.priceBreakdown,
+      routeDistanceKm: quote.route.distanceKm,
+      routeDurationMinutes: quote.route.durationMinutes,
+      routeGeometry: quote.route.geometry,
+      depotLocation: quote.depotLocation,
       paymentStatus: "UNPAID",
       statusHistory: [
         {
@@ -364,7 +464,10 @@ export const createPickup = async (req, res) => {
     });
   } catch (err) {
     console.error("createPickup error:", err);
-    return res.status(500).json({ message: "Failed to create pickup request", error: err.message });
+    return res.status(err.statusCode || 500).json({
+      message: err.statusCode ? err.message : "Failed to create pickup request",
+      ...(!err.statusCode && { error: err.message }),
+    });
   }
 };
 
@@ -379,8 +482,9 @@ export const getPickup = async (req, res) => {
     const isOwner = pickup.customerId.toString() === _id.toString();
     const isAdmin = role === "admin" || role === "super_admin";
     const isDriver = role === "driver";
+    const driverCanView = isDriver ? await canDriverViewPickup(pickup, req.user) : false;
 
-    if (!isOwner && !isDriver && !isAdmin) {
+    if (!isOwner && !driverCanView && !isAdmin) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -555,16 +659,14 @@ export const getPendingPickups = async (req, res) => {
       paymentMethod: { $in: ["cash", "esewa"] },
       paymentStatus: { $in: ["PENDING", "PAID"] },
       expiresAt: { $gt: new Date() },
-      $or: [{ orgId: driverUser.orgId }, { orgId: null }],
+      $or: [
+        { matchedDriverIds: driverUser._id },
+        { orgId: driverUser.orgId },
+        { orgId: null },
+      ],
     }).sort({ createdAt: -1 });
 
-    // Filter: only show if driver is explicitly matched, or if broadcast (empty matchedDriverIds)
-    const eligiblePickups = pendingPickups.filter((p) => {
-      if (p.matchedDriverIds && p.matchedDriverIds.length > 0) {
-        return p.matchedDriverIds.some((id) => id.toString() === driverUser._id.toString());
-      }
-      return true;
-    });
+    const eligiblePickups = pendingPickups.filter((p) => pickupMatchesPendingDriverVisibility(p, driverUser));
 
     return res.status(200).json({ pickups: eligiblePickups.slice(0, 20).map(pickupPayload) });
   } catch (err) {
@@ -599,6 +701,14 @@ export const acceptPickup = async (req, res) => {
     });
     if (activePickup) {
       return res.status(400).json({ message: "You already have an active pickup. Complete it before accepting a new one." });
+    }
+
+    const requestedPickup = await PickupRequest.findById(req.params.id);
+    if (!requestedPickup) {
+      return res.status(404).json({ message: "Pickup request not found" });
+    }
+    if (!pickupMatchesPendingDriverVisibility(requestedPickup, driverUser)) {
+      return res.status(403).json({ message: "This pickup is not available to you" });
     }
 
     const now = new Date();
@@ -807,6 +917,18 @@ export const updatePickupStatus = async (req, res) => {
     const expectedPrev = Object.entries(STATUS_TRANSITIONS).find(([, v]) => v === newStatus)?.[0];
     if (!expectedPrev) {
       return res.status(400).json({ message: `No valid transition to ${newStatus}` });
+    }
+
+    if (newStatus === "COMPLETED") {
+      const pickupBeforeCompletion = await PickupRequest.findOne({
+        _id: req.params.id,
+        driverId: driverUser._id,
+        status: expectedPrev,
+      }).select("paymentMethod paymentStatus");
+
+      if (pickupBeforeCompletion?.paymentMethod === "cash" && pickupBeforeCompletion.paymentStatus !== "PAID") {
+        return res.status(400).json({ message: "Confirm cash payment before completing this pickup" });
+      }
     }
 
     const now = new Date();

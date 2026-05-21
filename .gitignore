@@ -36,3 +36,4 @@ env/
 *.sw?
 
 .env
+CUSTOMER_PICKUP_FIX_LIST.txt

@@ -36,6 +36,7 @@ export default function TaskFlow() {
   const [error, setError] = useState(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [cashUpdating, setCashUpdating] = useState(false);
+  const [cashConfirmed, setCashConfirmed] = useState(false);
 
   // Fetch pickup if not passed via state
   useEffect(() => {
@@ -71,6 +72,13 @@ export default function TaskFlow() {
 
   const allChecked = Object.values(checks).every(Boolean);
   const isCompleted = currentStatus === "COMPLETED";
+  const requiresCashConfirmation = pickup?.paymentMethod === "cash" && pickup?.paymentStatus !== "PAID";
+
+  useEffect(() => {
+    if (pickup?.paymentMethod === "cash" && pickup?.paymentStatus === "PAID") {
+      setCashConfirmed(true);
+    }
+  }, [pickup?.paymentMethod, pickup?.paymentStatus]);
 
   function resetChecklist() {
     setChecks({
@@ -121,9 +129,29 @@ export default function TaskFlow() {
 
   async function handleMarkComplete() {
     if (!allChecked) return;
+    if (requiresCashConfirmation && !cashConfirmed) {
+      setError("Confirm cash payment before completing this pickup");
+      return;
+    }
+
     // First move to COLLECTING
     const ok1 = await updateStatus("COLLECTING");
     if (!ok1) return;
+
+    if (requiresCashConfirmation) {
+      setCashUpdating(true);
+      try {
+        await api.post(`/payments/${pickupId}/cash-collected`);
+        const fresh = await api.get(`/pickups/${pickupId}`);
+        if (fresh.data?.pickup) setPickup(fresh.data.pickup);
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to confirm cash received");
+        setCashUpdating(false);
+        return;
+      }
+      setCashUpdating(false);
+    }
+
     // Then to COMPLETED
     const ok2 = await updateStatus("COMPLETED");
     if (ok2) {
@@ -309,6 +337,10 @@ export default function TaskFlow() {
                 allChecked={allChecked}
                 isCompleted={isCompleted}
                 statusUpdating={statusUpdating}
+                cashUpdating={cashUpdating}
+                cashConfirmed={cashConfirmed}
+                requiresCashConfirmation={requiresCashConfirmation}
+                onCashConfirmedChange={setCashConfirmed}
                 onMarkComplete={handleMarkComplete}
                 onBack={handleBackToUpdate}
               />
@@ -425,6 +457,10 @@ function TaskExecutionUI({
   allChecked,
   isCompleted,
   statusUpdating,
+  cashUpdating,
+  cashConfirmed,
+  requiresCashConfirmation,
+  onCashConfirmedChange,
   onMarkComplete,
   onBack,
 }) {
@@ -522,18 +558,38 @@ function TaskExecutionUI({
           </div>
         </div>
 
+        <div className="bg-white rounded-3xl border border-primary/15 shadow-sm p-6">
+          <p className="text-sm font-semibold text-primary mb-4">
+            PAYMENT
+          </p>
+          <PaymentBadge pickup={pickup} />
+          {requiresCashConfirmation && (
+            <label className="mt-4 flex items-center gap-3 border rounded-xl px-4 py-3 select-none cursor-pointer hover:border-primary/50 transition-all border-primary/20">
+              <input
+                type="checkbox"
+                checked={cashConfirmed}
+                onChange={(e) => onCashConfirmedChange(e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="text-sm font-semibold text-primary">
+                Cash received from customer
+              </span>
+            </label>
+          )}
+        </div>
+
         {!isCompleted && (
           <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
             <button
               onClick={onMarkComplete}
-              disabled={!allChecked || statusUpdating}
-              className={`px-8 py-4 rounded-2xl font-semibold transition shadow-sm ${allChecked && !statusUpdating
+              disabled={!allChecked || statusUpdating || cashUpdating || (requiresCashConfirmation && !cashConfirmed)}
+              className={`px-8 py-4 rounded-2xl font-semibold transition shadow-sm ${allChecked && !statusUpdating && !cashUpdating && (!requiresCashConfirmation || cashConfirmed)
                   ? "bg-primary text-white hover:opacity-95 active:scale-95"
                   : "bg-black/10 text-black/40 cursor-not-allowed"
                 }`}
             >
-              {statusUpdating ? (
-                <span className="inline-flex items-center gap-2"><Spinner /> Completing…</span>
+              {statusUpdating || cashUpdating ? (
+                <span className="inline-flex items-center gap-2"><Spinner /> Completing...</span>
               ) : (
                 "Mark Collection Complete"
               )}
