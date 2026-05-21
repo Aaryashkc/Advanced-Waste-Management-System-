@@ -65,6 +65,72 @@ function driverIsMatchedToPickup(pickup, driverUser) {
   return (pickup.matchedDriverIds || []).some((id) => sameId(id, driverUser._id));
 }
 
+const MIN_CAPACITY_BY_LEVEL = {
+  easy: 0,
+  medium: 1000,
+  hard: 3500,
+};
+
+const MIN_DUTY_RANK_BY_LEVEL = {
+  easy: 1,
+  medium: 2,
+  hard: 3,
+};
+
+const DUTY_RANK = {
+  "light duty": 1,
+  "medium duty": 2,
+  "heavy duty": 3,
+};
+
+function driverPickupAvailabilityFilter(driverUserId) {
+  return {
+    driverId: driverUserId,
+    status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] },
+  };
+}
+
+function getPickupDriverAccessFilter(driverUser, pickup) {
+  const matchedDriverIds = pickup.matchedDriverIds || [];
+  if (matchedDriverIds.length > 0) {
+    return { matchedDriverIds: driverUser._id };
+  }
+
+  return pickup.orgId == null
+    ? { matchedDriverIds: { $size: 0 }, orgId: null }
+    : { matchedDriverIds: { $size: 0 }, orgId: pickup.orgId };
+}
+
+function checkDriverPickupEligibility(pickup, driverUser, driverProfile) {
+  if (!driverProfile) return { ok: false, message: "Driver profile not found", status: 404 };
+  if (!driverProfile.isAvailable) return { ok: false, message: "Driver is not available", status: 403 };
+
+  const truck = driverProfile.assignedTruckId;
+  if (!truck) return { ok: false, message: "Driver must have an assigned truck to accept pickups", status: 403 };
+  if (!truck.isAvailable) return { ok: false, message: "Assigned truck is not available", status: 403 };
+
+  if (pickup.orgId && !sameId(truck.orgId, pickup.orgId)) {
+    return { ok: false, message: "Assigned truck is not eligible for this pickup organization", status: 403 };
+  }
+
+  if (!pickupMatchesPendingDriverVisibility(pickup, driverUser)) {
+    return { ok: false, message: "This pickup is not available to you", status: 403 };
+  }
+
+  const minCapacity = MIN_CAPACITY_BY_LEVEL[pickup.level] ?? 0;
+  if ((truck.capacity || 0) < minCapacity) {
+    return { ok: false, message: "Assigned truck does not meet this pickup's capacity requirement", status: 403 };
+  }
+
+  const minDutyRank = MIN_DUTY_RANK_BY_LEVEL[pickup.level] ?? 1;
+  const dutyRank = DUTY_RANK[truck.dutyType] || 0;
+  if (dutyRank < minDutyRank) {
+    return { ok: false, message: "Assigned truck does not meet this pickup's duty requirement", status: 403 };
+  }
+
+  return { ok: true };
+}
+
 function pickupMatchesPendingDriverVisibility(pickup, driverUser) {
   const matchedDriverIds = pickup.matchedDriverIds || [];
   const isBroadcast = matchedDriverIds.length === 0;
@@ -89,13 +155,13 @@ function pickupMatchesPendingDriverVisibility(pickup, driverUser) {
 async function canDriverViewPickup(pickup, driverUser) {
   if (driverIsAssignedToPickup(pickup, driverUser)) return true;
 
-  const driverProfile = await Driver.findOne({ userId: driverUser._id }).select("assignedTruckId").lean();
-  if (!driverProfile?.assignedTruckId) return false;
+  const driverProfile = await Driver.findOne({ userId: driverUser._id })
+    .populate("assignedTruckId", "capacity dutyType isAvailable orgId")
+    .select("isAvailable assignedTruckId")
+    .lean();
+  if (!checkDriverPickupEligibility(pickup, driverUser, driverProfile).ok) return false;
 
-  const activePickup = await PickupRequest.findOne({
-    driverId: driverUser._id,
-    status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] },
-  }).select("_id").lean();
+  const activePickup = await PickupRequest.findOne(driverPickupAvailabilityFilter(driverUser._id)).select("_id").lean();
   if (activePickup && !sameId(activePickup._id, pickup._id)) return false;
 
   return pickupMatchesPendingDriverVisibility(pickup, driverUser);
@@ -640,16 +706,16 @@ export const getPendingPickups = async (req, res) => {
   try {
     const driverUser = req.user;
 
-    const driverProfile = await Driver.findOne({ userId: driverUser._id });
+    const driverProfile = await Driver.findOne({ userId: driverUser._id }).populate(
+      "assignedTruckId",
+      "capacity dutyType isAvailable orgId"
+    );
     if (!driverProfile?.assignedTruckId) {
       return res.status(200).json({ pickups: [] });
     }
 
     // Block if driver already has an active pickup
-    const activePickup = await PickupRequest.findOne({
-      driverId: driverUser._id,
-      status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] },
-    });
+    const activePickup = await PickupRequest.findOne(driverPickupAvailabilityFilter(driverUser._id));
     if (activePickup) {
       return res.status(200).json({ pickups: [], activePickup: pickupPayload(activePickup) });
     }
@@ -666,7 +732,9 @@ export const getPendingPickups = async (req, res) => {
       ],
     }).sort({ createdAt: -1 });
 
-    const eligiblePickups = pendingPickups.filter((p) => pickupMatchesPendingDriverVisibility(p, driverUser));
+    const eligiblePickups = pendingPickups.filter((p) =>
+      checkDriverPickupEligibility(p, driverUser, driverProfile).ok
+    );
 
     return res.status(200).json({ pickups: eligiblePickups.slice(0, 20).map(pickupPayload) });
   } catch (err) {
@@ -688,17 +756,11 @@ export const acceptPickup = async (req, res) => {
 
     const driverProfile = await Driver.findOne({ userId: driverUser._id }).populate(
       "assignedTruckId",
-      "licensePlate capacity truckType"
+      "licensePlate capacity truckType dutyType isAvailable orgId"
     );
-    if (!driverProfile) {
-      return res.status(404).json({ message: "Driver profile not found" });
-    }
 
     // Block if driver already has an active pickup
-    const activePickup = await PickupRequest.findOne({
-      driverId: driverUser._id,
-      status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] },
-    });
+    const activePickup = await PickupRequest.findOne(driverPickupAvailabilityFilter(driverUser._id));
     if (activePickup) {
       return res.status(400).json({ message: "You already have an active pickup. Complete it before accepting a new one." });
     }
@@ -707,8 +769,9 @@ export const acceptPickup = async (req, res) => {
     if (!requestedPickup) {
       return res.status(404).json({ message: "Pickup request not found" });
     }
-    if (!pickupMatchesPendingDriverVisibility(requestedPickup, driverUser)) {
-      return res.status(403).json({ message: "This pickup is not available to you" });
+    const eligibility = checkDriverPickupEligibility(requestedPickup, driverUser, driverProfile);
+    if (!eligibility.ok) {
+      return res.status(eligibility.status).json({ message: eligibility.message });
     }
 
     const now = new Date();
@@ -726,6 +789,8 @@ export const acceptPickup = async (req, res) => {
         status: "PENDING",
         paymentMethod: { $in: ["cash", "esewa"] },
         paymentStatus: { $in: ["PENDING", "PAID"] },
+        expiresAt: { $gt: now },
+        ...getPickupDriverAccessFilter(driverUser, requestedPickup),
       },
       {
         $set: {
