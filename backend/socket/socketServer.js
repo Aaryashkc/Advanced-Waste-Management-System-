@@ -4,6 +4,10 @@ import User from "../models/User.model.js";
 
 let io = null;
 
+export function driverOrgRoom(orgId) {
+    return orgId ? `driver-org:${orgId}` : null;
+}
+
 /**
  * Initialise Socket.IO and attach it to the HTTP server.
  * Call once from server.js after creating the http server.
@@ -50,10 +54,13 @@ export function initSocket(httpServer) {
             socket.join(`customer:${_id}`);
         }
 
-        // Every driver joins the shared drivers room AND a personal room for targeted notifications
+        // Drivers join a personal room and, when scoped, an org room for pickup fanout.
         if (role === "driver") {
-            socket.join("drivers");
             socket.join(`driver:${_id}`);
+            const orgDriverRoom = driverOrgRoom(orgId);
+            if (orgDriverRoom) {
+                socket.join(orgDriverRoom);
+            }
         }
 
         // Add admins to a shared 'admins' room for notifications

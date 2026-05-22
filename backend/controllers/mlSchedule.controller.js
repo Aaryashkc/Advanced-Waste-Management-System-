@@ -9,9 +9,24 @@ import {
   checkMLHealth as mlHealth,
 } from "../services/mlClient.js";
 import { createSystemNotification } from "./notification.controller.js";
-import { getIO } from "../socket/socketServer.js";
+import { driverOrgRoom, getIO } from "../socket/socketServer.js";
 
 const SCHEDULE_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Kathmandu";
+
+function emitScheduleUpdatedToDriverOrgs(io, schedule, payload) {
+  const orgIds = new Set();
+  for (const area of schedule?.areas || []) {
+    if (area.orgId) orgIds.add(area.orgId.toString());
+    for (const truck of area.assignedTrucks || []) {
+      if (truck.orgId) orgIds.add(truck.orgId.toString());
+    }
+  }
+
+  for (const orgId of orgIds) {
+    const room = driverOrgRoom(orgId);
+    if (room) io.to(room).emit("schedule:updated", payload);
+  }
+}
 
 /**
  * Get today's schedule date in APP_TIMEZONE as a UTC midnight Date.
@@ -214,7 +229,7 @@ async function notifyAssignedDrivers(schedule, source = "manual") {
     notified += 1;
   }
 
-  io.to("drivers").emit("schedule:updated", {
+  emitScheduleUpdatedToDriverOrgs(io, schedule, {
     scheduleId: schedule._id,
     status: "confirmed",
   });
@@ -988,8 +1003,8 @@ export const confirmSchedule = async (req, res) => {
           }
         }
       }
-      // Also broadcast to all drivers room for general awareness
-      io.to("drivers").emit("schedule:updated", {
+      // Notify drivers in organizations represented on this schedule.
+      emitScheduleUpdatedToDriverOrgs(io, schedule, {
         scheduleId: schedule._id,
         status: "confirmed",
       });

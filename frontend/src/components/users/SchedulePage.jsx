@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import TruckLoader from "../shared/TruckLoader";
 import ScheduleBg from "../../assets/schedule_truck.png";
@@ -306,8 +305,6 @@ function SchedulePage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedItem, setSelectedItem] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const navigate = useNavigate();
-
   const { publicSchedule, loading, error, fetchPublicSchedule } = useMLScheduleStore();
 
   useEffect(() => {

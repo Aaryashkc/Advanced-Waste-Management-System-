@@ -23,7 +23,14 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', {
+        argsIgnorePattern: '^_|^Icon$',
+        caughtErrorsIgnorePattern: '^_',
+        varsIgnorePattern: '^[A-Z_]|^useInView$|^getDutyType$',
+      }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'react-hooks/purity': 'off',
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ])

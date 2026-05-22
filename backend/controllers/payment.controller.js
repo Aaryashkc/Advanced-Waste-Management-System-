@@ -29,6 +29,16 @@ import {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
+function sameId(a, b) {
+  return a != null && b != null && a.toString() === b.toString();
+}
+
+function adminCanAccessPickup(pickup, user) {
+  if (user.role === "super_admin") return true;
+  if (user.role !== "admin") return false;
+  return sameId(pickup.orgId, user.orgId);
+}
+
 function paymentPayload(p) {
   if (!p) return null;
   return {
@@ -60,10 +70,59 @@ function paymentPayload(p) {
  *  - esewa: creates a Payment row, returns the SIGNED form fields the
  *           browser must POST to eSewa to start the hosted checkout.
  */
-async function dispatchPickupAfterPaymentChoice(pickup) {
+const DISPATCHABLE_PAYMENT_STATUSES = ["PAYMENT_REQUIRED", "PENDING"];
+
+function pickupMatchesPayment(pickup, payment) {
+  return (
+    payment &&
+    DISPATCHABLE_PAYMENT_STATUSES.includes(pickup.status) &&
+    pickup.paymentMethod === payment.method &&
+    pickup.paymentId?.toString() === payment._id.toString()
+  );
+}
+
+function activePickupPaymentFilter(payment) {
+  return {
+    _id: payment.pickupId,
+    paymentMethod: payment.method,
+    paymentId: payment._id,
+  };
+}
+
+async function updateActivePickupPaymentStatus(payment, paymentStatus) {
+  const result = await PickupRequest.updateOne(
+    activePickupPaymentFilter(payment),
+    { $set: { paymentStatus } }
+  );
+  return result.modifiedCount > 0;
+}
+
+async function cancelSupersededEsewaAttempts(pickupId, activePaymentId) {
+  await Payment.updateMany(
+    {
+      pickupId,
+      method: "esewa",
+      status: "PENDING",
+      _id: { $ne: activePaymentId },
+    },
+    {
+      $set: {
+        status: "CANCELLED",
+        failedAt: new Date(),
+        failureReason: "Superseded by a newer eSewa payment attempt",
+      },
+    }
+  );
+}
+
+async function dispatchPickupAfterPaymentChoice(pickup, payment) {
+  if (!pickupMatchesPayment(pickup, payment)) {
+    return false;
+  }
+
   const previousStatus = pickup.status;
 
-  if (pickup.status !== "PENDING") {
+  if (pickup.status === "PAYMENT_REQUIRED") {
     pickup.status = "PENDING";
     pickup.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     pickup.statusHistory.push({
@@ -78,6 +137,7 @@ async function dispatchPickupAfterPaymentChoice(pickup) {
 
   const customer = await User.findById(pickup.customerId).select("name").lean();
   emitPickupToDrivers(pickup, customer?.name || null);
+  return true;
 }
 
 export const initiatePayment = async (req, res) => {
@@ -156,7 +216,7 @@ export const initiatePayment = async (req, res) => {
       pickup.paymentStatus = "PENDING";
       pickup.paymentId = payment._id;
       await pickup.save();
-      await dispatchPickupAfterPaymentChoice(pickup);
+      await dispatchPickupAfterPaymentChoice(pickup, payment);
 
       return res.status(200).json({
         success: true,
@@ -193,6 +253,7 @@ export const initiatePayment = async (req, res) => {
     pickup.paymentStatus = "PENDING";
     pickup.paymentId = payment._id;
     await pickup.save();
+    await cancelSupersededEsewaAttempts(pickup._id, payment._id);
 
     return res.status(200).json({
       success: true,
@@ -288,8 +349,7 @@ export const esewaSuccess = async (req, res) => {
           failureReason: "Stored payment amount did not match recomputed pickup price",
         }
       );
-      pickup.paymentStatus = "FAILED";
-      await pickup.save();
+      await updateActivePickupPaymentStatus(payment, "FAILED");
       return res.redirect(`${FRONTEND_URL}/payment-failed?reason=amount_mismatch`);
     }
 
@@ -325,10 +385,7 @@ export const esewaSuccess = async (req, res) => {
           failureReason: `eSewa status: ${statusResp?.status}`,
         }
       );
-      await PickupRequest.updateOne(
-        { _id: payment.pickupId },
-        { paymentStatus: "FAILED" }
-      );
+      await updateActivePickupPaymentStatus(payment, "FAILED");
       return res.redirect(`${FRONTEND_URL}/payment-failed?reason=not_complete`);
     }
 
@@ -345,9 +402,26 @@ export const esewaSuccess = async (req, res) => {
     );
 
     if (updated) {
-      pickup.paymentStatus = "PAID";
-      await pickup.save();
-      await dispatchPickupAfterPaymentChoice(pickup);
+      const activePickup = await PickupRequest.findOneAndUpdate(
+        activePickupPaymentFilter(updated),
+        {
+          $set: {
+            paymentStatus: "PAID",
+            orgId: pickup.orgId,
+            estimatedPrice: pickup.estimatedPrice,
+            currency: pickup.currency,
+            priceBreakdown: pickup.priceBreakdown,
+            routeDistanceKm: pickup.routeDistanceKm,
+            routeDurationMinutes: pickup.routeDurationMinutes,
+            routeGeometry: pickup.routeGeometry,
+            depotLocation: pickup.depotLocation,
+          },
+        },
+        { new: true }
+      );
+      if (activePickup) {
+        await dispatchPickupAfterPaymentChoice(activePickup, updated);
+      }
     }
 
     return res.redirect(
@@ -377,10 +451,7 @@ export const esewaFailure = async (req, res) => {
           { new: true }
         );
         if (payment) {
-          await PickupRequest.updateOne(
-            { _id: payment.pickupId },
-            { paymentStatus: "FAILED" }
-          );
+          await updateActivePickupPaymentStatus(payment, "FAILED");
         }
       } catch {
         // Signature failure — ignore silently, do not mutate state
@@ -465,11 +536,11 @@ export const getPaymentByPickup = async (req, res) => {
     );
     if (!pickup) return res.status(404).json({ message: "Pickup not found" });
 
-    const { _id, role } = req.user;
+    const { _id } = req.user;
     const isOwner = pickup.customerId.toString() === _id.toString();
     const isAssignedDriver =
       pickup.driverId && pickup.driverId.toString() === _id.toString();
-    const isAdmin = role === "admin" || role === "super_admin";
+    const isAdmin = adminCanAccessPickup(pickup, req.user);
 
     if (!isOwner && !isAssignedDriver && !isAdmin) {
       return res.status(403).json({ message: "Access denied" });
@@ -487,24 +558,66 @@ export const getPaymentByPickup = async (req, res) => {
 export const getAllPayments = async (req, res) => {
   try {
     const { method, status, limit = 100 } = req.query;
+    const { role, orgId } = req.user;
     const filter = {};
     if (method) filter.method = method;
     if (status) filter.status = status;
+    const maxLimit = Math.min(Number(limit) || 100, 500);
 
-    const payments = await Payment.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(Math.min(Number(limit) || 100, 500))
-      .lean();
+    const scopedStages = [];
+    if (role === "admin") {
+      if (!orgId || !mongoose.isValidObjectId(orgId)) {
+        return res.status(403).json({ message: "Organization ID required" });
+      }
 
-    const totals = await Payment.aggregate([
-      { $match: { status: "COMPLETED" } },
-      {
-        $group: {
-          _id: "$method",
-          total: { $sum: "$amount" },
-          count: { $sum: 1 },
+      const orgObjectId = new mongoose.Types.ObjectId(orgId);
+      scopedStages.push(
+        {
+          $lookup: {
+            from: "pickuprequests",
+            localField: "pickupId",
+            foreignField: "_id",
+            as: "pickup",
+          },
         },
-      },
+        {
+          $lookup: {
+            from: "users",
+            localField: "customerId",
+            foreignField: "_id",
+            as: "customer",
+          },
+        },
+        {
+          $match: {
+            $or: [
+              { "pickup.orgId": orgObjectId },
+              { "customer.orgId": orgObjectId },
+            ],
+          },
+        },
+        { $project: { pickup: 0, customer: 0 } }
+      );
+    }
+
+    const [payments, totals] = await Promise.all([
+      Payment.aggregate([
+        { $match: filter },
+        ...scopedStages,
+        { $sort: { createdAt: -1 } },
+        { $limit: maxLimit },
+      ]),
+      Payment.aggregate([
+        { $match: { status: "COMPLETED" } },
+        ...scopedStages,
+        {
+          $group: {
+            _id: "$method",
+            total: { $sum: "$amount" },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
     ]);
 
     return res.status(200).json({

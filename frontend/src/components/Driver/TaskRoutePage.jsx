@@ -81,7 +81,6 @@ export default function TaskRoutePage() {
   const lat = Number(loc.latitude);
   const lng = Number(loc.longitude);
   const hasCoords = !isNaN(lat) && !isNaN(lng);
-  const mapCenter = hasCoords ? [lat, lng] : [27.7172, 85.324];
 
   const category = pickup.category || "non-recyclable";
   const level = pickup.level || "easy";

@@ -6,7 +6,7 @@ import { sendOTPEmail, sendOTPSMS } from "../services/emailService.js";
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, phone, address, role } = req.body;
+    const { name, email, password, phone, address } = req.body;
 
     if (!name || !email || !phone) {
       return res.status(400).json({ message: "Name, email, and phone are required" });
@@ -41,7 +41,7 @@ export const register = async (req, res) => {
       passwordHash: hashedPassword,
       phone,
       address,
-      role: role || "customer_admin",
+      role: "customer_admin",
       loginOtp: {
         hash: hashedOTP,
         expiresAt: expiresAt,

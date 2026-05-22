@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import api from "../utils/api";
 
-const useUserStore = create((set, get) => ({
+const useUserStore = create((set) => ({
   users: [],
   stats: null,
   pagination: null,

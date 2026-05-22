@@ -1,44 +1,9 @@
 import Task from "../models/Task.model.js";
-import User from "../models/User.model.js";
 
 export const requestOnDemandPickup = async (req, res) => {
-  try {
-    const { wasteType, estimatedVolume, location, scheduledDate } = req.body;
-    const userId = req.user._id;
-    const user = await User.findById(userId);
-
-    if (!wasteType || !location || !location.latitude || !location.longitude) {
-      return res.status(400).json({ 
-        message: "Waste type and location (with coordinates) are required" 
-      });
-    }
-
-    if (!user.orgId) {
-      return res.status(400).json({ 
-        message: "User must be associated with an organization" 
-      });
-    }
-
-    const task = new Task({
-      taskType: "ON_DEMAND",
-      wasteType,
-      estimatedVolume: estimatedVolume || 100,
-      location,
-      status: "PENDING",
-      orgId: user.orgId,
-      requestedBy: userId,
-      scheduledDate: scheduledDate || null
-    });
-
-    await task.save();
-
-    res.status(201).json({
-      message: "On-demand pickup request created successfully",
-      task
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to create pickup request", error: error.message });
-  }
+  return res.status(410).json({
+    message: "Legacy pickup requests are disabled. Use /api/pickups to create a payment-gated pickup request.",
+  });
 };
 
 export const trackRequestStatus = async (req, res) => {

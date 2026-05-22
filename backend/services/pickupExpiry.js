@@ -1,5 +1,6 @@
 import PickupRequest from "../models/PickupRequest.model.js";
 import PickupEvent from "../models/PickupEvent.model.js";
+import Driver from "../models/Driver.model.js";
 import { getIO } from "../socket/socketServer.js";
 
 /**
@@ -31,6 +32,27 @@ export async function ensurePickupRequestIndexes() {
   }
 }
 
+function activePickupFilter(driverUserId) {
+  return {
+    driverId: driverUserId,
+    status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] },
+  };
+}
+
+async function releaseDriverIfNoActivePickup(driverUserId) {
+  if (!driverUserId) return false;
+  const activePickup = await PickupRequest.findOne(activePickupFilter(driverUserId))
+    .select("_id")
+    .lean();
+  if (activePickup) return false;
+
+  await Driver.updateOne(
+    { userId: driverUserId },
+    { $set: { isAvailable: true, updatedAt: new Date() } }
+  );
+  return true;
+}
+
 export async function expireStalePendingPickups({ customerId = null } = {}) {
   const now = new Date();
   const filter = {
@@ -40,7 +62,7 @@ export async function expireStalePendingPickups({ customerId = null } = {}) {
   };
 
   const stalePickups = await PickupRequest.find(filter)
-    .select("_id customerId")
+    .select("_id customerId driverId")
     .lean();
 
   if (stalePickups.length === 0) {
@@ -66,6 +88,11 @@ export async function expireStalePendingPickups({ customerId = null } = {}) {
 
   const modifiedCount = result.modifiedCount || 0;
   if (modifiedCount > 0) {
+    const driverIds = [
+      ...new Set(stalePickups.map((pickup) => pickup.driverId?.toString()).filter(Boolean)),
+    ];
+    await Promise.all(driverIds.map((driverId) => releaseDriverIfNoActivePickup(driverId)));
+
     await PickupEvent.insertMany(
       stalePickups.map((pickup) => ({
         pickupId: pickup._id,

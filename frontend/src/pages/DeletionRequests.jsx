@@ -52,8 +52,6 @@ const DeletionRequests = ({ onUpdate }) => {
     rejected: "bg-red-100 text-red-700"
   };
 
-  const pendingCount = requests.filter(r => r.status === "pending").length;
-
   return (
     <div className="space-y-6">
       {/* Header */}

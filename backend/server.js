@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import cron from "node-cron";
 import connectDB from "./config/db.js";
@@ -64,8 +65,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: process.env.URLENCODED_BODY_LIMIT || "1mb" }));
 
 // ── REST routes ───────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);

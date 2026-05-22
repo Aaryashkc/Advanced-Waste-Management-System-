@@ -4,13 +4,14 @@ import PickupEvent from "../models/PickupEvent.model.js";
 import Driver from "../models/Driver.model.js";
 import Truck from "../models/Truck.model.js";
 import User from "../models/User.model.js";
-import { getIO } from "../socket/socketServer.js";
+import { driverOrgRoom, getIO } from "../socket/socketServer.js";
 import { findBestDrivers } from "../services/driverMatcher.js";
 import { getRoute } from "../services/openRouteService.js";
 import { calculatePrice } from "../services/pricingEngine.js";
 import Area from "../models/Area.model.js";
 import Organization from "../models/Organization.model.js";
 import { expireStalePendingPickups } from "../services/pickupExpiry.js";
+import { validateCoordinates } from "../utils/coordinateValidator.js";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,12 @@ function sameId(a, b) {
   return a != null && b != null && a.toString() === b.toString();
 }
 
+function adminCanAccessPickup(pickup, user) {
+  if (user.role === "super_admin") return true;
+  if (user.role !== "admin") return false;
+  return sameId(pickup.orgId, user.orgId);
+}
+
 function driverIsAssignedToPickup(pickup, driverUser) {
   return sameId(pickup.driverId, driverUser._id);
 }
@@ -88,6 +95,25 @@ function driverPickupAvailabilityFilter(driverUserId) {
     driverId: driverUserId,
     status: { $in: ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"] },
   };
+}
+
+async function setDriverAvailable(driverUserId, isAvailable) {
+  if (!driverUserId) return;
+  await Driver.updateOne(
+    { userId: driverUserId },
+    { $set: { isAvailable, updatedAt: new Date() } }
+  );
+}
+
+async function releaseDriverIfNoActivePickup(driverUserId) {
+  if (!driverUserId) return false;
+  const activePickup = await PickupRequest.findOne(driverPickupAvailabilityFilter(driverUserId))
+    .select("_id")
+    .lean();
+  if (activePickup) return false;
+
+  await setDriverAvailable(driverUserId, true);
+  return true;
 }
 
 function getPickupDriverAccessFilter(driverUser, pickup) {
@@ -187,15 +213,34 @@ function emitSafe(fn) {
   try { fn(getIO()); } catch (_) { /* socket may not be initialized */ }
 }
 
+export function getPickupDriverRooms(pickup, { includeAssignedDriver = false } = {}) {
+  const rooms = new Set();
+  const matchedIds = pickup.matchedDriverIds || [];
+
+  if (matchedIds.length > 0) {
+    matchedIds.forEach((driverId) => rooms.add(`driver:${driverId}`));
+  } else {
+    const orgRoom = driverOrgRoom(pickup.orgId);
+    if (orgRoom) rooms.add(orgRoom);
+  }
+
+  if (includeAssignedDriver && pickup.driverId) {
+    rooms.add(`driver:${pickup.driverId}`);
+  }
+
+  return [...rooms];
+}
+
+function emitToPickupDriverRooms(io, pickup, event, payload, options = {}) {
+  getPickupDriverRooms(pickup, options).forEach((room) => {
+    io.to(room).emit(event, payload);
+  });
+}
+
 export function emitPickupToDrivers(pickup, customerName = null) {
   emitSafe((io) => {
     const payload = { ...pickupPayload(pickup), customerName };
-    const matchedIds = pickup.matchedDriverIds || [];
-    if (matchedIds.length > 0) {
-      matchedIds.forEach((driverId) => io.to(`driver:${driverId}`).emit("pickup:created", payload));
-    } else {
-      io.to("drivers").emit("pickup:created", payload);
-    }
+    emitToPickupDriverRooms(io, pickup, "pickup:created", payload);
     io.to("admins").emit("pickup:created", payload);
   });
 }
@@ -282,7 +327,18 @@ async function findServiceAreaForLocation({ latitude, longitude, area }) {
 }
 
 export async function computePickupPricingAndRoute({ latitude, longitude, category, level, area, orgId = null }) {
-  const areaDoc = await findServiceAreaForLocation({ latitude, longitude, area });
+  const customerCoordinates = validateCoordinates(latitude, longitude);
+  if (!customerCoordinates.ok) {
+    const err = new Error(customerCoordinates.message);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const areaDoc = await findServiceAreaForLocation({
+    latitude: customerCoordinates.coordinates.latitude,
+    longitude: customerCoordinates.coordinates.longitude,
+    area,
+  });
   const effectiveOrgId = orgId || areaDoc?.orgId || null;
 
   if (!effectiveOrgId) {
@@ -315,14 +371,18 @@ export async function computePickupPricingAndRoute({ latitude, longitude, catego
     err.statusCode = 404;
     throw err;
   }
-  if (!org.location?.latitude || !org.location?.longitude) {
-    const err = new Error(`Organization "${org.name}" has no depot coordinates configured`);
+  const depotCoordinates = validateCoordinates(org.location?.latitude, org.location?.longitude, {
+    latitudeLabel: "depot latitude",
+    longitudeLabel: "depot longitude",
+  });
+  if (!depotCoordinates.ok) {
+    const err = new Error(`Organization "${org.name}" has invalid depot coordinates: ${depotCoordinates.message}`);
     err.statusCode = 400;
     throw err;
   }
 
-  const depot = { latitude: org.location.latitude, longitude: org.location.longitude };
-  const customer = { latitude: Number(latitude), longitude: Number(longitude) };
+  const depot = depotCoordinates.coordinates;
+  const customer = customerCoordinates.coordinates;
   const route = await getRoute(depot, customer);
   const pricing = await calculatePrice({
     category: category || "non-recyclable",
@@ -358,16 +418,23 @@ export async function computePickupPricingAndRoute({ latitude, longitude, catego
 export const getDriverRoute = async (req, res) => {
   try {
     const { originLat, originLng, destLat, destLng } = req.body || {};
-    if (
-      originLat == null || originLng == null ||
-      destLat == null || destLng == null
-    ) {
-      return res.status(400).json({ message: "originLat, originLng, destLat, destLng are required" });
+    const origin = validateCoordinates(originLat, originLng, {
+      latitudeLabel: "originLat",
+      longitudeLabel: "originLng",
+    });
+    if (!origin.ok) {
+      return res.status(400).json({ message: origin.message });
     }
-    const route = await getRoute(
-      { latitude: Number(originLat), longitude: Number(originLng) },
-      { latitude: Number(destLat), longitude: Number(destLng) },
-    );
+
+    const destination = validateCoordinates(destLat, destLng, {
+      latitudeLabel: "destLat",
+      longitudeLabel: "destLng",
+    });
+    if (!destination.ok) {
+      return res.status(400).json({ message: destination.message });
+    }
+
+    const route = await getRoute(origin.coordinates, destination.coordinates);
     return res.json({ success: true, ...route });
   } catch (err) {
     console.error("getDriverRoute error:", err);
@@ -379,14 +446,15 @@ export const estimatePickup = async (req, res) => {
   try {
     const { latitude, longitude, category, level, area } = req.body;
 
-    if (!latitude || !longitude) {
-      return res.status(400).json({ message: "latitude and longitude are required" });
+    const coordinates = validateCoordinates(latitude, longitude);
+    if (!coordinates.ok) {
+      return res.status(400).json({ message: coordinates.message });
     }
 
     // 1. Resolve area → organization
     const { org, areaDoc, route, pricing, depotLocation } = await computePickupPricingAndRoute({
-      latitude,
-      longitude,
+      latitude: coordinates.coordinates.latitude,
+      longitude: coordinates.coordinates.longitude,
       category,
       level,
       area,
@@ -421,7 +489,7 @@ export const estimatePickup = async (req, res) => {
 /**
  * Customer creates a new pickup request.
  * Uses the knapsack driver-matching algorithm to notify only best-fit drivers.
- * Falls back to broadcasting to all drivers if no matches found.
+ * Falls back to the pickup organization's driver room if no matches are found.
  */
 export const createPickup = async (req, res) => {
   try {
@@ -430,8 +498,9 @@ export const createPickup = async (req, res) => {
     } = req.body;
 
     // Whitelist payment method — never trust arbitrary client values
-    if (!latitude || !longitude) {
-      return res.status(400).json({ message: "latitude and longitude are required" });
+    const coordinates = validateCoordinates(latitude, longitude);
+    if (!coordinates.ok) {
+      return res.status(400).json({ message: coordinates.message });
     }
 
     const customer = req.user;
@@ -443,15 +512,15 @@ export const createPickup = async (req, res) => {
     let resolvedOrgId = customer.orgId || null;
     if (!resolvedOrgId) {
       resolvedOrgId = await resolveOrgIdForLocation({
-        latitude,
-        longitude,
+        latitude: coordinates.coordinates.latitude,
+        longitude: coordinates.coordinates.longitude,
         area: area || null,
       });
     }
 
     const quote = await computePickupPricingAndRoute({
-      latitude,
-      longitude,
+      latitude: coordinates.coordinates.latitude,
+      longitude: coordinates.coordinates.longitude,
       category,
       level,
       area: area || null,
@@ -461,8 +530,8 @@ export const createPickup = async (req, res) => {
 
     // Run the driver-matching algorithm (now area-aware)
     const matched = await findBestDrivers({
-      latitude: Number(latitude),
-      longitude: Number(longitude),
+      latitude: coordinates.coordinates.latitude,
+      longitude: coordinates.coordinates.longitude,
       category: category || "non-recyclable",
       level: level || "easy",
       orgId: resolvedOrgId,
@@ -475,7 +544,7 @@ export const createPickup = async (req, res) => {
       customerId: customer._id,
       orgId: resolvedOrgId,
       wasteUploadId: wasteUploadId || null,
-      location: { latitude, longitude, address: address || null },
+      location: { ...coordinates.coordinates, address: address || null },
       province: province || null,
       area: area || null,
       category: category || "non-recyclable",
@@ -520,7 +589,10 @@ export const createPickup = async (req, res) => {
       });
     } else {
       logEvent(pickup._id, "BROADCAST", { role: "system", name: "DriverMatcher" }, "PAYMENT_REQUIRED", "PAYMENT_REQUIRED", {
-        reason: "No matching drivers found — broadcast to all",
+        reason: resolvedOrgId
+          ? "No matching drivers found - broadcast to pickup organization drivers"
+          : "No matching drivers found and no organization scope was available",
+        orgId: resolvedOrgId,
       });
     }
 
@@ -546,7 +618,7 @@ export const getPickup = async (req, res) => {
 
     const { role, _id } = req.user;
     const isOwner = pickup.customerId.toString() === _id.toString();
-    const isAdmin = role === "admin" || role === "super_admin";
+    const isAdmin = adminCanAccessPickup(pickup, req.user);
     const isDriver = role === "driver";
     const driverCanView = isDriver ? await canDriverViewPickup(pickup, req.user) : false;
 
@@ -572,9 +644,9 @@ export const getPickupEvents = async (req, res) => {
     const pickup = await PickupRequest.findById(req.params.id).select("customerId orgId").lean();
     if (!pickup) return res.status(404).json({ message: "Pickup request not found" });
 
-    const { role, _id } = req.user;
+    const { _id } = req.user;
     const isOwner = pickup.customerId.toString() === _id.toString();
-    const isAdmin = role === "admin" || role === "super_admin";
+    const isAdmin = adminCanAccessPickup(pickup, req.user);
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: "Access denied" });
     }
@@ -751,6 +823,7 @@ export const getPendingPickups = async (req, res) => {
  * driver can ever succeed. Full audit trail recorded.
  */
 export const acceptPickup = async (req, res) => {
+  let reservedDriverUserId = null;
   try {
     const driverUser = req.user;
 
@@ -773,6 +846,16 @@ export const acceptPickup = async (req, res) => {
     if (!eligibility.ok) {
       return res.status(eligibility.status).json({ message: eligibility.message });
     }
+
+    const reservedDriver = await Driver.findOneAndUpdate(
+      { _id: driverProfile._id, isAvailable: true },
+      { $set: { isAvailable: false, updatedAt: new Date() } },
+      { new: true }
+    );
+    if (!reservedDriver) {
+      return res.status(409).json({ message: "Driver is no longer available" });
+    }
+    reservedDriverUserId = driverUser._id;
 
     const now = new Date();
     const driverInfo = {
@@ -812,6 +895,8 @@ export const acceptPickup = async (req, res) => {
     );
 
     if (!updated) {
+      await releaseDriverIfNoActivePickup(driverUser._id);
+
       const exists = await PickupRequest.findById(req.params.id);
       if (!exists) return res.status(404).json({ message: "Pickup request not found" });
 
@@ -844,12 +929,21 @@ export const acceptPickup = async (req, res) => {
         ...payload,
         driverName: driverInfo.name,
       });
-      io.to("drivers").emit("pickup:accepted", { id: updated._id, status: "ASSIGNED", driverId: driverUser._id });
+      emitToPickupDriverRooms(
+        io,
+        updated,
+        "pickup:accepted",
+        { id: updated._id, status: "ASSIGNED", driverId: driverUser._id },
+        { includeAssignedDriver: true }
+      );
       io.to("admins").emit("pickup:accepted", { id: updated._id, status: "ASSIGNED", driverId: driverUser._id });
     });
 
     return res.status(200).json({ message: "Pickup request accepted", pickup: payload });
   } catch (err) {
+    if (reservedDriverUserId) {
+      await releaseDriverIfNoActivePickup(reservedDriverUserId);
+    }
     console.error("acceptPickup error:", err);
     return res.status(500).json({ message: "Failed to accept pickup", error: err.message });
   }
@@ -859,19 +953,47 @@ export const acceptPickup = async (req, res) => {
 
 export const cancelPickup = async (req, res) => {
   try {
-    const { _id, role, name } = req.user;
+    const { _id, role, name, orgId } = req.user;
     const { reason } = req.body || {};
+    const adminAccessClauses = [
+      ...(role === "super_admin" ? [{}] : []),
+      ...(role === "admin" && orgId ? [{ orgId }] : []),
+    ];
 
-    // Atomic: only cancel if in a cancellable state
+    const accessFilter = {
+      _id: req.params.id,
+      $or: [
+        { customerId: _id },                                      // owner
+        ...adminAccessClauses,                                    // scoped admin override
+      ],
+    };
+
+    const cancellablePickup = await PickupRequest.findOne({
+      ...accessFilter,
+      status: { $in: ["PAYMENT_REQUIRED", "PENDING", "ASSIGNED"] },
+    }).select("status").lean();
+
+    if (!cancellablePickup) {
+      const exists = await PickupRequest.findById(req.params.id);
+      if (!exists) return res.status(404).json({ message: "Pickup request not found" });
+
+      const isOwner = exists.customerId.toString() === _id.toString();
+      const isAdmin = adminCanAccessPickup(exists, req.user);
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      return res.status(400).json({ message: `Cannot cancel a request with status: ${exists.status}` });
+    }
+
+    const previousStatus = cancellablePickup.status;
+
+    // Atomic: only cancel if the status is still the one we audited.
     const now = new Date();
     const updated = await PickupRequest.findOneAndUpdate(
       {
-        _id: req.params.id,
-        status: { $in: ["PAYMENT_REQUIRED", "PENDING", "ASSIGNED"] },
-        $or: [
-          { customerId: _id },                                      // owner
-          ...(role === "admin" || role === "super_admin" ? [{}] : []), // admin override
-        ],
+        ...accessFilter,
+        status: previousStatus,
       },
       {
         $set: {
@@ -882,7 +1004,7 @@ export const cancelPickup = async (req, res) => {
         },
         $push: {
           statusHistory: {
-            from: null, // will be set by pre-check
+            from: previousStatus,
             to: "CANCELLED",
             at: now,
             by: { userId: _id, role, name },
@@ -898,7 +1020,7 @@ export const cancelPickup = async (req, res) => {
       if (!exists) return res.status(404).json({ message: "Pickup request not found" });
 
       const isOwner = exists.customerId.toString() === _id.toString();
-      const isAdmin = role === "admin" || role === "super_admin";
+      const isAdmin = adminCanAccessPickup(exists, req.user);
       if (!isOwner && !isAdmin) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -906,16 +1028,11 @@ export const cancelPickup = async (req, res) => {
       return res.status(400).json({ message: `Cannot cancel a request with status: ${exists.status}` });
     }
 
-    // Fix the from status in the history entry we just pushed
-    const lastEntry = updated.statusHistory[updated.statusHistory.length - 1];
-    if (lastEntry && !lastEntry.from) {
-      // Determine the previous status from the second-to-last entry
-      const prevEntry = updated.statusHistory[updated.statusHistory.length - 2];
-      lastEntry.from = prevEntry?.to || "PENDING";
-      await updated.save();
+    if (updated.driverId) {
+      await releaseDriverIfNoActivePickup(updated.driverId);
     }
 
-    logEvent(updated._id, "CANCELLED", req.user, lastEntry?.from || "PENDING", "CANCELLED", {
+    logEvent(updated._id, "CANCELLED", req.user, previousStatus, "CANCELLED", {
       reason: reason || null,
       cancelledBy: { userId: _id, role, name },
       hadDriver: !!updated.driverId,
@@ -928,10 +1045,13 @@ export const cancelPickup = async (req, res) => {
         id: updated._id,
         status: "CANCELLED",
       });
-      io.to("drivers").emit("pickup:cancelled", { id: updated._id });
-      if (updated.driverId) {
-        io.to(`driver:${updated.driverId}`).emit("pickup:cancelled", { id: updated._id });
-      }
+      emitToPickupDriverRooms(
+        io,
+        updated,
+        "pickup:cancelled",
+        { id: updated._id },
+        { includeAssignedDriver: true }
+      );
       io.to("admins").emit("pickup:cancelled", { id: updated._id, status: "CANCELLED" });
     });
 
@@ -963,6 +1083,27 @@ const TIMESTAMP_FIELDS = {
   COMPLETED: "completedAt",
 };
 
+const COMPLETION_PAYMENT_FILTER = {
+  $or: [
+    { paymentMethod: "cash", paymentStatus: "PAID" },
+    { paymentMethod: "esewa", paymentStatus: "PAID" },
+  ],
+};
+
+function completionPaymentError(pickup) {
+  if (!pickup) return null;
+  if (pickup.paymentMethod === "cash" && pickup.paymentStatus !== "PAID") {
+    return "Confirm cash payment before completing this pickup";
+  }
+  if (pickup.paymentMethod === "esewa" && pickup.paymentStatus !== "PAID") {
+    return "eSewa payment must be paid before completing this pickup";
+  }
+  if (!["cash", "esewa"].includes(pickup.paymentMethod)) {
+    return "Choose a payment method before completing this pickup";
+  }
+  return null;
+}
+
 export const updatePickupStatus = async (req, res) => {
   try {
     const driverUser = req.user;
@@ -991,8 +1132,9 @@ export const updatePickupStatus = async (req, res) => {
         status: expectedPrev,
       }).select("paymentMethod paymentStatus");
 
-      if (pickupBeforeCompletion?.paymentMethod === "cash" && pickupBeforeCompletion.paymentStatus !== "PAID") {
-        return res.status(400).json({ message: "Confirm cash payment before completing this pickup" });
+      const paymentError = completionPaymentError(pickupBeforeCompletion);
+      if (paymentError) {
+        return res.status(400).json({ message: paymentError });
       }
     }
 
@@ -1008,12 +1150,15 @@ export const updatePickupStatus = async (req, res) => {
     }
 
     // Atomic update — only succeeds if current status matches expected previous
+    const transitionFilter = {
+      _id: req.params.id,
+      driverId: driverUser._id,
+      status: expectedPrev,
+      ...(newStatus === "COMPLETED" && COMPLETION_PAYMENT_FILTER),
+    };
+
     const updated = await PickupRequest.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        driverId: driverUser._id,
-        status: expectedPrev,
-      },
+      transitionFilter,
       {
         $set: updateFields,
         $push: {
@@ -1036,6 +1181,13 @@ export const updatePickupStatus = async (req, res) => {
         return res.status(403).json({ message: "Only the assigned driver can update status" });
       }
 
+      if (newStatus === "COMPLETED" && exists.status === expectedPrev) {
+        const paymentError = completionPaymentError(exists);
+        if (paymentError) {
+          return res.status(400).json({ message: paymentError });
+        }
+      }
+
       const expected = STATUS_TRANSITIONS[exists.status];
       return res.status(400).json({
         message: `Invalid transition: ${exists.status} → ${newStatus}. Expected: ${expected || "none"}`,
@@ -1046,6 +1198,9 @@ export const updatePickupStatus = async (req, res) => {
     if (newStatus === "COMPLETED" && updated.assignedAt) {
       updated.taskDurationMs = now.getTime() - new Date(updated.assignedAt).getTime();
       await updated.save();
+    }
+    if (newStatus === "COMPLETED") {
+      await releaseDriverIfNoActivePickup(driverUser._id);
     }
 
     // Audit event

@@ -203,10 +203,7 @@ const PickupStats = () => {
               <div className="h-56">
                 <Bar
                   data={{
-                    labels: Array.from({ length: 24 }, (_, i) => {
-                      const h = hourlyDistribution.find((d) => d.hour === i);
-                      return `${i.toString().padStart(2, "0")}:00`;
-                    }),
+                    labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`),
                     datasets: [{
                       label: "Pickups",
                       data: Array.from({ length: 24 }, (_, i) => hourlyDistribution.find((d) => d.hour === i)?.count || 0),

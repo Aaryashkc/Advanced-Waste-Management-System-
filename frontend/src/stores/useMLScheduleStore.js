@@ -146,7 +146,7 @@ const useMLScheduleStore = create((set, get) => ({
             const response = await api.get("/ml-schedule/health");
             set({ mlHealth: response.data.data });
             return response.data.data;
-        } catch (error) {
+        } catch {
             set({ mlHealth: { status: "offline" } });
             return { status: "offline" };
         }

@@ -57,7 +57,6 @@ function CustomerSignUpPage() {
 
   useEffect(() => {
     fetchLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateForm = () => {
@@ -88,7 +87,6 @@ function CustomerSignUpPage() {
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
-        role: 'customer_admin',
       });
 
       if (result.success) {

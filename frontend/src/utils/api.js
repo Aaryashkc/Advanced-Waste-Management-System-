@@ -25,7 +25,7 @@ api.interceptors.request.use(
         const parsed = JSON.parse(authStorage);
         token = parsed?.state?.token;
       }
-    } catch (e) {
+    } catch {
       // Fallback to old localStorage key
       token = localStorage.getItem('accessToken');
     }

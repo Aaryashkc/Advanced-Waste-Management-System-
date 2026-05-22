@@ -114,10 +114,7 @@ const MLScheduleHistory = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/5">
-                {currentSchedule.areas?.map((d) => {
-                  const catBadge = STATUS_BADGES[d.wasteCategory] ||
-                    { bg: "bg-gray-100", text: "text-gray-700" };
-                  return (
+                {currentSchedule.areas?.map((d) => (
                     <tr key={d.area} className={d.action === "skip" ? "opacity-50" : ""}>
                       <td className="px-5 py-3 font-medium text-primary">
                         {d.area}
@@ -149,8 +146,7 @@ const MLScheduleHistory = () => {
                         {d.assignedTrucks?.map((t) => t.licensePlate || t.truckId).join(", ") || "—"}
                       </td>
                     </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>

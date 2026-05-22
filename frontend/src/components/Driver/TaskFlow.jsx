@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../../utils/api";
 import DriverRouteMap from "./DriverRouteMap";
@@ -79,15 +79,6 @@ export default function TaskFlow() {
       setCashConfirmed(true);
     }
   }, [pickup?.paymentMethod, pickup?.paymentStatus]);
-
-  function resetChecklist() {
-    setChecks({
-      containerLocated: false,
-      loadSecured: false,
-      volumeVerified: false,
-      siteClean: false,
-    });
-  }
 
   // Call API to update status
   async function updateStatus(newStatus) {

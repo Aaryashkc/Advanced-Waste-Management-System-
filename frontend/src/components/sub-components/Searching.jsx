@@ -449,7 +449,6 @@ function SearchPage() {
   }, []);
 
   // Socket
-  const [taskStatus, setTaskStatus] = useState(null);
   useEffect(() => {
     const socket = getSocket();
     const onAccepted = (data) => {
@@ -467,7 +466,6 @@ function SearchPage() {
     };
     const onStatusUpdate = (data) => {
       if (pickupId && data.id?.toString() !== pickupId?.toString()) return;
-      setTaskStatus(data.status);
       if (data.status === "COMPLETED") {
         clearPickupResume();
         setFlow("thankyou");

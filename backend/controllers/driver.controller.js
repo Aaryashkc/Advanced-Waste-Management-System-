@@ -2,6 +2,7 @@ import Task from "../models/Task.model.js";
 import Driver from "../models/Driver.model.js";
 import Truck from "../models/Truck.model.js";
 import User from "../models/User.model.js";
+import { validateCoordinates } from "../utils/coordinateValidator.js";
 
 // ── GET /api/driver/me ────────────────────────────────────────────────────
 export const getMyProfile = async (req, res) => {
@@ -168,8 +169,12 @@ export const updateLocation = async (req, res) => {
     const { latitude, longitude, address } = req.body;
     const userId = req.user._id;
 
-    if (!latitude || !longitude) {
-      return res.status(400).json({ message: "Latitude and longitude are required" });
+    const coordinates = validateCoordinates(latitude, longitude, {
+      latitudeLabel: "Latitude",
+      longitudeLabel: "longitude",
+    });
+    if (!coordinates.ok) {
+      return res.status(400).json({ message: coordinates.message });
     }
 
     const driver = await Driver.findOne({ userId });
@@ -178,8 +183,8 @@ export const updateLocation = async (req, res) => {
     }
 
     driver.currentLocation = {
-      latitude,
-      longitude,
+      latitude: coordinates.coordinates.latitude,
+      longitude: coordinates.coordinates.longitude,
       address: address || driver.currentLocation?.address
     };
 
