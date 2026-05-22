@@ -233,7 +233,7 @@ VITE_API_URL=http://localhost:5000/api
 Notes:
 
 - Some frontend stores use `VITE_API_BASE_URL`; some older stores use `VITE_API_URL`.
-- If these are missing, the frontend falls back to `http://localhost:5001/api`, while the backend default is `5000`. Set both frontend env vars to avoid confusion.
+- If these are missing, the frontend falls back to `http://localhost:5000/api`, matching the backend default.
 - eSewa needs `BACKEND_URL` because callbacks are generated as backend URLs.
 - ML service defaults to `http://localhost:8000` if `ML_SERVICE_URL` is not set.
 

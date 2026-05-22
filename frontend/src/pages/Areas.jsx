@@ -4,6 +4,7 @@ import useAuthStore from "../stores/useAuthStore";
 import { MapPin, CheckCircle, PauseCircle, Store } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
 import LocationPickerMap from "../components/shared/LocationPickerMap";
+import api from "../utils/api";
 
 const TYPE_BADGES = {
   commercial: { cls: "bg-blue-100 text-blue-700", icon: "C" },
@@ -31,10 +32,8 @@ const Areas = () => {
 
   useEffect(() => {
     if (isSuperAdmin) {
-      const token = useAuthStore.getState().token;
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-      fetch(`${API_URL}/super-admin/organizations`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json()).then(data => setOrgs(data.organizations || [])).catch(() => {});
+      api.get("/super-admin/organizations")
+        .then(({ data }) => setOrgs(data.organizations || [])).catch(() => {});
     }
   }, [isSuperAdmin]);
 

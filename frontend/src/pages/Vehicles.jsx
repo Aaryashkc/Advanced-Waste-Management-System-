@@ -4,6 +4,7 @@ import useDriverStore from "../stores/useDriverStore";
 import useAuthStore from "../stores/useAuthStore";
 import { Truck, CheckCircle, Wrench, UserX } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
+import api from "../utils/api";
 
 const getDutyType = (capacity) => {
   const kg = Number(capacity);
@@ -35,10 +36,8 @@ const Vehicles = () => {
 
   useEffect(() => {
     if (isSuperAdmin) {
-      const token = useAuthStore.getState().token;
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-      fetch(`${API_URL}/super-admin/organizations`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json()).then(data => setOrgs(data.organizations || [])).catch(() => {});
+      api.get("/super-admin/organizations")
+        .then(({ data }) => setOrgs(data.organizations || [])).catch(() => {});
     }
   }, [isSuperAdmin]);
 

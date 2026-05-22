@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from "react";
 import useAuthStore from "../stores/useAuthStore";
-import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+import api from "../utils/api";
 
 const DeletionRequests = ({ onUpdate }) => {
   const user = useAuthStore((s) => s.user);
-  const token = useAuthStore((s) => s.token);
   const isSuperAdmin = user?.role === "super_admin";
 
   const [requests, setRequests] = useState([]);
@@ -21,9 +18,9 @@ const DeletionRequests = ({ onUpdate }) => {
     setIsLoading(true); setError(null);
     try {
       const url = isSuperAdmin
-        ? `${API_URL}/super-admin/deletion-requests${filter ? `?status=${filter}` : ""}`
-        : `${API_URL}/org-admin/deletion-requests`;
-      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+        ? `/super-admin/deletion-requests${filter ? `?status=${filter}` : ""}`
+        : "/org-admin/deletion-requests";
+      const res = await api.get(url);
       setRequests(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch requests");
@@ -36,7 +33,7 @@ const DeletionRequests = ({ onUpdate }) => {
   const handleReview = async (action) => {
     setSubmitting(true);
     try {
-      await axios.put(`${API_URL}/super-admin/deletion-requests/${reviewTarget._id}`, { action, reviewNote }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.put(`/super-admin/deletion-requests/${reviewTarget._id}`, { action, reviewNote });
       setReviewTarget(null); setReviewNote("");
       fetchRequests();
       if (onUpdate) onUpdate();

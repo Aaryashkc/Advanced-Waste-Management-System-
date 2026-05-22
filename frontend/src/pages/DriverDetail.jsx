@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/useAuthStore";
+import api from "../utils/api";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,8 +15,6 @@ import {
 import { Bar, Doughnut } from "react-chartjs-2";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 const STATUS_COLORS = {
   COMPLETED: "bg-green-100 text-green-700",
@@ -31,7 +30,6 @@ const STATUS_COLORS = {
 const DriverDetail = () => {
   const { driverId } = useParams();
   const navigate = useNavigate();
-  const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,20 +38,17 @@ const DriverDetail = () => {
     (async () => {
       try {
         const baseUrl = user?.role === "super_admin"
-          ? `${API_URL}/super-admin/drivers/${driverId}/detail`
-          : `${API_URL}/org-admin/drivers/${driverId}/detail`;
-        const res = await fetch(baseUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-        if (json.success) setData(json.data);
+          ? `/super-admin/drivers/${driverId}/detail`
+          : `/org-admin/drivers/${driverId}/detail`;
+        const res = await api.get(baseUrl);
+        if (res.data.success) setData(res.data.data);
       } catch (err) {
         console.error("Failed to fetch driver detail:", err);
       } finally {
         setLoading(false);
       }
     })();
-  }, [driverId, token, user?.role]);
+  }, [driverId, user?.role]);
 
   if (loading) {
     return (

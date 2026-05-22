@@ -6,10 +6,9 @@
  *   socket.on('pickup:accepted', handler);
  */
 import { io } from "socket.io-client";
+import { API_ORIGIN } from "./api";
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
-    ? import.meta.env.VITE_API_BASE_URL.replace("/api", "")
-    : "http://localhost:5001";
+const SOCKET_URL = API_ORIGIN;
 
 let socket = null;
 

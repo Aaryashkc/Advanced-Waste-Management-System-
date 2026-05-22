@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import api from "../utils/api";
 import useAuthStore from "../stores/useAuthStore";
 import { getSocket } from "../utils/socket";
 import DeletionRequests from "./DeletionRequests";
 import { Bell, AlertTriangle, CheckCircle, Info, Truck, User, Ban, RotateCcw, Clock, CheckCheck, Filter, RefreshCw } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 const SEVERITY_CONFIG = {
   critical: { border: "border-l-red-500", bg: "bg-red-50/60", badge: "bg-red-100 text-red-700", icon: <AlertTriangle className="w-5 h-5 text-red-500" /> },
@@ -23,7 +21,7 @@ const TYPE_ICONS = {
 };
 
 const Notifications = () => {
-  const { token, user } = useAuthStore();
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState("alerts");
   const [messages, setMessages] = useState([]);
   const [systemAlerts, setSystemAlerts] = useState([]);
@@ -42,22 +40,18 @@ const Notifications = () => {
 
   const fetchSystemAlerts = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/notifications');
       setSystemAlerts(res.data.data || []);
       return res.data.unreadCount || 0;
     } catch (err) {
       console.error("Failed to fetch system alerts", err);
       return 0;
     }
-  }, [token]);
+  }, []);
 
   const markAlertRead = async (id) => {
     try {
-      await axios.put(`${API_URL}/notifications/${id}/read`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/notifications/${id}/read`, {});
       setSystemAlerts(prev => prev.map(a =>
         a._id === id ? { ...a, isRead: true } : a
       ));
@@ -69,9 +63,7 @@ const Notifications = () => {
 
   const markAllAlertsRead = async () => {
     try {
-      await axios.put(`${API_URL}/notifications/read-all`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put('/notifications/read-all', {});
       setSystemAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
       setCounts(prev => ({ ...prev, alerts: 0 }));
     } catch (err) {
@@ -83,13 +75,12 @@ const Notifications = () => {
     try {
       const [alertsCount, clientsRes, orgAdminRes, driverRes, deletionsRes] = await Promise.all([
         fetchSystemAlerts(),
-        axios.get(`${API_URL}/contact/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/internal-messages/org_admin/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/internal-messages/driver/unread-count`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(user?.role === "super_admin"
-          ? `${API_URL}/super-admin/deletion-requests/pending-count`
-          : `${API_URL}/org-admin/deletion-requests/pending-count`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        api.get('/contact/unread-count'),
+        api.get('/internal-messages/org_admin/unread-count'),
+        api.get('/internal-messages/driver/unread-count'),
+        api.get(user?.role === "super_admin"
+          ? '/super-admin/deletion-requests/pending-count'
+          : '/org-admin/deletion-requests/pending-count'
         ),
       ]);
       setCounts({
@@ -102,7 +93,7 @@ const Notifications = () => {
     } catch (err) {
       console.error("Failed to fetch notification counts", err);
     }
-  }, [token, user, fetchSystemAlerts]);
+  }, [user, fetchSystemAlerts]);
 
   const fetchMessages = async (type) => {
     setLoading(true);
@@ -110,17 +101,15 @@ const Notifications = () => {
     try {
       let endpoint = "";
       if (type === "clients") {
-        endpoint = `${API_URL}/contact/messages`;
+        endpoint = '/contact/messages';
       } else if (type === "org_admin" || type === "driver") {
-        endpoint = `${API_URL}/internal-messages/${type}`;
+        endpoint = `/internal-messages/${type}`;
       } else {
         setLoading(false);
         return;
       }
 
-      const response = await axios.get(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(endpoint);
       setMessages(response.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load messages");
@@ -210,17 +199,15 @@ const Notifications = () => {
     if (activeTab !== "deletions" && activeTab !== "alerts") {
       fetchMessages(activeTab);
     }
-  }, [activeTab, token]);
+  }, [activeTab]);
 
   const markAsRead = async (id, type) => {
     try {
       const endpoint = type === "clients"
-        ? `${API_URL}/contact/${id}/read`
-        : `${API_URL}/internal-messages/${id}/read`;
+        ? `/contact/${id}/read`
+        : `/internal-messages/${id}/read`;
 
-      await axios.put(endpoint, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(endpoint, {});
 
       setMessages(prev => prev.map(msg => msg._id === id ? { ...msg, status: "read" } : msg));
       setCounts(prev => ({ ...prev, [type]: Math.max(0, prev[type] - 1) }));

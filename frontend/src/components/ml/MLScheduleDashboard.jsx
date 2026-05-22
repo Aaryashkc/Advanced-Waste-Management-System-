@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import useAuthStore from "../../stores/useAuthStore";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
+import api from "../../utils/api";
 import AreaPredictionCard from "./AreaPredictionCard";
 
 const STATUS_STYLES = {
@@ -159,8 +160,7 @@ const MLScheduleDashboard = () => {
 
   const loadTodaySchedule = useCallback(async (date) => {
     try {
-      const response = await import("../../utils/api").then((m) => m.default);
-      const res = await response.get(`/ml-schedule?date=${date}&limit=1`);
+      const res = await api.get(`/ml-schedule?date=${date}&limit=1`);
       const todaySchedules = res.data.data || [];
       if (todaySchedules.length > 0) {
         useMLScheduleStore.setState({ currentSchedule: todaySchedules[0], schedules: todaySchedules });

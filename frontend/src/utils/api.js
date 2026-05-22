@@ -1,11 +1,23 @@
 import axios from 'axios';
 
-// Get API base URL from environment variable or use default
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:5001/api';
+
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
+export const ML_API_BASE_URL = import.meta.env.VITE_ML_API_BASE_URL || API_BASE_URL;
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const mlApi = axios.create({
+  baseURL: ML_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,6 +51,27 @@ api.interceptors.request.use(
     console.error('API Request Error:', error);
     return Promise.reject(error);
   }
+);
+
+mlApi.interceptors.request.use(
+  (config) => {
+    let token = null;
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const parsed = JSON.parse(authStorage);
+        token = parsed?.state?.token;
+      }
+    } catch {
+      token = localStorage.getItem('accessToken');
+    }
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor to handle errors

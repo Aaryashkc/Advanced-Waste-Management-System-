@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/useAuthStore";
 import useMLScheduleStore from "../stores/useMLScheduleStore";
+import api from "../utils/api";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -18,8 +19,6 @@ import {
 import { Bar, Doughnut } from "react-chartjs-2";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend, Filler);
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 const STATUS_COLORS = {
   COMPLETED: "bg-emerald-100 text-emerald-700",
@@ -57,7 +56,6 @@ const fmt = (ms) => {
 };
 
 const History = () => {
-  const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const isSuperAdmin = user?.role === "super_admin";
@@ -92,8 +90,6 @@ const History = () => {
   const [auditEvents, setAuditEvents] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
-  const headers = { Authorization: `Bearer ${token}` };
-
   // Fetch pickup history
   useEffect(() => {
     if (activeTab !== "pickups") return;
@@ -102,13 +98,12 @@ const History = () => {
     if (statusFilter) params.set("status", statusFilter);
     if (categoryFilter) params.set("category", categoryFilter);
 
-    fetch(`${API_URL}/history/pickups?${params}`, { headers })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success) {
-          setPickups(json.data.pickups);
-          setPickupStats(json.data.stats);
-          setPagination(json.data.pagination);
+    api.get(`/history/pickups?${params}`)
+      .then((res) => {
+        if (res.data.success) {
+          setPickups(res.data.data.pickups);
+          setPickupStats(res.data.data.stats);
+          setPagination(res.data.data.pagination);
         }
       })
       .catch(console.error)
@@ -119,14 +114,13 @@ const History = () => {
   useEffect(() => {
     if (activeTab !== "customers") return;
     setLoading(true);
-    fetch(`${API_URL}/history/customers`, { headers })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success) {
-          setCustomers(json.data.customers);
+    api.get('/history/customers')
+      .then((res) => {
+        if (res.data.success) {
+          setCustomers(res.data.data.customers);
           setCustomerTotals({
-            totalCustomers: json.data.totalCustomers,
-            totalPickups: json.data.totalPickups,
+            totalCustomers: res.data.data.totalCustomers,
+            totalPickups: res.data.data.totalPickups,
           });
         }
       })
@@ -138,14 +132,13 @@ const History = () => {
   useEffect(() => {
     if (activeTab !== "drivers") return;
     setLoading(true);
-    fetch(`${API_URL}/history/drivers`, { headers })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success) {
-          setDrivers(json.data.drivers);
+    api.get('/history/drivers')
+      .then((res) => {
+        if (res.data.success) {
+          setDrivers(res.data.data.drivers);
           setDriverTotals({
-            totalDrivers: json.data.totalDrivers,
-            totalPickups: json.data.totalPickups,
+            totalDrivers: res.data.data.totalDrivers,
+            totalPickups: res.data.data.totalPickups,
           });
         }
       })
@@ -168,9 +161,8 @@ const History = () => {
     setExpandedPickup(pickupId);
     setAuditLoading(true);
     try {
-      const res = await fetch(`${API_URL}/pickups/${pickupId}/events`, { headers });
-      const json = await res.json();
-      if (json.success) setAuditEvents(json.data);
+      const res = await api.get(`/pickups/${pickupId}/events`);
+      if (res.data.success) setAuditEvents(res.data.data);
     } catch (err) {
       console.error("Failed to fetch audit trail:", err);
     } finally {

@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '../utils/api';
 import useAuthStore from './useAuthStore';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const useOrganizationStore = create((set, get) => ({
   organizations: [],
@@ -13,10 +11,7 @@ const useOrganizationStore = create((set, get) => ({
   fetchOrganizations: async () => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const res = await axios.get(`${API_URL}/super-admin/organizations`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/super-admin/organizations');
       set({ organizations: res.data.organizations || [], isLoading: false });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch organizations', isLoading: false });
@@ -26,15 +21,12 @@ const useOrganizationStore = create((set, get) => ({
   fetchOrgDetail: async (orgId) => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
       const user = useAuthStore.getState().user;
       const isMyOrg = orgId === "mine" || user?.role === "admin";
       const url = isMyOrg
-        ? `${API_URL}/org-admin/organization`
-        : `${API_URL}/super-admin/organizations/${orgId}`;
-      const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+        ? '/org-admin/organization'
+        : `/super-admin/organizations/${orgId}`;
+      const res = await api.get(url);
       set({ currentOrg: res.data.data, isLoading: false });
       return res.data.data;
     } catch (error) {
@@ -47,10 +39,7 @@ const useOrganizationStore = create((set, get) => ({
 
   createOrganization: async (data) => {
     try {
-      const token = useAuthStore.getState().token;
-      await axios.post(`${API_URL}/super-admin/organizations`, data, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post('/super-admin/organizations', data);
       get().fetchOrganizations();
       return { success: true };
     } catch (error) {
@@ -60,15 +49,12 @@ const useOrganizationStore = create((set, get) => ({
 
   updateOrganization: async (orgId, data) => {
     try {
-      const token = useAuthStore.getState().token;
       const user = useAuthStore.getState().user;
       const isMyOrg = orgId === "mine" || user?.role === "admin";
       const url = isMyOrg
-        ? `${API_URL}/org-admin/organization`
-        : `${API_URL}/super-admin/organizations/${orgId}`;
-      const res = await axios.put(url, data, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+        ? '/org-admin/organization'
+        : `/super-admin/organizations/${orgId}`;
+      const res = await api.put(url, data);
       if (isMyOrg) {
         set({ currentOrg: res.data.data || res.data.organization || null });
       } else {
@@ -82,10 +68,7 @@ const useOrganizationStore = create((set, get) => ({
 
   addAdmin: async (orgId, adminData) => {
     try {
-      const token = useAuthStore.getState().token;
-      await axios.post(`${API_URL}/super-admin/organizations/${orgId}/admins`, adminData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post(`/super-admin/organizations/${orgId}/admins`, adminData);
       get().fetchOrganizations();
       return { success: true };
     } catch (error) {

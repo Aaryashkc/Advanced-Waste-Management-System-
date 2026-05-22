@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '../utils/api';
 import useAuthStore from './useAuthStore';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const useZoneStore = create((set, get) => ({
   zones: [],
@@ -17,12 +15,9 @@ const useZoneStore = create((set, get) => ({
   fetchZones: async (orgId = null) => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
       const params = new URLSearchParams();
       if (orgId) params.append('orgId', orgId);
-      const res = await axios.get(`${API_URL}/schedule?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/schedule?${params.toString()}`);
       set({ zones: res.data.data || [], isLoading: false });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch zones', isLoading: false });
@@ -33,16 +28,13 @@ const useZoneStore = create((set, get) => ({
   createZone: async (data) => {
     set({ isSubmitting: true });
     try {
-      const token = useAuthStore.getState().token;
       const user = useAuthStore.getState().user;
       // For admin, orgId comes from their account; for super_admin they pass it explicitly
       const payload = { ...data };
       if (user?.role === 'admin' && !payload.orgId) {
         payload.orgId = user.orgId;
       }
-      await axios.post(`${API_URL}/schedule`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post('/schedule', payload);
       set({ isSubmitting: false });
       await get().fetchZones();
       return { success: true };
@@ -56,10 +48,7 @@ const useZoneStore = create((set, get) => ({
   updateZone: async (zoneId, data) => {
     set({ isSubmitting: true });
     try {
-      const token = useAuthStore.getState().token;
-      await axios.put(`${API_URL}/schedule/${zoneId}`, data, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/schedule/${zoneId}`, data);
       set({ isSubmitting: false });
       await get().fetchZones();
       return { success: true };
@@ -72,10 +61,7 @@ const useZoneStore = create((set, get) => ({
   // Delete zone (soft delete)
   deleteZone: async (zoneId) => {
     try {
-      const token = useAuthStore.getState().token;
-      await axios.delete(`${API_URL}/schedule/${zoneId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/schedule/${zoneId}`);
       await get().fetchZones();
       return { success: true };
     } catch (error) {
@@ -86,12 +72,11 @@ const useZoneStore = create((set, get) => ({
   // Fetch trucks for dropdown (org scoped)
   fetchTrucks: async () => {
     try {
-      const token = useAuthStore.getState().token;
       const user = useAuthStore.getState().user;
       const url = user?.role === 'super_admin'
-        ? `${API_URL}/super-admin/vehicles`
-        : `${API_URL}/org-admin/trucks`;
-      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+        ? '/super-admin/vehicles'
+        : '/org-admin/trucks';
+      const res = await api.get(url);
       set({ trucks: res.data.data || [] });
     } catch (error) {
       console.error('Failed to fetch trucks:', error);
@@ -101,12 +86,11 @@ const useZoneStore = create((set, get) => ({
   // Fetch drivers for dropdown (org scoped)
   fetchDrivers: async () => {
     try {
-      const token = useAuthStore.getState().token;
       const user = useAuthStore.getState().user;
       const url = user?.role === 'super_admin'
-        ? `${API_URL}/super-admin/drivers`
-        : `${API_URL}/org-admin/drivers`;
-      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+        ? '/super-admin/drivers'
+        : '/org-admin/drivers';
+      const res = await api.get(url);
       set({ drivers: res.data.data || [] });
     } catch (error) {
       console.error('Failed to fetch drivers:', error);
@@ -116,10 +100,7 @@ const useZoneStore = create((set, get) => ({
   // Fetch organizations (super_admin only)
   fetchOrganizations: async () => {
     try {
-      const token = useAuthStore.getState().token;
-      const res = await axios.get(`${API_URL}/super-admin/organizations`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/super-admin/organizations');
       set({ organizations: res.data.organizations || [] });
     } catch (error) {
       console.error('Failed to fetch organizations:', error);

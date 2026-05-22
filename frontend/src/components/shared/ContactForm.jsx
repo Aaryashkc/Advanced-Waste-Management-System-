@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import TruckLoader from './TruckLoader';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export default function ContactForm() {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
@@ -35,7 +33,7 @@ export default function ContactForm() {
     setLoading(true);
     setServerError(null);
     try {
-      await axios.post(`${API_URL}/contact/submit`, form);
+      await api.post('/contact/submit', form);
       setSubmitted(true);
       setForm({ name: '', email: '', message: '' });
       setErrors({});

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import useAuthStore from "../stores/useAuthStore";
 import { useDashboardTheme } from "../hooks/useDashboardTheme";
+import api from "../utils/api";
 
 import {
   Chart as ChartJS,
@@ -19,8 +20,6 @@ import { Bar, Doughnut, Line } from "react-chartjs-2";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-
 const fmt = (ms) => {
   if (!ms) return "--";
   const s = Math.round(ms / 1000);
@@ -33,7 +32,6 @@ const fmt = (ms) => {
 };
 
 const PickupStats = () => {
-  const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const { theme } = useDashboardTheme();
   const isSuperAdmin = user?.role === "super_admin";
@@ -52,18 +50,15 @@ const PickupStats = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_URL}/pickups/analytics`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-        if (json.success) setData(json.data);
+        const res = await api.get('/pickups/analytics');
+        if (res.data.success) setData(res.data.data);
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
       } finally {
         setLoading(false);
       }
     })();
-  }, [token]);
+  }, []);
 
   if (loading) {
     return (

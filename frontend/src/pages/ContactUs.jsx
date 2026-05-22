@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Clock, Recycle } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import TruckLoader from '../components/shared/TruckLoader';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export default function ContactUs() {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
@@ -36,7 +34,7 @@ export default function ContactUs() {
     setLoading(true);
     setServerError(null);
     try {
-      await axios.post(`${API_URL}/contact/submit`, form);
+      await api.post('/contact/submit', form);
       setSubmitted(true);
       setForm({ name: '', email: '', message: '' });
       setErrors({});
