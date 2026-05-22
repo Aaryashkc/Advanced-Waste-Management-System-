@@ -1,4 +1,4 @@
-import { createElement, useEffect, useState } from "react";
+import { createElement, useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Mail, MessageSquare, RefreshCw, Send, Trash2 } from "lucide-react";
 import api from "../utils/api";
 import useAuthStore from "../stores/useAuthStore";
@@ -18,7 +18,7 @@ export default function AdminContact() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!isSuperAdmin) return;
     setLoading(true);
     setError(null);
@@ -30,12 +30,12 @@ export default function AdminContact() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     if (isSuperAdmin) fetchMessages();
     else setLoading(false);
-  }, [isSuperAdmin]);
+  }, [fetchMessages, isSuperAdmin]);
 
   const markRead = async (id) => {
     setMarkingId(id);

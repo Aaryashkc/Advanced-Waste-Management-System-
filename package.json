@@ -7,6 +7,8 @@
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "test": "node --test",
+    "lint:frontend": "npm --prefix frontend run lint -- --max-warnings=0",
+    "build:frontend": "npm --prefix frontend run build",
     "seed": "node scripts/seed.js"
   },
   "keywords": [],

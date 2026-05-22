@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
 
 /**
- * PickupRequest — represents a customer's ad-hoc waste pickup request.
+ * PickupRequest - represents a customer's ad-hoc waste pickup request.
  *
- * Lifecycle:  PENDING → ASSIGNED (driver accepted)
- *                     → EN_ROUTE → ARRIVED → COLLECTING → COMPLETED
- *                     → CANCELLED (customer/admin cancelled)
- *                     → EXPIRED   (no driver within TTL)
+ * Lifecycle:  PENDING -> ASSIGNED (driver accepted)
+ *                     -> EN_ROUTE -> ARRIVED -> COLLECTING -> COMPLETED
+ *                     -> CANCELLED (customer/admin cancelled)
+ *                     -> EXPIRED   (no driver within TTL)
  *
  * statusHistory[] tracks every transition with actor + timestamp for audit.
  */
@@ -64,7 +64,7 @@ const pickupRequestSchema = new mongoose.Schema(
       default: "easy",
     },
 
-    // Organisation scope — used to broadcast only to relevant drivers
+    // Organisation scope - used to broadcast only to relevant drivers
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
@@ -103,7 +103,7 @@ const pickupRequestSchema = new mongoose.Schema(
       licensePlate: { type: String, default: null },
     },
 
-    // ── Key timestamps ──────────────────────────────────────────────────
+    // -- Key timestamps --------------------------------------------------
     assignedAt: { type: Date, default: null },
     enRouteAt: { type: Date, default: null },
     arrivedAt: { type: Date, default: null },
@@ -119,7 +119,7 @@ const pickupRequestSchema = new mongoose.Schema(
     },
     cancelReason: { type: String, default: null },
 
-    // ── Embedded audit trail ────────────────────────────────────────────
+    // -- Embedded audit trail --------------------------------------------
     statusHistory: [statusTransitionSchema],
 
     // Auto-expires pending request (TTL)
@@ -128,7 +128,7 @@ const pickupRequestSchema = new mongoose.Schema(
       default: () => new Date(Date.now() + 10 * 60 * 1000),
     },
 
-    // ── Pricing & route data (set from estimate before creation) ────────
+    // -- Pricing & route data (set from estimate before creation) --------
     estimatedPrice: { type: Number, default: null },
     currency: { type: String, default: "NPR" },
     priceBreakdown: {
@@ -146,7 +146,7 @@ const pickupRequestSchema = new mongoose.Schema(
       address: { type: String, default: null },
     },
 
-    // ── Payment ─────────────────────────────────────────────────────────
+    // -- Payment ---------------------------------------------------------
     // Method chosen by the customer at booking time.
     paymentMethod: {
       type: String,
@@ -154,11 +154,11 @@ const pickupRequestSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
-    // High-level payment state — driven by the Payment record(s) for this pickup.
-    //   UNPAID  — no payment attempted yet (initial)
-    //   PENDING — eSewa initiated, awaiting verification, or cash awaiting collection
-    //   PAID    — verified by gateway / collected by driver and confirmed
-    //   FAILED  — gateway failure or driver-reported non-payment
+    // High-level payment state - driven by the Payment record(s) for this pickup.
+    //   UNPAID  - no payment attempted yet (initial)
+    //   PENDING - eSewa initiated, awaiting verification, or cash awaiting collection
+    //   PAID    - verified by gateway / collected by driver and confirmed
+    //   FAILED  - gateway failure or driver-reported non-payment
     paymentStatus: {
       type: String,
       enum: ["UNPAID", "PENDING", "PAID", "FAILED"],
@@ -188,6 +188,11 @@ pickupRequestSchema.index({ status: 1, createdAt: -1 });
 pickupRequestSchema.index({ driverId: 1, status: 1 });
 pickupRequestSchema.index({ orgId: 1, status: 1, createdAt: -1 });
 pickupRequestSchema.index({ customerId: 1, createdAt: -1 });
+pickupRequestSchema.index({ orgId: 1, createdAt: -1 });
+pickupRequestSchema.index({ driverId: 1, createdAt: -1 });
+pickupRequestSchema.index({ paymentStatus: 1, createdAt: -1 });
+pickupRequestSchema.index({ orgId: 1, paymentStatus: 1, createdAt: -1 });
+pickupRequestSchema.index({ paymentMethod: 1, paymentStatus: 1, createdAt: -1 });
 
 const PickupRequest = mongoose.model("PickupRequest", pickupRequestSchema);
 export default PickupRequest;

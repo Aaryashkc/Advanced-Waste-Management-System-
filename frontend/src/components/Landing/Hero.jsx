@@ -5,6 +5,8 @@ import { getDashboardRoute } from '../../utils/roleRouting';
 import { useRef, useState, useEffect } from 'react';
 import HERO_IMAGE from "../../assets/hero.png"
 
+const DEFAULT_OBSERVER_OPTIONS = {};
+
 // Preload at module scope so the browser caches the hero image once and
 // keeps it ready for instant paint on every remount (fixes flash on nav back).
 if (typeof window !== "undefined") {
@@ -13,7 +15,7 @@ if (typeof window !== "undefined") {
 }
 
 /* ── Viewport observer ── */
-function useInView(options = {}) {
+function useInView(options = DEFAULT_OBSERVER_OPTIONS) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -30,7 +32,7 @@ function useInView(options = {}) {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [options]);
   return [ref, inView];
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { getSocket } from "../../utils/socket";
 
 const STATUS_LABELS = {
@@ -29,16 +29,16 @@ export default function PickupStatusToast() {
   const [exiting, setExiting] = useState(false);
   const dismissTimerRef = useRef(null);
 
-  const dismiss = () => {
+  const dismiss = useCallback(() => {
     setExiting(true);
     setTimeout(() => {
       setVisible(false);
       setStatus(null);
       setDriverName(null);
     }, 400);
-  };
+  }, []);
 
-  const showToast = (newStatus, driver) => {
+  const showToast = useCallback((newStatus, driver) => {
     // Clear any pending auto-dismiss
     if (dismissTimerRef.current) {
       clearTimeout(dismissTimerRef.current);
@@ -54,7 +54,7 @@ export default function PickupStatusToast() {
     if (newStatus === "COMPLETED") {
       dismissTimerRef.current = setTimeout(dismiss, 6000);
     }
-  };
+  }, [dismiss]);
 
   useEffect(() => {
     const socket = getSocket();
@@ -77,7 +77,7 @@ export default function PickupStatusToast() {
       socket.off("pickup:statusUpdate", onStatusUpdate);
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     };
-  }, []);
+  }, [showToast]);
 
   if (!visible || !status) return null;
 

@@ -109,7 +109,9 @@ export async function findBestDrivers(pickup) {
         }
     }
 
-    // 2. Fetch available drivers with their truck details
+    // 2. Fetch available drivers with their truck details.
+    // Prototype note: this intentionally scores available drivers in memory.
+    // At scale, add geospatial filtering first, then score only nearby drivers.
     const drivers = await Driver.find({ isAvailable: true }).populate(
         "assignedTruckId",
         "truckType capacity dutyType orgId"

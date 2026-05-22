@@ -24,7 +24,7 @@ const MLScheduleHistory = () => {
 
   useEffect(() => {
     fetchSchedules({ status: statusFilter || undefined });
-  }, [statusFilter]);
+  }, [fetchSchedules, statusFilter]);
 
   const handleView = async (id) => {
     setViewingId(id);

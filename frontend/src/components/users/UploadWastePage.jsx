@@ -56,7 +56,7 @@ function UploadWastePage() {
     if (uploadError) clearError();
   }, [uploadError, clearError]);
 
-  const categories = [
+  const categories = useMemo(() => [
     {
       id: 'recyclable',
       label: 'Recyclable',
@@ -90,9 +90,9 @@ function UploadWastePage() {
         </svg>
       ),
     },
-  ];
+  ], []);
 
-  const levels = [
+  const levels = useMemo(() => [
     {
       id: 'easy',
       label: 'Easy',
@@ -114,16 +114,16 @@ function UploadWastePage() {
       description: 'Heavy load, over 5,000 kg.',
       color: 'red',
     },
-  ];
+  ], []);
 
   const selectedCategory = useMemo(
     () => categories.find((item) => item.id === category),
-    [category]
+    [categories, category]
   );
 
   const selectedLevel = useMemo(
     () => levels.find((item) => item.id === level),
-    [level]
+    [levels, level]
   );
 
   const formatFileSize = (bytes) => {

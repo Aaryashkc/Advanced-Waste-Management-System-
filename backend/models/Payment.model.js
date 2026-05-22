@@ -78,6 +78,9 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.index({ pickupId: 1, status: 1 });
 paymentSchema.index({ customerId: 1, createdAt: -1 });
+paymentSchema.index({ status: 1, createdAt: -1 });
+paymentSchema.index({ method: 1, status: 1, createdAt: -1 });
+paymentSchema.index({ driverId: 1, status: 1, createdAt: -1 });
 paymentSchema.index(
   { transactionUuid: 1 },
   {

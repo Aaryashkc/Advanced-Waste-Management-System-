@@ -43,31 +43,25 @@ const DAY_COLORS = {
 };
 
 const ORG_PALETTE = ['#3b82f6', '#a855f7', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#f97316', '#ec4899'];
+const EMPTY_ZONE_FORM = { city: '', area: '', truckId: '', day: '', time: '', truckType: '', orgId: '' };
+
+function zoneFormFromEdit(editZone) {
+  if (!editZone) return EMPTY_ZONE_FORM;
+  return {
+    city: editZone.city || '',
+    area: editZone.area || '',
+    truckId: editZone.truckObjectId ? String(editZone.truckObjectId) : '',
+    day: editZone.day || '',
+    time: editZone.time || '',
+    truckType: editZone.truckType || '',
+    orgId: editZone.orgId ? String(editZone.orgId) : '',
+  };
+}
 
 // ─── Add/Edit Zone Modal ───────────────────────────────────────────────────────
 function ZoneModal({ isOpen, onClose, onSubmit, trucks, organizations, isSuperAdmin, isSubmitting, editZone }) {
-  const emptyForm = { city: '', area: '', truckId: '', day: '', time: '', truckType: '', orgId: '' };
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => zoneFormFromEdit(editZone));
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      if (editZone) {
-        setForm({
-          city: editZone.city || '',
-          area: editZone.area || '',
-          truckId: editZone.truckObjectId ? String(editZone.truckObjectId) : '',
-          day: editZone.day || '',
-          time: editZone.time || '',
-          truckType: editZone.truckType || '',
-          orgId: editZone.orgId ? String(editZone.orgId) : '',
-        });
-      } else {
-        setForm(emptyForm);
-      }
-      setError('');
-    }
-  }, [isOpen, editZone]);
 
   // Trucks filtered by selected duty type — uses dutyType field (not truckType which is BIO/NON_BIO)
   const filteredTrucks = useMemo(() => {
@@ -608,16 +602,19 @@ const Zones = () => {
         )}
       </div>
 
-      <ZoneModal
-        isOpen={modalOpen}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmit}
-        trucks={trucks}
-        organizations={organizations}
-        isSuperAdmin={isSuperAdmin}
-        isSubmitting={isSubmitting}
-        editZone={editZone}
-      />
+      {modalOpen && (
+        <ZoneModal
+          key={editZone?.id || "new-zone"}
+          isOpen={modalOpen}
+          onClose={handleCloseModal}
+          onSubmit={handleSubmit}
+          trucks={trucks}
+          organizations={organizations}
+          isSuperAdmin={isSuperAdmin}
+          isSubmitting={isSubmitting}
+          editZone={editZone}
+        />
+      )}
     </div>
   );
 };

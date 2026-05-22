@@ -7,6 +7,7 @@ import DeletionRequest from "../models/DeletionRequest.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
 import Area from "../models/Area.model.js";
 import { buildPickupAnalytics, buildScheduleAnalytics } from "../services/pickupAnalytics.js";
+import { cacheDashboardResponse } from "../services/dashboardCache.js";
 import { getIO } from "../socket/socketServer.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
@@ -828,6 +829,7 @@ export const getAdminAnalytics = async (req, res) => {
     const orgId = req.user.orgId;
     if (!orgId) return res.status(403).json({ message: "Organization ID required" });
 
+    const cached = await cacheDashboardResponse(`admin:analytics:${orgId}`, async () => {
     const orgIdObj = new mongoose.Types.ObjectId(orgId);
     const match = { orgId: orgIdObj };
 
@@ -869,7 +871,7 @@ export const getAdminAnalytics = async (req, res) => {
       ]),
     ]);
 
-    res.status(200).json({
+    return {
       success: true,
       data: {
         // Headline cards (Dashboard.jsx reads these — note totalOrganizations
@@ -899,7 +901,10 @@ export const getAdminAnalytics = async (req, res) => {
         // Per-area breakdown (admin view)
         areaBreakdown,
       },
+    };
     });
+
+    res.status(200).json(cached);
   } catch (error) {
     console.error("Error generating admin analytics:", error);
     res.status(500).json({ success: false, message: "Failed to generate analytics", error: error.message });

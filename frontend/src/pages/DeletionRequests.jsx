@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import useAuthStore from "../stores/useAuthStore";
 import api from "../utils/api";
 
@@ -14,7 +14,7 @@ const DeletionRequests = ({ onUpdate }) => {
   const [reviewNote, setReviewNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setIsLoading(true); setError(null);
     try {
       const url = isSuperAdmin
@@ -26,9 +26,12 @@ const DeletionRequests = ({ onUpdate }) => {
       setError(err.response?.data?.message || "Failed to fetch requests");
     }
     setIsLoading(false);
-  };
+  }, [filter, isSuperAdmin]);
 
-  useEffect(() => { fetchRequests(); }, [filter]);
+  useEffect(() => {
+    const timer = setTimeout(fetchRequests, 0);
+    return () => clearTimeout(timer);
+  }, [fetchRequests]);
 
   const handleReview = async (action) => {
     setSubmitting(true);

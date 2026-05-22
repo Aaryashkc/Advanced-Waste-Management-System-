@@ -93,7 +93,7 @@ const Notifications = () => {
     } catch (err) {
       console.error("Failed to fetch notification counts", err);
     }
-  }, [user, fetchSystemAlerts]);
+  }, [user?.role, fetchSystemAlerts]);
 
   const fetchMessages = async (type) => {
     setLoading(true);
@@ -199,7 +199,7 @@ const Notifications = () => {
     if (activeTab !== "deletions" && activeTab !== "alerts") {
       fetchMessages(activeTab);
     }
-  }, [activeTab]);
+  }, [activeTab, fetchCounts]);
 
   const markAsRead = async (id, type) => {
     try {

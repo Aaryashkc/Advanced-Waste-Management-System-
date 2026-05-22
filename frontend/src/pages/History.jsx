@@ -150,7 +150,7 @@ const History = () => {
   useEffect(() => {
     if (activeTab !== "completions") return;
     fetchCompletions();
-  }, [activeTab]);
+  }, [activeTab, fetchCompletions]);
 
   // Fetch audit trail for a pickup
   const fetchAuditTrail = useCallback(async (pickupId) => {

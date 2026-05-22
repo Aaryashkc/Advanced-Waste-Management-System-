@@ -396,6 +396,7 @@ function SearchPage() {
       } else if (["PENDING", "ASSIGNED", "EN_ROUTE", "ARRIVED", "COLLECTING"].includes(pickup.status)) {
         setPaymentSettled(true);
         paymentSettledRef.current = true;
+        if (pickup.status !== "PENDING") setSecondsLeft(60);
         setFlow(pickup.status === "PENDING" ? "searching" : "found");
         setDriverInfo(pickup.driverInfo || null);
         setAssignedAt(pickup.assignedAt || null);
@@ -409,7 +410,6 @@ function SearchPage() {
 
   useEffect(() => {
     if (flow !== "found") { clearInterval(intervalRef.current); return; }
-    setSecondsLeft(60);
     intervalRef.current = setInterval(() => {
       setSecondsLeft((s) => { if (s <= 1) { clearInterval(intervalRef.current); return 0; } return s - 1; });
     }, 1000);
@@ -455,6 +455,7 @@ function SearchPage() {
       if (pickupId && data.id?.toString() !== pickupId?.toString()) return;
       setDriverInfo(data.driverInfo || null);
       setAssignedAt(data.assignedAt || null);
+      setSecondsLeft(60);
       setFlow("found");
     };
     const onStatus = (data) => {

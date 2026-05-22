@@ -3,6 +3,7 @@ import { generateToken } from "../config/jwt.config.js";
 import bcrypt from "bcryptjs";
 import { generateOTP, hashOTP, verifyOTP as verifyOTPHash, isOTPExpired, getOTPExpiration, canResendOTP, isAttemptLimitExceeded } from "../utils/otp.utils.js";
 import { sendOTPEmail, sendOTPSMS } from "../services/emailService.js";
+import { ROLES } from "../utils/roles.js";
 
 export const register = async (req, res) => {
   try {
@@ -41,7 +42,7 @@ export const register = async (req, res) => {
       passwordHash: hashedPassword,
       phone,
       address,
-      role: "customer_admin",
+      role: ROLES.CUSTOMER_ADMIN,
       loginOtp: {
         hash: hashedOTP,
         expiresAt: expiresAt,

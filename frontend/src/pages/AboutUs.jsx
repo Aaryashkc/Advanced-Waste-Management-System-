@@ -25,8 +25,10 @@ const IMAGES = {
     'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=1200&auto=format&fit=crop',
 };
 
+const DEFAULT_OBSERVER_OPTIONS = {};
+
 /* ── Viewport observer ── */
-function useInView(options = {}) {
+function useInView(options = DEFAULT_OBSERVER_OPTIONS) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -43,7 +45,7 @@ function useInView(options = {}) {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [options]);
   return [ref, inView];
 }
 

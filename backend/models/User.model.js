@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ALL_ROLES, ROLES } from "../utils/roles.js";
 
 const otpSchema = new mongoose.Schema(
   {
@@ -35,8 +36,8 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["customer_admin", "driver", "admin", "super_admin"],
-      default: "customer_admin",
+      enum: ALL_ROLES,
+      default: ROLES.CUSTOMER_ADMIN,
       index: true
     },
 

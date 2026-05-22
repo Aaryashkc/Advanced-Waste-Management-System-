@@ -5,6 +5,7 @@ import Truck from "../models/Truck.model.js";
 import Driver from "../models/Driver.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
 import { buildPickupAnalytics, buildScheduleAnalytics } from "../services/pickupAnalytics.js";
+import { cacheDashboardResponse } from "../services/dashboardCache.js";
 import DeletionRequest from "../models/DeletionRequest.model.js";
 import { getIO } from "../socket/socketServer.js";
 import bcrypt from "bcryptjs";
@@ -229,6 +230,7 @@ export const addAdminToOrg = async (req, res) => {
 
 export const getSuperAdminAnalytics = async (req, res) => {
   try {
+    const cached = await cacheDashboardResponse("super-admin:analytics", async () => {
     // Real ecosystem-wide counts (not pickup-derived)
     const [totalOrganizations, activeVehicles, pickupAnalytics, scheduleAnalytics, orgBreakdown] = await Promise.all([
       Organization.countDocuments(),
@@ -279,7 +281,7 @@ export const getSuperAdminAnalytics = async (req, res) => {
       ]),
     ]);
 
-    res.status(200).json({
+    return {
       success: true,
       data: {
         // Headline cards (Dashboard.jsx reads these)
@@ -307,7 +309,10 @@ export const getSuperAdminAnalytics = async (req, res) => {
         // Cross-org breakdown (super-admin only)
         orgBreakdown,
       },
+    };
     });
+
+    res.status(200).json(cached);
   } catch (error) {
     console.error("Error generating super admin analytics:", error);
     res.status(500).json({ success: false, message: "Failed to generate analytics", error: error.message });

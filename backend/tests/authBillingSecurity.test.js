@@ -6,6 +6,7 @@ import test from "node:test";
 import { register } from "../controllers/auth.controller.js";
 import { payBill } from "../controllers/billing.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { roleMiddleware } from "../middlewares/role.middleware.js";
 import Billing from "../models/Billing.model.js";
 import User from "../models/User.model.js";
 
@@ -101,6 +102,50 @@ test("auth middleware excludes password hash, OTP, and two-factor secret fields"
 
   assert.equal(nextCalled, true);
   assert.equal(selectSeen, "-passwordHash -loginOtp -twoFactor.secret");
+});
+
+test("auth middleware rejects disabled users even with a valid token", async () => {
+  process.env.JWT_SECRET = "test-jwt-secret";
+  const userId = oid("64b000000000000000000102");
+  const token = jwt.sign({ userId, role: "admin" }, process.env.JWT_SECRET);
+
+  stub(User, "findById", () => ({
+    select() {
+      return Promise.resolve({ _id: userId, role: "admin", isActive: false });
+    },
+  }));
+
+  let nextError;
+  const response = res();
+  await authMiddleware(
+    { headers: { authorization: `Bearer ${token}` } },
+    response,
+    (error) => { nextError = error; }
+  );
+
+  assert.equal(nextError.statusCode, 403);
+  assert.equal(nextError.message, "User account is disabled");
+});
+
+test("role middleware fails closed for invalid route role configuration", () => {
+  assert.throws(
+    () => roleMiddleware("admin", "owner"),
+    /Invalid role\(s\) configured: owner/
+  );
+});
+
+test("role middleware rejects disabled users before role checks", () => {
+  const middleware = roleMiddleware("admin");
+  let nextError;
+
+  middleware(
+    { user: { _id: oid("64b000000000000000000103"), role: "admin", isActive: false } },
+    res(),
+    (error) => { nextError = error; }
+  );
+
+  assert.equal(nextError.statusCode, 403);
+  assert.equal(nextError.message, "User account is disabled");
 });
 
 test("billing cash payment marks the user's bill as pending admin confirmation", async () => {

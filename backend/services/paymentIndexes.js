@@ -39,4 +39,12 @@ export async function ensurePaymentIndexes() {
     );
     console.log("[PaymentIndexes] Ensured partial unique transactionUuid index");
   }
+
+  await Promise.all([
+    collection.createIndex({ pickupId: 1, status: 1 }, { name: "pickupId_1_status_1" }),
+    collection.createIndex({ customerId: 1, createdAt: -1 }, { name: "customerId_1_createdAt_-1" }),
+    collection.createIndex({ status: 1, createdAt: -1 }, { name: "status_1_createdAt_-1" }),
+    collection.createIndex({ method: 1, status: 1, createdAt: -1 }, { name: "method_1_status_1_createdAt_-1" }),
+    collection.createIndex({ driverId: 1, status: 1, createdAt: -1 }, { name: "driverId_1_status_1_createdAt_-1" }),
+  ]);
 }

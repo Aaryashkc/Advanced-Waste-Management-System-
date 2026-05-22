@@ -67,7 +67,8 @@ export function useAdminNotificationCounts() {
   }, [token, user]);
 
   useEffect(() => {
-    fetchCounts();
+    const timer = setTimeout(fetchCounts, 0);
+    return () => clearTimeout(timer);
   }, [fetchCounts]);
 
   useEffect(() => {

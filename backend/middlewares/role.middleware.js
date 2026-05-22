@@ -1,11 +1,20 @@
+import { AuthenticationError, ForbiddenError } from "../utils/httpErrors.js";
+import { assertValidRoles } from "../utils/roles.js";
+
 export const roleMiddleware = (...allowedRoles) => {
+  assertValidRoles(allowedRoles);
+
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: "Authentication required" });
+      return next(new AuthenticationError("Authentication required"));
+    }
+
+    if (req.user.isActive === false) {
+      return next(new ForbiddenError("User account is disabled"));
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Access denied. Insufficient permissions" });
+      return next(new ForbiddenError("Access denied. Insufficient permissions"));
     }
 
     next();

@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import PickupRequest from "../models/PickupRequest.model.js";
+import PickupDailySummary from "../models/PickupDailySummary.model.js";
 import MLSchedule from "../models/MLSchedule.model.js";
 
 /**
@@ -15,6 +17,121 @@ import MLSchedule from "../models/MLSchedule.model.js";
  * Lives in services/ (not in a controller) so both controllers can import it
  * without creating a circular dependency.
  */
+function dayRange(days = 30) {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+  start.setHours(0, 0, 0, 0);
+
+  return { start, end };
+}
+
+function dateKey(date) {
+  return new Date(date).toISOString().split("T")[0];
+}
+
+function objectIdOrNull(value) {
+  return value || null;
+}
+
+export async function refreshPickupDailySummaries({ from, to } = {}) {
+  if (mongoose.connection.readyState !== 1) return { refreshed: 0, skipped: "database-not-connected" };
+
+  const { start, end } = from && to ? { start: from, end: to } : dayRange(30);
+
+  const rows = await PickupRequest.aggregate([
+    { $match: { createdAt: { $gte: start, $lte: end } } },
+    {
+      $group: {
+        _id: {
+          date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          orgId: "$orgId",
+        },
+        created: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] } },
+        expired: { $sum: { $cond: [{ $eq: ["$status", "EXPIRED"] }, 1, 0] } },
+        revenue: {
+          $sum: {
+            $cond: [
+              { $and: [{ $eq: ["$status", "COMPLETED"] }, { $eq: ["$paymentStatus", "PAID"] }] },
+              { $ifNull: ["$estimatedPrice", 0] },
+              0,
+            ],
+          },
+        },
+        responseTimeTotalMs: { $sum: { $ifNull: ["$responseTimeMs", 0] } },
+        responseTimeCount: { $sum: { $cond: [{ $ne: ["$responseTimeMs", null] }, 1, 0] } },
+        taskDurationTotalMs: { $sum: { $ifNull: ["$taskDurationMs", 0] } },
+        taskDurationCount: { $sum: { $cond: [{ $ne: ["$taskDurationMs", null] }, 1, 0] } },
+      },
+    },
+  ]);
+
+  await PickupDailySummary.deleteMany({
+    date: { $gte: dateKey(start), $lte: dateKey(end) },
+  });
+
+  if (rows.length === 0) return { refreshed: 0 };
+
+  await PickupDailySummary.insertMany(
+    rows.map((row) => ({
+      date: row._id.date,
+      orgId: objectIdOrNull(row._id.orgId),
+      created: row.created,
+      completed: row.completed,
+      cancelled: row.cancelled,
+      expired: row.expired,
+      revenue: row.revenue,
+      responseTimeTotalMs: row.responseTimeTotalMs,
+      responseTimeCount: row.responseTimeCount,
+      taskDurationTotalMs: row.taskDurationTotalMs,
+      taskDurationCount: row.taskDurationCount,
+      refreshedAt: new Date(),
+    })),
+    { ordered: false }
+  );
+
+  return { refreshed: rows.length };
+}
+
+export async function refreshPickupDailySummaryForDate(date = new Date()) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+  return refreshPickupDailySummaries({ from: start, to: end });
+}
+
+async function buildPrecomputedDailyTrend(match, thirtyDaysAgo) {
+  const summaryMatch = {
+    date: { $gte: dateKey(thirtyDaysAgo) },
+    ...(match.orgId ? { orgId: match.orgId } : {}),
+  };
+
+  const rows = await PickupDailySummary.aggregate([
+    { $match: summaryMatch },
+    {
+      $group: {
+        _id: "$date",
+        created: { $sum: "$created" },
+        completed: { $sum: "$completed" },
+        cancelled: { $sum: "$cancelled" },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  return rows.map((d) => ({
+    date: d._id,
+    created: d.created,
+    completed: d.completed,
+    cancelled: d.cancelled,
+  }));
+}
+
 export async function buildPickupAnalytics(match) {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -24,7 +141,7 @@ export async function buildPickupAnalytics(match) {
     statusAgg,
     categoryAgg,
     levelAgg,
-    dailyAgg,
+    dailyTrend,
     monthlyRevenueAgg,
     hourlyAgg,
     topDriversAgg,
@@ -80,18 +197,7 @@ export async function buildPickupAnalytics(match) {
       { $group: { _id: "$level", count: { $sum: 1 } } },
     ]),
 
-    PickupRequest.aggregate([
-      { $match: { ...match, createdAt: { $gte: thirtyDaysAgo } } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          created: { $sum: 1 },
-          completed: { $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] } },
-          cancelled: { $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] } },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]),
+    buildPrecomputedDailyTrend(match, thirtyDaysAgo),
 
     PickupRequest.aggregate([
       { $match: { ...match, status: "COMPLETED", paymentStatus: "PAID" } },
@@ -174,12 +280,7 @@ export async function buildPickupAnalytics(match) {
     statusDistribution: statusAgg.map((s) => ({ status: s._id, count: s.count })),
     categoryDistribution: categoryAgg.map((c) => ({ category: c._id, count: c.count })),
     levelDistribution: levelAgg.map((l) => ({ level: l._id, count: l.count })),
-    dailyTrend: dailyAgg.map((d) => ({
-      date: d._id,
-      created: d.created,
-      completed: d.completed,
-      cancelled: d.cancelled,
-    })),
+    dailyTrend,
     monthlyRevenue: monthlyRevenueAgg.map((d) => ({
       month: d._id,
       revenue: Math.round(d.revenue || 0),

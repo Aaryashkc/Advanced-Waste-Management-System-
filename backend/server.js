@@ -30,7 +30,9 @@ import { autoDispatchQualifiedMLSchedule, autoGenerateMLSchedule } from "./contr
 import { runBillGeneration } from "./controllers/billing.controller.js";
 import { ensurePickupRequestIndexes, expireStalePendingPickups } from "./services/pickupExpiry.js";
 import { ensurePaymentIndexes } from "./services/paymentIndexes.js";
+import { refreshPickupDailySummaries } from "./services/pickupAnalytics.js";
 import { initSocket } from "./socket/socketServer.js";
+import { sendError } from "./utils/apiResponse.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,18 +44,20 @@ let mlScheduleCronScheduled = false;
 let mlAutoDispatchCronScheduled = false;
 let billingCronScheduled = false;
 let pickupExpiryCronScheduled = false;
+let pickupSummaryCronScheduled = false;
 const ML_AUTO_DISPATCH_CRON = "0 5 * * *"; // 5:00 AM every day - dispatches qualified ML truck assignments
 const CRON_SCHEDULE = "0 2 * * *"; // 2:00 AM every day (server local time)
 const PICKUP_EXPIRY_CRON = "*/1 * * * *"; // every minute
-const ML_SCHEDULE_CRON = "0 0 * * *"; // 12:00 AM (midnight) every day — generates today's schedule
-const BILLING_CRON = "0 3 1 * *"; // 3:00 AM on the 1st of every month — generate monthly bills
+const PICKUP_SUMMARY_CRON = "*/15 * * * *"; // keep dashboard daily summaries warm
+const ML_SCHEDULE_CRON = "0 0 * * *"; // 12:00 AM (midnight) every day - generates today's schedule
+const BILLING_CRON = "0 3 1 * *"; // 3:00 AM on the 1st of every month - generate monthly bills
 
 const LOCAL_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Kathmandu";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ── CORS ──────────────────────────────────────────────────────────────────
+// -- CORS ------------------------------------------------------------------
 const corsOptions = {
   origin: process.env.NODE_ENV === "production"
     ? (process.env.FRONTEND_URL || "http://localhost:5173")
@@ -69,7 +73,7 @@ app.use(helmet());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: process.env.URLENCODED_BODY_LIMIT || "1mb" }));
 
-// ── REST routes ───────────────────────────────────────────────────────────
+// -- REST routes -----------------------------------------------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/org-admin", orgAdminRoutes);
@@ -119,13 +123,10 @@ app.get("/api/cron/cleanup-uploads", async (req, res) => {
 // Global error handler
 app.use((err, req, res, next) => {
   console.error("Error:", err);
-  res.status(err.status || 500).json({
-    message: err.message || "Internal server error",
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
-  });
+  return sendError(res, err, err.message || "Internal server error");
 });
 
-// ── HTTP + Socket.IO server ───────────────────────────────────────────────
+// -- HTTP + Socket.IO server -----------------------------------------------
 const server = http.createServer(app);
 initSocket(server); // attach Socket.IO to the same HTTP server
 
@@ -141,6 +142,7 @@ server.listen(PORT, async () => {
     await connectDB();
     await ensurePickupRequestIndexes();
     await ensurePaymentIndexes();
+    await refreshPickupDailySummaries();
     await expireStalePendingPickups();
   } catch (err) {
     console.error("Startup database initialization failed:", err.message);
@@ -166,6 +168,14 @@ server.listen(PORT, async () => {
           if (r.modified > 0) console.log(`Pickup expiry: marked ${r.modified} request(s) as EXPIRED`);
         })
         .catch((e) => console.error("Pickup expiry error:", e));
+    });
+  }
+
+  if (!pickupSummaryCronScheduled) {
+    pickupSummaryCronScheduled = true;
+    cron.schedule(PICKUP_SUMMARY_CRON, () => {
+      refreshPickupDailySummaries()
+        .catch((e) => console.error("Pickup summary refresh error:", e));
     });
   }
 

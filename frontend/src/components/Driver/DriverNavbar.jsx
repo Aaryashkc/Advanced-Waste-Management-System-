@@ -31,7 +31,7 @@ export default function DriverNavbar() {
   }, [token]);
 
   useEffect(() => {
-    fetchUnread();
+    const initialFetchTimer = setTimeout(fetchUnread, 0);
 
     const socket = getSocket();
     const onNew = () => setUnreadCount((prev) => prev + 1);
@@ -51,6 +51,7 @@ export default function DriverNavbar() {
       socket.off("notification:new", onNew);
       socket.off("notification:counts", onCounts);
       socket.off("schedule:confirmed", onSchedule);
+      clearTimeout(initialFetchTimer);
       clearInterval(interval);
     };
   }, [fetchUnread]);

@@ -2,7 +2,9 @@ import mongoose from "mongoose";
 import Payment from "../models/Payment.model.js";
 import PickupRequest from "../models/PickupRequest.model.js";
 import User from "../models/User.model.js";
-import { computePickupPricingAndRoute, emitPickupToDrivers } from "./pickup.controller.js";
+import { computePickupPricingAndRoute, emitPickupToDrivers } from "../services/pickup.service.js";
+import { invalidateDashboardCache } from "../services/dashboardCache.js";
+import { refreshPickupDailySummaryForDate } from "../services/pickupAnalytics.js";
 import {
   buildEsewaInitiationPayload,
   decodeAndVerifyCallback,
@@ -59,6 +61,13 @@ function paymentPayload(p) {
   };
 }
 
+function invalidatePaymentAnalytics(date = new Date()) {
+  invalidateDashboardCache();
+  refreshPickupDailySummaryForDate(date).catch((err) => {
+    console.error("[PickupAnalytics] Failed to refresh daily summary:", err.message);
+  });
+}
+
 // ── POST /api/payments/initiate ───────────────────────────────────────────
 /**
  * Customer chooses how they want to pay for an existing pickup.
@@ -90,11 +99,13 @@ function activePickupPaymentFilter(payment) {
 }
 
 async function updateActivePickupPaymentStatus(payment, paymentStatus) {
-  const result = await PickupRequest.updateOne(
+  const pickup = await PickupRequest.findOneAndUpdate(
     activePickupPaymentFilter(payment),
-    { $set: { paymentStatus } }
+    { $set: { paymentStatus } },
+    { new: true }
   );
-  return result.modifiedCount > 0;
+  if (pickup) invalidatePaymentAnalytics(pickup.createdAt);
+  return !!pickup;
 }
 
 async function cancelSupersededEsewaAttempts(pickupId, activePaymentId) {
@@ -216,6 +227,7 @@ export const initiatePayment = async (req, res) => {
       pickup.paymentStatus = "PENDING";
       pickup.paymentId = payment._id;
       await pickup.save();
+      invalidatePaymentAnalytics(pickup.createdAt);
       await dispatchPickupAfterPaymentChoice(pickup, payment);
 
       return res.status(200).json({
@@ -253,6 +265,7 @@ export const initiatePayment = async (req, res) => {
     pickup.paymentStatus = "PENDING";
     pickup.paymentId = payment._id;
     await pickup.save();
+    invalidatePaymentAnalytics(pickup.createdAt);
     await cancelSupersededEsewaAttempts(pickup._id, payment._id);
 
     return res.status(200).json({
@@ -420,6 +433,7 @@ export const esewaSuccess = async (req, res) => {
         { new: true }
       );
       if (activePickup) {
+        invalidatePaymentAnalytics(activePickup.createdAt);
         await dispatchPickupAfterPaymentChoice(activePickup, updated);
       }
     }
@@ -452,6 +466,8 @@ export const esewaFailure = async (req, res) => {
         );
         if (payment) {
           await updateActivePickupPaymentStatus(payment, "FAILED");
+          const pickup = await PickupRequest.findById(payment.pickupId).select("createdAt").lean();
+          invalidatePaymentAnalytics(pickup?.createdAt);
         }
       } catch {
         // Signature failure — ignore silently, do not mutate state
@@ -515,6 +531,7 @@ export const markCashCollected = async (req, res) => {
 
     pickup.paymentStatus = "PAID";
     await pickup.save();
+    invalidatePaymentAnalytics(pickup.createdAt);
 
     return res.status(200).json({ success: true, payment: paymentPayload(payment) });
   } catch (err) {

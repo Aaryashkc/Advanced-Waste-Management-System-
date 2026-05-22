@@ -20,6 +20,7 @@ maskey-1/
 - [Setup](#setup)
 - [Environment Variables](#environment-variables)
 - [How to Run](#how-to-run)
+- [Quality Gates, CI, and Tests](#quality-gates-ci-and-tests)
 - [Core Workflows](#core-workflows)
 - [ML Scheduling](#ml-scheduling)
 - [On-Demand Pickups](#on-demand-pickups)
@@ -30,6 +31,7 @@ maskey-1/
 - [Frontend Pages](#frontend-pages)
 - [Backend API Map](#backend-api-map)
 - [Data Models](#data-models)
+- [Development Notes](#development-notes)
 - [Troubleshooting](#troubleshooting)
 
 ## What This App Does
@@ -285,6 +287,541 @@ ML health:
 ```http
 GET http://localhost:8000/health
 ```
+
+## Quality Gates, CI, and Tests
+
+This repository uses automated checks to protect the most important parts of the system: backend security/business rules, frontend code quality, and production frontend build safety.
+
+### Why Use CI
+
+CI means Continuous Integration. In this project, CI is the GitHub Actions workflow in `.github/workflows/ci.yml`.
+
+CI is useful here because the app has many moving pieces:
+
+- Backend controllers enforce security rules for auth, payments, billing, pickups, driver assignment, and organization scoping.
+- Frontend code depends on many route, store, and component contracts.
+- Payment and pickup flows must not silently regress because they affect money, driver dispatch, and customer history.
+- Role-based access must stay strict for `super_admin`, `admin`, `driver`, and `customer_admin`.
+- A change in one file can break another area that is not obvious locally.
+
+CI gives every push and pull request the same repeatable checks. If a developer forgets to run tests locally, GitHub still catches many issues before the code reaches `main` or `master`.
+
+### Current CI Workflow
+
+CI file:
+
+```text
+.github/workflows/ci.yml
+```
+
+Triggers:
+
+| Trigger | When CI runs |
+| --- | --- |
+| `pull_request` | Every pull request to the repository. |
+| `push` to `main` | Every direct push to the `main` branch. |
+| `push` to `master` | Every direct push to the `master` branch. |
+
+Jobs:
+
+| Job | Purpose | Main commands |
+| --- | --- | --- |
+| `backend-tests` | Installs root dependencies and runs backend/domain tests. | `npm ci`, `npm test` |
+| `frontend` | Installs frontend dependencies, enforces lint rules, and verifies the production build. | `npm ci`, `npm run lint -- --max-warnings=0`, `npm run build` |
+
+Both jobs run on:
+
+```text
+ubuntu-latest
+```
+
+Both jobs use:
+
+```text
+actions/checkout@v4
+actions/setup-node@v4
+node-version: 22
+```
+
+Why Node 22 in CI:
+
+- It is a current modern Node runtime.
+- It supports the built-in `node:test` runner used by the backend tests.
+- It keeps GitHub Actions behavior consistent even if a developer has a different local Node version.
+
+### CI Job Details
+
+#### Backend tests job
+
+```yaml
+backend-tests:
+  name: Backend tests
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+    - run: npm test
+```
+
+What it does:
+
+1. Checks out the repository.
+2. Installs Node 22.
+3. Restores/saves npm cache for faster installs.
+4. Runs `npm ci` from the repository root.
+5. Runs `npm test`, which executes:
+
+```bash
+node --test
+```
+
+The backend tests are intentionally lightweight and mostly stub external dependencies. They do not need a real MongoDB, Cloudinary account, eSewa account, SMTP server, OpenRouteService key, or ML service for the covered cases.
+
+#### Frontend job
+
+```yaml
+frontend:
+  name: Frontend lint and build
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: frontend/package-lock.json
+    - run: npm ci
+      working-directory: frontend
+    - run: npm run lint -- --max-warnings=0
+      working-directory: frontend
+    - run: npm run build
+      working-directory: frontend
+```
+
+What it does:
+
+1. Checks out the repository.
+2. Installs Node 22.
+3. Uses the frontend lockfile for npm cache.
+4. Runs a clean frontend install from `frontend/package-lock.json`.
+5. Runs ESLint and treats warnings as failures.
+6. Builds the React/Vite app for production.
+
+Why lint with `--max-warnings=0`:
+
+- Warnings can hide real bugs in React hooks, unused variables, accidental globals, and import mistakes.
+- CI should be stricter than casual local development.
+- A green frontend job means the code is not just buildable, but also meets the configured lint standard.
+
+Why build in CI:
+
+- Vite catches module resolution errors that may not appear until bundling.
+- Production builds catch missing exports, bad imports, JSX syntax problems, and some environment assumptions.
+- A page can work in a dev server but fail in a production bundle; the build step protects against that.
+
+### Local Quality Commands
+
+Run these before opening a pull request.
+
+From the repository root:
+
+```bash
+npm test
+```
+
+Runs all backend/domain tests through Node's built-in test runner.
+
+```bash
+npm run lint:frontend
+```
+
+Runs frontend ESLint with zero warnings allowed.
+
+```bash
+npm run build:frontend
+```
+
+Builds the frontend production bundle from the root package script.
+
+Equivalent frontend-only commands:
+
+```bash
+cd frontend
+npm run lint -- --max-warnings=0
+npm run build
+```
+
+### Installing Dependencies for CI Parity
+
+CI uses `npm ci`, not `npm install`.
+
+Use `npm ci` when you want your local install to match CI exactly:
+
+```bash
+npm ci
+cd frontend
+npm ci
+```
+
+Difference:
+
+| Command | Use case |
+| --- | --- |
+| `npm install` | Normal development when adding/updating packages. May update lockfiles. |
+| `npm ci` | Clean repeatable install from lockfile. Used by CI. Fails if lockfile and package file disagree. |
+
+If CI fails during install, check:
+
+- `package.json`
+- `package-lock.json`
+- `frontend/package.json`
+- `frontend/package-lock.json`
+
+The package file and lockfile must agree.
+
+### Test Runner
+
+Backend tests use the built-in Node.js test runner:
+
+```js
+import test from "node:test";
+import assert from "node:assert/strict";
+```
+
+The root test script is:
+
+```json
+"test": "node --test"
+```
+
+This automatically discovers test files matching Node's test conventions, including the files under:
+
+```text
+backend/tests/
+backend/domains/*/tests/
+```
+
+No Jest, Mocha, or Vitest setup is required for the current backend tests.
+
+### Test Categories
+
+#### Domain contract tests
+
+Files:
+
+```text
+backend/domains/auth/tests/auth.domain.test.js
+backend/domains/billing/tests/billing.domain.test.js
+backend/domains/fleet/tests/fleet.domain.test.js
+backend/domains/ml-schedules/tests/ml-schedules.domain.test.js
+backend/domains/organizations/tests/organizations.domain.test.js
+backend/domains/payments/tests/payments.domain.test.js
+backend/domains/pickups/tests/pickups.domain.test.js
+```
+
+Purpose:
+
+- Keep important domain contracts explicit.
+- Make allowed roles, allowed actions, payment methods, and lifecycle states visible.
+- Catch accidental edits to small but critical policy surfaces.
+
+Examples of protected contracts:
+
+| Domain | What the tests protect |
+| --- | --- |
+| Auth | Public registration is customer-only by contract. |
+| Billing | Customer bill payment method surface is explicit. |
+| Fleet | Fleet role surface is limited to driver/admin/super admin. |
+| ML schedules | Scheduler actions are limited to `dispatch`, `skip`, and `reduced`. |
+| Organizations | Admin organization access is scoped by `orgId`; super admin remains global. |
+| Payments | Pickup payment methods are allow-listed as `cash` and `esewa`. |
+| Pickups | Driver lifecycle targets stay in the expected order surface. |
+
+These tests are intentionally small. They are a tripwire for policy drift.
+
+#### Auth, role, and billing security tests
+
+File:
+
+```text
+backend/tests/authBillingSecurity.test.js
+```
+
+What it covers:
+
+- Public registration ignores client-supplied privileged roles.
+- Auth middleware excludes sensitive fields from the loaded user:
+  - `passwordHash`
+  - `loginOtp`
+  - `twoFactor.secret`
+- Disabled users are rejected even with valid JWTs.
+- Role middleware fails closed if a route is configured with an invalid role.
+- Role middleware rejects disabled users before normal role checks.
+- Cash bill payment moves a user bill to `CASH_PENDING` for admin confirmation.
+
+Why this matters:
+
+- Users must not self-register as admins or super admins.
+- Sensitive auth fields must never be attached to `req.user`.
+- Disabling an account must immediately block access.
+- A typo in allowed roles should fail loudly, not open access.
+- Cash billing needs a confirmation state so payment cannot be silently trusted.
+
+#### Pickup lifecycle and payment tests
+
+File:
+
+```text
+backend/tests/pickupLifecycle.test.js
+```
+
+What it covers:
+
+- Pickup driver socket rooms are scoped to matched drivers, assigned drivers, or organization driver rooms.
+- Pickup dispatch does not fall back to a global `drivers` room for scoped pickups.
+- Payment initiation ignores client-supplied amount and recomputes server-side price.
+- eSewa callbacks reject tampered amounts before settlement.
+- Drivers cannot view or accept pickups outside their organization.
+- Admin pickup listing is scoped to the admin organization.
+- Cancelled pickup eSewa callbacks settle payment without redispatching the cancelled pickup.
+- Cash collection is only allowed for the assigned driver and only during collection.
+- Cash pickups cannot be completed until cash is collected.
+- eSewa pickups cannot be completed unless payment is paid.
+- Driver availability is reserved on accept and released after completion.
+
+Why this matters:
+
+- Dispatch must respect organization boundaries.
+- Customers cannot lower payment amounts by editing browser requests.
+- eSewa callbacks must be verified before the app trusts them.
+- Drivers should not see or accept another organization's work.
+- Cash and eSewa completion rules protect payment integrity.
+- Driver availability must represent real assignment state.
+
+### Running Focused Tests
+
+Run one test file:
+
+```bash
+node --test backend/tests/pickupLifecycle.test.js
+```
+
+Run the auth/billing security tests:
+
+```bash
+node --test backend/tests/authBillingSecurity.test.js
+```
+
+Run one domain test:
+
+```bash
+node --test backend/domains/payments/tests/payments.domain.test.js
+```
+
+Run all tests:
+
+```bash
+npm test
+```
+
+### How the Backend Tests Avoid External Services
+
+Many backend tests use stubs instead of real external infrastructure.
+
+The tests replace model methods and service calls in memory, for example:
+
+- `User.findOne`
+- `User.findById`
+- `PickupRequest.findById`
+- `PickupRequest.findOneAndUpdate`
+- `Payment.findOne`
+- `Payment.create`
+- `Driver.findOne`
+- `Area.findOne`
+- `Organization.findById`
+
+This keeps tests fast and deterministic.
+
+Benefits:
+
+- No MongoDB server is required for these tests.
+- No real payment gateway call is required.
+- No real email/SMS provider is required.
+- No real Cloudinary upload is required.
+- No ML service is required.
+- Tests can focus on controller behavior and business rules.
+
+Tradeoff:
+
+- Stubbed tests do not prove that the full database schema, indexes, network calls, and external providers work together.
+- For release confidence, manual or integration testing should still cover full app flows with real services or staging credentials.
+
+### What CI Does Not Currently Test
+
+CI does not currently run:
+
+- Python ML unit tests.
+- ML model training.
+- FastAPI service startup checks.
+- Browser end-to-end tests.
+- Real MongoDB integration tests.
+- Real Cloudinary upload tests.
+- Real eSewa sandbox transaction tests.
+- Real OpenRouteService routing tests.
+- Accessibility checks.
+- Visual regression tests.
+
+This does not mean those areas are unimportant. It means the current CI is focused on the checks that are already implemented and can run reliably without secrets or external services.
+
+Recommended future CI additions:
+
+- Add Python tests for `ml/main.py`, `ml/scheduler.py`, and `ml/nepal_holidays.py`.
+- Add a FastAPI health/startup test for the ML service.
+- Add integration tests with a temporary MongoDB service.
+- Add a small Playwright smoke test for login, dashboard routing, and pickup creation.
+- Add API contract tests for critical endpoints.
+- Add dependency audit checks when the team is ready to manage audit noise.
+
+### When to Add a Test
+
+Add or update tests when changing:
+
+- Authentication, OTP, JWT, role, or account activation behavior.
+- Organization scoping.
+- Admin/super-admin permissions.
+- Pickup creation, matching, acceptance, status transitions, expiry, or cancellation.
+- Driver availability or truck assignment logic.
+- Payment amount calculation, eSewa verification, or cash settlement.
+- Monthly billing generation, payment, waive, or cash confirmation behavior.
+- ML schedule action/state contracts.
+- Any schema/policy object in `backend/domains/*/validation.schema.js`.
+
+Good test names should describe behavior:
+
+```js
+test("cash pickup cannot be completed until cash has been collected", async () => {
+  // ...
+});
+```
+
+Avoid vague names like:
+
+```js
+test("works", () => {});
+```
+
+### CI Failure Guide
+
+#### `npm ci` fails
+
+Likely causes:
+
+- `package.json` changed but `package-lock.json` was not updated.
+- `frontend/package.json` changed but `frontend/package-lock.json` was not updated.
+- Dependency version conflict.
+
+Fix:
+
+```bash
+npm install
+cd frontend
+npm install
+```
+
+Then commit the updated lockfile if it changed intentionally.
+
+#### `npm test` fails
+
+Check:
+
+- Which test file failed.
+- The assertion message.
+- Whether a business rule changed intentionally.
+- Whether the test needs updating because the rule changed.
+- Whether the code changed accidentally and should be fixed instead.
+
+If the failure is in a security or payment test, treat it as high priority.
+
+#### Frontend lint fails
+
+Run locally:
+
+```bash
+cd frontend
+npm run lint -- --max-warnings=0
+```
+
+Common causes:
+
+- Unused imports.
+- Unused variables.
+- React hook dependency warnings.
+- Fast refresh export warnings.
+- Accidental globals.
+
+#### Frontend build fails
+
+Run locally:
+
+```bash
+cd frontend
+npm run build
+```
+
+Common causes:
+
+- Wrong import path.
+- Missing export.
+- Case-sensitive path problem that works on Windows but fails on Linux CI.
+- Environment variable assumptions.
+- Syntax error in JSX.
+
+Important: GitHub Actions runs on Linux. File paths are case-sensitive there. A component import that works locally on Windows may fail in CI if the filename casing is different.
+
+### Pull Request Checklist
+
+Before asking for review:
+
+- Run `npm test`.
+- Run `npm run lint:frontend`.
+- Run `npm run build:frontend`.
+- Confirm `.env` or secrets were not committed.
+- Confirm package lockfiles are updated only when dependency changes are intentional.
+- Confirm README/API docs are updated when behavior changes.
+- For security/payment changes, include a test or explain why one is not possible.
+
+### Adding or Changing CI
+
+When editing `.github/workflows/ci.yml`:
+
+- Keep jobs deterministic.
+- Prefer `npm ci` over `npm install`.
+- Avoid requiring secrets for normal pull request checks.
+- Keep external services optional unless the job explicitly provisions them.
+- Use separate jobs for backend, frontend, and future ML checks so failures are easy to read.
+- Cache dependencies with the correct lockfile path.
+
+If adding ML CI later, a likely job shape is:
+
+```yaml
+ml:
+  name: ML service checks
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: pip
+    - run: pip install -r ml/requirements.txt
+    - run: python -m compileall ml
+```
+
+Add real Python tests before making this a required gate.
 
 ## Core Workflows
 

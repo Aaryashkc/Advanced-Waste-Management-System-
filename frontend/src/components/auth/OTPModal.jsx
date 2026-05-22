@@ -53,26 +53,7 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
     }
   }, []);
 
-  const handleKeyDown = useCallback((index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-    if (e.key === 'Enter') {
-      handleVerify();
-    }
-  }, [otp]);
-
-  const handlePaste = useCallback((e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pasted) return;
-    const next = pasted.split('').concat(Array(6).fill('')).slice(0, 6);
-    setOtp(next);
-    const lastIdx = Math.min(pasted.length, 5);
-    inputRefs.current[lastIdx]?.focus();
-  }, []);
-
-  const handleVerify = async () => {
+  const handleVerify = useCallback(async () => {
     const code = otp.join('');
     if (code.length !== 6) {
       setError('Please enter all 6 digits');
@@ -101,7 +82,26 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [email, loginWithOTP, navigate, onSuccess, otp]);
+
+  const handleKeyDown = useCallback((index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'Enter') {
+      handleVerify();
+    }
+  }, [handleVerify, otp]);
+
+  const handlePaste = useCallback((e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    const next = pasted.split('').concat(Array(6).fill('')).slice(0, 6);
+    setOtp(next);
+    const lastIdx = Math.min(pasted.length, 5);
+    inputRefs.current[lastIdx]?.focus();
+  }, []);
 
   const handleResend = async () => {
     if (!canResend) return;

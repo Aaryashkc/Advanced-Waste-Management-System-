@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import usePricingStore from "../stores/usePricingStore";
 import useAuthStore from "../stores/useAuthStore";
 import { DollarSign, Save, RefreshCw } from "lucide-react";
@@ -11,46 +11,47 @@ const PricingConfig = () => {
   const [form, setForm] = useState(null);
   const [saveMsg, setSaveMsg] = useState("");
 
+  const configForm = useMemo(() => {
+    if (!config) return null;
+    return {
+      recyclable: config.categoryBase?.recyclable ?? 500,
+      nonRecyclable: config.categoryBase?.nonRecyclable ?? 800,
+      mixed: config.categoryBase?.mixed ?? 1000,
+      easy: config.levelMultiplier?.easy ?? 1.0,
+      medium: config.levelMultiplier?.medium ?? 2.5,
+      hard: config.levelMultiplier?.hard ?? 5.0,
+      distanceRatePerKm: config.distanceRatePerKm ?? 50,
+      minimumCharge: config.minimumCharge ?? 500,
+    };
+  }, [config]);
+
+  const formValues = form || configForm;
+
   useEffect(() => {
     fetchPricingConfig();
   }, [fetchPricingConfig]);
 
-  useEffect(() => {
-    if (config) {
-      setForm({
-        recyclable: config.categoryBase?.recyclable ?? 500,
-        nonRecyclable: config.categoryBase?.nonRecyclable ?? 800,
-        mixed: config.categoryBase?.mixed ?? 1000,
-        easy: config.levelMultiplier?.easy ?? 1.0,
-        medium: config.levelMultiplier?.medium ?? 2.5,
-        hard: config.levelMultiplier?.hard ?? 5.0,
-        distanceRatePerKm: config.distanceRatePerKm ?? 50,
-        minimumCharge: config.minimumCharge ?? 500,
-      });
-    }
-  }, [config]);
-
   const handleChange = (field, value) => {
     if (!isSuperAdmin) return;
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...(prev || configForm), [field]: value }));
     setSaveMsg("");
   };
 
   const handleSave = async () => {
-    if (!isSuperAdmin || !form) return;
+    if (!isSuperAdmin || !formValues) return;
     const result = await updatePricingConfig({
       categoryBase: {
-        recyclable: Number(form.recyclable),
-        nonRecyclable: Number(form.nonRecyclable),
-        mixed: Number(form.mixed),
+        recyclable: Number(formValues.recyclable),
+        nonRecyclable: Number(formValues.nonRecyclable),
+        mixed: Number(formValues.mixed),
       },
       levelMultiplier: {
-        easy: Number(form.easy),
-        medium: Number(form.medium),
-        hard: Number(form.hard),
+        easy: Number(formValues.easy),
+        medium: Number(formValues.medium),
+        hard: Number(formValues.hard),
       },
-      distanceRatePerKm: Number(form.distanceRatePerKm),
-      minimumCharge: Number(form.minimumCharge),
+      distanceRatePerKm: Number(formValues.distanceRatePerKm),
+      minimumCharge: Number(formValues.minimumCharge),
     });
     if (result.success) {
       setSaveMsg("Pricing updated successfully!");
@@ -80,7 +81,7 @@ const PricingConfig = () => {
     );
   }
 
-  if (!form) return null;
+  if (!formValues) return null;
 
   return (
     <div className="space-y-6">
@@ -117,7 +118,7 @@ const PricingConfig = () => {
           <PriceField
             label="Recyclable"
             tag="BIO"
-            value={form.recyclable}
+            value={formValues.recyclable}
             onChange={(v) => handleChange("recyclable", v)}
             readOnly={!isSuperAdmin}
             color="green"
@@ -125,7 +126,7 @@ const PricingConfig = () => {
           <PriceField
             label="Non-Recyclable"
             tag="NON"
-            value={form.nonRecyclable}
+            value={formValues.nonRecyclable}
             onChange={(v) => handleChange("nonRecyclable", v)}
             readOnly={!isSuperAdmin}
             color="red"
@@ -133,7 +134,7 @@ const PricingConfig = () => {
           <PriceField
             label="Mixed"
             tag="MIX"
-            value={form.mixed}
+            value={formValues.mixed}
             onChange={(v) => handleChange("mixed", v)}
             readOnly={!isSuperAdmin}
             color="amber"
@@ -153,21 +154,21 @@ const PricingConfig = () => {
           <MultiplierField
             label="Easy"
             desc="< 1,000 kg"
-            value={form.easy}
+            value={formValues.easy}
             onChange={(v) => handleChange("easy", v)}
             readOnly={!isSuperAdmin}
           />
           <MultiplierField
             label="Medium"
             desc="1,000 – 5,000 kg"
-            value={form.medium}
+            value={formValues.medium}
             onChange={(v) => handleChange("medium", v)}
             readOnly={!isSuperAdmin}
           />
           <MultiplierField
             label="Hard"
             desc="> 5,000 kg"
-            value={form.hard}
+            value={formValues.hard}
             onChange={(v) => handleChange("hard", v)}
             readOnly={!isSuperAdmin}
           />
@@ -187,7 +188,7 @@ const PricingConfig = () => {
             <input
               type="number"
               min="0"
-              value={form.distanceRatePerKm}
+              value={formValues.distanceRatePerKm}
               onChange={(e) => handleChange("distanceRatePerKm", e.target.value)}
               readOnly={!isSuperAdmin}
               className={`w-full px-4 py-3 rounded-xl border border-primary/20 text-primary text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 ${
@@ -202,7 +203,7 @@ const PricingConfig = () => {
             <input
               type="number"
               min="0"
-              value={form.minimumCharge}
+              value={formValues.minimumCharge}
               onChange={(e) => handleChange("minimumCharge", e.target.value)}
               readOnly={!isSuperAdmin}
               className={`w-full px-4 py-3 rounded-xl border border-primary/20 text-primary text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 ${
@@ -221,7 +222,7 @@ const PricingConfig = () => {
         <div className="bg-white/80 rounded-xl border border-primary/10 p-4 font-mono text-sm text-primary/80">
           <p>total = max(minimumCharge, categoryBase × levelMultiplier + distance × ratePerKm)</p>
           <p className="mt-2 text-xs text-primary/50">
-            Example: Non-recyclable + Medium + 10 km = max({form.minimumCharge}, {form.nonRecyclable} × {form.medium} + 10 × {form.distanceRatePerKm}) = <strong>NPR {Math.max(Number(form.minimumCharge), Number(form.nonRecyclable) * Number(form.medium) + 10 * Number(form.distanceRatePerKm))}</strong>
+            Example: Non-recyclable + Medium + 10 km = max({formValues.minimumCharge}, {formValues.nonRecyclable} × {formValues.medium} + 10 × {formValues.distanceRatePerKm}) = <strong>NPR {Math.max(Number(formValues.minimumCharge), Number(formValues.nonRecyclable) * Number(formValues.medium) + 10 * Number(formValues.distanceRatePerKm))}</strong>
           </p>
         </div>
       </section>

@@ -33,7 +33,7 @@ export default function DriverDashboard() {
       }
     })();
     fetchDriverAssignments();
-  }, []);
+  }, [fetchDriverAssignments]);
 
   const fetchPendingPickups = useCallback(async () => {
     try {

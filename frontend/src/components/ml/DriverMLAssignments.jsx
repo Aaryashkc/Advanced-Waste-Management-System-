@@ -29,7 +29,7 @@ const DriverMLAssignments = () => {
   const [confirmArea, setConfirmArea] = useState(null); // area to confirm completion
   const [toast, setToast] = useState(null);
 
-  useEffect(() => { fetchDriverAssignments(); }, []);
+  useEffect(() => { fetchDriverAssignments(); }, [fetchDriverAssignments]);
 
   // Auto-dismiss toast
   useEffect(() => {

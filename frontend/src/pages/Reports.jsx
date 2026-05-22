@@ -64,7 +64,7 @@ const Reports = () => {
   const pieBaseOptions = { ...commonOptions, scales: { x: { display: false }, y: { display: false } } };
   const doughnutBaseOptions = { ...pieBaseOptions, cutout: "65%" };
 
-  const analytics = mlAnalytics || {};
+  const analytics = useMemo(() => mlAnalytics || {}, [mlAnalytics]);
   const totalSchedules = analytics.totalSchedules || 0;
   const modelInfo = analytics.modelInfo || { model: "GradientBoosting", r2Score: 0.974 };
 
@@ -74,18 +74,18 @@ const Reports = () => {
   const weeklyChange = wc.changePercent || 0;
   const weeklyChangeIsGood = Number(weeklyChange) <= 0;
 
-  const wasteTrend = analytics.wasteTrend || [];
+  const wasteTrend = useMemo(() => analytics.wasteTrend || [], [analytics.wasteTrend]);
   const trendDates = wasteTrend.map((t) => t.date);
   const trendValues = wasteTrend.map((t) => t.totalWasteKg);
 
-  const areaBreakdown = analytics.areaBreakdown || [];
-  const categoryDist = analytics.categoryDistribution || [];
-  const scheduleStats = analytics.scheduleStats || [];
-  const actionDist = analytics.actionDistribution || [];
+  const areaBreakdown = useMemo(() => analytics.areaBreakdown || [], [analytics.areaBreakdown]);
+  const categoryDist = useMemo(() => analytics.categoryDistribution || [], [analytics.categoryDistribution]);
+  const scheduleStats = useMemo(() => analytics.scheduleStats || [], [analytics.scheduleStats]);
+  const actionDist = useMemo(() => analytics.actionDistribution || [], [analytics.actionDistribution]);
 
-  const incompleteAreas = analytics.incompleteAreas || [];
-  const reasonBreakdown = analytics.reasonBreakdown || [];
-  const driverlessTruckStats = analytics.driverlessTruckStats || [];
+  const incompleteAreas = useMemo(() => analytics.incompleteAreas || [], [analytics.incompleteAreas]);
+  const reasonBreakdown = useMemo(() => analytics.reasonBreakdown || [], [analytics.reasonBreakdown]);
+  const driverlessTruckStats = useMemo(() => analytics.driverlessTruckStats || [], [analytics.driverlessTruckStats]);
 
   const avgDispatched = wasteTrend.length > 0
     ? (wasteTrend.reduce((sum, t) => sum + (t.dispatched || 0), 0) / wasteTrend.length).toFixed(1)

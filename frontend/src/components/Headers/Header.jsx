@@ -39,7 +39,8 @@ export function Header() {
 
   // Close mobile menu on route change
   useEffect(() => {
-    setMobileOpen(false);
+    const timer = setTimeout(() => setMobileOpen(false), 0);
+    return () => clearTimeout(timer);
   }, [location.pathname]);
 
   const handleLogout = () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import useScheduleStore from "../../stores/useScheduleStore";
 
@@ -27,8 +27,7 @@ export default function DebugScheduleData() {
     fetchAllData 
   } = useScheduleStore();
 
-  useEffect(() => {
-    const testBothStores = async () => {
+  const testBothStores = useCallback(async () => {
       setDebugInfo({ testing: 'Starting debug test...' });
       
       try {
@@ -39,20 +38,23 @@ export default function DebugScheduleData() {
         // Test Regular Schedule Store
         console.log('Testing Regular Schedule Store...');
         await fetchAllData();
+
+        const mlState = useMLScheduleStore.getState();
+        const scheduleState = useScheduleStore.getState();
         
         setDebugInfo({
           testing: 'Complete',
           mlSchedule: {
-            data: publicSchedule,
-            loading: mlLoading,
-            error: mlError
+            data: mlState.publicSchedule,
+            loading: mlState.loading,
+            error: mlState.error
           },
           regularSchedule: {
-            schedules: schedules,
-            locations: locations,
-            drivers: drivers,
-            loading: scheduleLoading,
-            error: scheduleError
+            schedules: scheduleState.schedules,
+            locations: scheduleState.locations,
+            drivers: scheduleState.drivers,
+            loading: scheduleState.loading,
+            error: scheduleState.error
           }
         });
       } catch (error) {
@@ -62,10 +64,12 @@ export default function DebugScheduleData() {
           error: error.message
         });
       }
-    };
+  }, [fetchAllData, fetchPublicSchedule]);
 
-    testBothStores();
-  }, [fetchPublicSchedule, fetchAllData]);
+  useEffect(() => {
+    const timer = setTimeout(testBothStores, 0);
+    return () => clearTimeout(timer);
+  }, [testBothStores]);
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-lg max-w-2xl mx-auto mt-8">

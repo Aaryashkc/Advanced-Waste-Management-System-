@@ -30,7 +30,7 @@ export default defineConfig([
       }],
       'no-empty': ['error', { allowEmptyCatch: true }],
       'react-hooks/purity': 'off',
-      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/set-state-in-effect': 'error',
     },
   },
 ])
