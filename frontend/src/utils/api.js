@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { reportFrontendError } from './errorReporting.js';
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
@@ -26,8 +27,7 @@ export const mlApi = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    // Log the request for debugging
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    config.metadata = { startedAt: performance.now() };
     
     // Try to get token from Zustand store first, fallback to localStorage for backward compatibility
     let token = null;
@@ -48,13 +48,14 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    reportFrontendError(error, { source: 'api-request' });
     return Promise.reject(error);
   }
 );
 
 mlApi.interceptors.request.use(
   (config) => {
+    config.metadata = { startedAt: performance.now() };
     let token = null;
     try {
       const authStorage = localStorage.getItem('auth-storage');
@@ -77,16 +78,18 @@ mlApi.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`);
     return response;
   },
   (error) => {
-    console.error('API Response Error:', {
+    reportFrontendError(error, {
+      source: 'api-response',
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
-      message: error.message,
-      data: error.response?.data
+      durationMs: error.config?.metadata?.startedAt
+        ? Math.round(performance.now() - error.config.metadata.startedAt)
+        : undefined,
+      responseMessage: error.response?.data?.message,
     });
     
     if (error.response?.status === 401) {
@@ -99,6 +102,23 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+    return Promise.reject(error);
+  }
+);
+
+mlApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    reportFrontendError(error, {
+      source: 'ml-api-response',
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      durationMs: error.config?.metadata?.startedAt
+        ? Math.round(performance.now() - error.config.metadata.startedAt)
+        : undefined,
+      responseMessage: error.response?.data?.message,
+    });
     return Promise.reject(error);
   }
 );

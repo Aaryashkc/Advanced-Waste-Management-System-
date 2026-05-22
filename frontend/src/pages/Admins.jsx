@@ -4,9 +4,10 @@ import useAuthStore from "../stores/useAuthStore";
 import useOrganizationStore from "../stores/useOrganizationStore";
 import { UserCog, Users, Building2, Shield, Search, ChevronRight, Mail, Phone, Calendar, X, Eye } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
+import PaginationControls from "../components/shared/PaginationControls";
 
 const Admins = () => {
-  const { admins, orgName, orgGroups, isLoading, error, fetchAdmins, createAdmin, updateAdmin, deleteAdmin } = useAdminStore();
+  const { admins, orgName, orgGroups, pagination, isLoading, error, fetchAdmins, createAdmin, updateAdmin, deleteAdmin } = useAdminStore();
   const user = useAuthStore((s) => s.user);
   const { organizations, fetchOrganizations } = useOrganizationStore();
   const isSuperAdmin = user?.role === "super_admin";
@@ -22,7 +23,7 @@ const Admins = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
-  useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
+  useEffect(() => { fetchAdmins({ page: 1, limit: 10 }); }, [fetchAdmins]);
 
   useEffect(() => {
     if (isSuperAdmin) fetchOrganizations();
@@ -98,7 +99,7 @@ const Admins = () => {
   };
 
   // Derived stats
-  const totalAdmins = admins.length;
+  const totalAdmins = pagination?.total ?? admins.length;
   const orgSet = new Set(admins.map(a => a.organization?.name).filter(Boolean));
   const superAdminCount = admins.filter(a => a.role === "super_admin").length;
   const recentCount = admins.filter(a => {
@@ -244,6 +245,11 @@ const Admins = () => {
           <div className="text-xs text-primary/40 text-center">
             Showing {filteredAdmins.length} of {admins.length} admin{admins.length !== 1 ? "s" : ""} across {filteredOrgGroups.length} organization{filteredOrgGroups.length !== 1 ? "s" : ""}
           </div>
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={(nextPage) => fetchAdmins({ page: nextPage, limit: 10 })}
+            itemLabel="admins"
+          />
         </div>
       ) : (
         /* Org Admin: Flat table for own org */
@@ -273,6 +279,11 @@ const Admins = () => {
           <div className="px-5 py-3 border-t border-primary/8 bg-primary/2 text-xs text-primary/40">
             Showing {filteredAdmins.length} of {admins.length} admin{admins.length !== 1 ? "s" : ""}
           </div>
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={(nextPage) => fetchAdmins({ page: nextPage, limit: 10 })}
+            itemLabel="admins"
+          />
         </div>
       )}
 

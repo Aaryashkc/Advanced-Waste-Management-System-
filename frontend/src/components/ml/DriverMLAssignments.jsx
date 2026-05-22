@@ -27,6 +27,7 @@ const DriverMLAssignments = () => {
   const [activeDay, setActiveDay] = useState("today");
   const [completing, setCompleting] = useState(null); // area name being completed
   const [confirmArea, setConfirmArea] = useState(null); // area to confirm completion
+  const [actualWasteKg, setActualWasteKg] = useState("");
   const [toast, setToast] = useState(null);
 
   useEffect(() => { fetchDriverAssignments(); }, [fetchDriverAssignments]);
@@ -55,11 +56,17 @@ const DriverMLAssignments = () => {
   const statusCfg = STATUS_CONFIG[currentData?.status] || STATUS_CONFIG.pending;
 
   const handleComplete = async (area) => {
+    const measuredKg = Number(actualWasteKg);
+    if (!Number.isFinite(measuredKg) || measuredKg < 0) {
+      setToast({ type: "error", message: "Enter the collected waste in kg" });
+      return;
+    }
     setConfirmArea(null);
     setCompleting(area);
-    const result = await completeAssignment(currentData.scheduleId, area);
+    const result = await completeAssignment(currentData.scheduleId, area, measuredKg);
     setCompleting(null);
     if (result) {
+      setActualWasteKg("");
       setToast({ type: "success", message: result.message || `${area} marked as completed!` });
     } else {
       setToast({ type: "error", message: "Failed to mark as completed" });
@@ -280,7 +287,10 @@ const DriverMLAssignments = () => {
                       {isConfirmedSchedule && (a.action === "dispatch" || a.action === "reduced") && (
                         <div className="px-5 py-3 bg-white">
                           <button
-                            onClick={() => setConfirmArea(a.area)}
+                            onClick={() => {
+                              setActualWasteKg(a.predictedWasteKg ? String(Math.round(a.predictedWasteKg)) : "");
+                              setConfirmArea(a.area);
+                            }}
                             disabled={isCompleting}
                             className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#2d4a4e] active:scale-[0.98] transition-all disabled:opacity-50"
                           >
@@ -335,10 +345,24 @@ const DriverMLAssignments = () => {
               <p className="text-sm text-primary/60">
                 Mark <span className="font-semibold text-primary">{confirmArea}</span> collection as completed?
               </p>
+              <label className="block mt-5 text-left text-xs font-semibold text-primary/60">
+                Collected waste (kg)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={actualWasteKg}
+                  onChange={(e) => setActualWasteKg(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-primary/15 px-4 py-3 text-sm font-semibold text-primary outline-none focus:border-primary/40"
+                />
+              </label>
             </div>
             <div className="flex gap-3 p-4 pt-0">
               <button
-                onClick={() => setConfirmArea(null)}
+                onClick={() => {
+                  setConfirmArea(null);
+                  setActualWasteKg("");
+                }}
                 className="flex-1 py-3 rounded-xl border border-primary/15 text-sm font-semibold text-primary/60 hover:bg-primary/5 transition"
               >
                 Cancel

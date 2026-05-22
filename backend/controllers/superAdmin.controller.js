@@ -10,6 +10,7 @@ import DeletionRequest from "../models/DeletionRequest.model.js";
 import { getIO } from "../socket/socketServer.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 export const createOrganization = async (req, res) => {
   try {
@@ -37,15 +38,26 @@ export const createOrganization = async (req, res) => {
 
 export const getAllOrganizations = async (req, res) => {
   try {
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     const organizations = await Organization.find()
-      .populate("admins", "name email");
+      .select("name location admins createdAt updatedAt")
+      .populate("admins", "name email")
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await Organization.countDocuments();
 
     // Get real fleet + driver data from source-of-truth collections
     const orgsWithFleet = await Promise.all(
       organizations.map(async (org) => {
-        const trucks = await Truck.find({ orgId: org._id }).select("truckType capacity licensePlate");
+        const trucks = await Truck.find({ orgId: org._id })
+          .select("truckType capacity licensePlate")
+          .sort({ createdAt: -1 })
+          .limit(100)
+          .lean();
         const driverCount = await User.countDocuments({ orgId: org._id, role: "driver" });
-        const orgObj = org.toObject();
+        const orgObj = org;
         orgObj.fleet = trucks;
         orgObj.driverCount = driverCount;
         return orgObj;
@@ -54,7 +66,8 @@ export const getAllOrganizations = async (req, res) => {
 
     res.status(200).json({
       message: "Organizations retrieved successfully",
-      organizations: orgsWithFleet
+      organizations: orgsWithFleet,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to retrieve organizations", error: error.message });
@@ -76,10 +89,18 @@ export const getOrganizationById = async (req, res) => {
     if (!org) return res.status(404).json({ message: "Organization not found" });
 
     // Get trucks for this org
-    const trucks = await Truck.find({ orgId: org._id }).lean();
+    const trucks = await Truck.find({ orgId: org._id })
+      .select("licensePlate truckType capacity dutyType isAvailable createdAt")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
 
     // Get all drivers for this org
-    const orgDriverUsers = await User.find({ orgId: org._id, role: "driver" }).select("_id name email phone isActive createdAt").lean();
+    const orgDriverUsers = await User.find({ orgId: org._id, role: "driver" })
+      .select("_id name email phone isActive createdAt")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
     const driverUserIds = orgDriverUsers.map(u => u._id);
     const drivers = await Driver.find({ userId: { $in: driverUserIds } })
       .populate("assignedTruckId", "licensePlate truckType capacity")
@@ -107,7 +128,11 @@ export const getOrganizationById = async (req, res) => {
 
     // Get areas for this org
     const Area = (await import("../models/Area.model.js")).default;
-    const areas = await Area.find({ orgId: org._id, isActive: true }).lean();
+    const areas = await Area.find({ orgId: org._id, isActive: true })
+      .select("name type boundary isActive createdAt")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
 
     // Build driver map for trucks
     const driverByTruck = {};
@@ -324,16 +349,23 @@ export const getSuperAdminAnalytics = async (req, res) => {
 export const getAllVehicles = async (req, res) => {
   try {
     const { orgId } = req.query;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     const filter = orgId ? { orgId } : {};
 
     const trucks = await Truck.find(filter)
+      .select("truckType capacity licensePlate isAvailable orgId createdAt")
       .populate("orgId", "name")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await Truck.countDocuments(filter);
 
     // Find drivers assigned to each truck
     const truckIds = trucks.map(t => t._id);
     const drivers = await Driver.find({ assignedTruckId: { $in: truckIds } })
-      .populate("userId", "name email");
+      .populate("userId", "name email")
+      .lean();
 
     const driverByTruck = {};
     drivers.forEach(d => {
@@ -358,7 +390,11 @@ export const getAllVehicles = async (req, res) => {
       createdAt: t.createdAt
     }));
 
-    res.status(200).json({ success: true, data: formattedTrucks });
+    res.status(200).json({
+      success: true,
+      data: formattedTrucks,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch vehicles", error: error.message });
   }
@@ -611,15 +647,25 @@ export const deleteAdmin = async (req, res) => {
 export const getDeletionRequests = async (req, res) => {
   try {
     const { status } = req.query;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     const filter = status ? { status } : {};
 
     const requests = await DeletionRequest.find(filter)
+      .select("type targetId targetName reason status requestedBy orgId reviewedBy reviewNote reviewedAt createdAt updatedAt")
       .populate("requestedBy", "name email")
       .populate("orgId", "name")
       .populate("reviewedBy", "name")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await DeletionRequest.countDocuments(filter);
 
-    res.status(200).json({ success: true, data: requests });
+    res.status(200).json({
+      success: true,
+      data: requests,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch deletion requests", error: error.message });
   }
@@ -716,7 +762,9 @@ export const getDriverDetail = async (req, res) => {
 
     // Get all pickups by this driver
     const pickups = await PickupRequest.find({ driverId: userId })
+      .select("status category level province area location createdAt assignedAt")
       .sort({ createdAt: -1 })
+      .limit(100)
       .lean();
 
     const completedPickups = pickups.filter(p => p.status === "COMPLETED");
@@ -822,6 +870,7 @@ export const getPickupStats = async (req, res) => {
           },
         },
         { $sort: { count: -1 } },
+        { $limit: 100 },
         {
           $lookup: {
             from: "users",

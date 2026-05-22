@@ -32,6 +32,13 @@ const areaEntrySchema = new mongoose.Schema({
     enum: ["dispatch", "skip", "reduced"]
   },
   recommendation: { type: String },
+  predictionMethod: { type: String },
+  predictionConfidence: {
+    score: { type: Number },
+    label: { type: String },
+    estimatedErrorKg: { type: Number },
+    basis: { type: mongoose.Schema.Types.Mixed },
+  },
   isHoliday: { type: Boolean, default: false },
   holidayName: { type: String },
   assignedTrucks: [assignedTruckSchema],
@@ -66,7 +73,8 @@ const mlScheduleSchema = new mongoose.Schema({
     totalTrucksAssigned: { type: Number },
     totalTrucksAvailable: { type: Number },
     driverlessTrucks: { type: Number, default: 0 },
-    unavailableDrivers: [{ type: String }]
+    unavailableDrivers: [{ type: String }],
+    optimizer: { type: String }
   },
   areas: [areaEntrySchema],
   generatedBy: {
@@ -82,7 +90,12 @@ const mlScheduleSchema = new mongoose.Schema({
   },
   mlModelInfo: {
     model: { type: String },
-    r2Score: { type: Number }
+    r2Score: { type: Number },
+    validationStrategy: { type: String },
+    mae: { type: Number },
+    rmse: { type: Number },
+    latestDataDate: { type: String },
+    metrics: { type: mongoose.Schema.Types.Mixed }
   },
   createdAt: {
     type: Date,

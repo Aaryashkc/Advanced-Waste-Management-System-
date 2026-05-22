@@ -4,17 +4,28 @@ import useAuthStore from './useAuthStore';
 
 const useVehicleStore = create((set, get) => ({
   vehicles: [],
+  pagination: null,
   isLoading: false,
   error: null,
+  lastParams: { page: 1, limit: 10 },
 
-  fetchVehicles: async () => {
+  fetchVehicles: async (params = {}) => {
+    const nextParams = { ...get().lastParams, ...params, limit: params.limit || 10 };
     set({ isLoading: true, error: null });
     try {
       const user = useAuthStore.getState().user;
       const isSuperAdmin = user?.role === 'super_admin';
       const url = isSuperAdmin ? '/super-admin/vehicles' : '/org-admin/trucks';
-      const res = await api.get(url);
-      set({ vehicles: res.data.data, isLoading: false });
+      const query = new URLSearchParams();
+      if (nextParams.page) query.set("page", nextParams.page);
+      if (nextParams.limit) query.set("limit", nextParams.limit);
+      const res = await api.get(`${url}?${query.toString()}`);
+      set({
+        vehicles: res.data.data,
+        pagination: res.data.pagination || null,
+        lastParams: nextParams,
+        isLoading: false,
+      });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch vehicles', isLoading: false });
     }
@@ -25,7 +36,7 @@ const useVehicleStore = create((set, get) => ({
       const user = useAuthStore.getState().user;
       const url = user?.role === 'super_admin' ? '/super-admin/vehicles' : '/org-admin/trucks';
       await api.post(url, data);
-      get().fetchVehicles();
+      get().fetchVehicles({ page: 1 });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to add vehicle' };

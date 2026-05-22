@@ -4,6 +4,7 @@ import useAuthStore from "../stores/useAuthStore";
 import { getSocket } from "../utils/socket";
 import DeletionRequests from "./DeletionRequests";
 import { Bell, AlertTriangle, CheckCircle, Info, Truck, User, Ban, RotateCcw, Clock, CheckCheck, Filter, RefreshCw } from "lucide-react";
+import PaginationControls from "../components/shared/PaginationControls";
 
 const SEVERITY_CONFIG = {
   critical: { border: "border-l-red-500", bg: "bg-red-50/60", badge: "bg-red-100 text-red-700", icon: <AlertTriangle className="w-5 h-5 text-red-500" /> },
@@ -28,6 +29,10 @@ const Notifications = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filterSeverity, setFilterSeverity] = useState("all");
+  const [alertsPage, setAlertsPage] = useState(1);
+  const [messagesPage, setMessagesPage] = useState(1);
+  const [alertsPagination, setAlertsPagination] = useState(null);
+  const [messagesPagination, setMessagesPagination] = useState(null);
   const [counts, setCounts] = useState({
     alerts: 0,
     clients: 0,
@@ -38,16 +43,17 @@ const Notifications = () => {
 
   const totalUnread = counts.alerts + counts.clients + counts.org_admin + counts.driver + counts.deletions;
 
-  const fetchSystemAlerts = useCallback(async () => {
+  const fetchSystemAlerts = useCallback(async (page = alertsPage) => {
     try {
-      const res = await api.get('/notifications');
+      const res = await api.get(`/notifications?page=${page}&limit=10`);
       setSystemAlerts(res.data.data || []);
+      setAlertsPagination(res.data.pagination || null);
       return res.data.unreadCount || 0;
     } catch (err) {
       console.error("Failed to fetch system alerts", err);
       return 0;
     }
-  }, []);
+  }, [alertsPage]);
 
   const markAlertRead = async (id) => {
     try {
@@ -95,15 +101,15 @@ const Notifications = () => {
     }
   }, [user?.role, fetchSystemAlerts]);
 
-  const fetchMessages = async (type) => {
+  const fetchMessages = useCallback(async (type, page = messagesPage) => {
     setLoading(true);
     setError(null);
     try {
       let endpoint = "";
       if (type === "clients") {
-        endpoint = '/contact/messages';
+        endpoint = `/contact/messages?page=${page}&limit=10`;
       } else if (type === "org_admin" || type === "driver") {
-        endpoint = `/internal-messages/${type}`;
+        endpoint = `/internal-messages/${type}?page=${page}&limit=10`;
       } else {
         setLoading(false);
         return;
@@ -111,12 +117,13 @@ const Notifications = () => {
 
       const response = await api.get(endpoint);
       setMessages(response.data.data || []);
+      setMessagesPagination(response.data.pagination || null);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load messages");
     } finally {
       setLoading(false);
     }
-  };
+  }, [messagesPage]);
 
   // Socket listeners for real-time updates
   useEffect(() => {
@@ -132,7 +139,7 @@ const Notifications = () => {
     const onContactMessage = () => {
       setCounts(prev => ({ ...prev, clients: prev.clients + 1 }));
       if (activeTab === "clients") {
-        fetchMessages("clients");
+        fetchMessages("clients", messagesPage);
       }
     };
 
@@ -153,7 +160,7 @@ const Notifications = () => {
     const onInternalMessage = (message) => {
       if (message?.type === "org_admin" || message?.type === "driver") {
         setCounts(prev => ({ ...prev, [message.type]: prev[message.type] + 1 }));
-        if (activeTab === message.type) fetchMessages(message.type);
+        if (activeTab === message.type) fetchMessages(message.type, messagesPage);
       } else {
         fetchCounts();
       }
@@ -192,14 +199,21 @@ const Notifications = () => {
       socket.off("deletion-request:new", onDeletionRequest);
       socket.off("deletion-request:counts", onDeletionCounts);
     };
-  }, [activeTab, fetchCounts]);
+  }, [activeTab, fetchCounts, fetchMessages, messagesPage]);
 
   useEffect(() => {
     fetchCounts();
-    if (activeTab !== "deletions" && activeTab !== "alerts") {
-      fetchMessages(activeTab);
+    if (activeTab === "alerts") {
+      fetchSystemAlerts(alertsPage);
+    } else if (activeTab !== "deletions") {
+      fetchMessages(activeTab, messagesPage);
     }
-  }, [activeTab, fetchCounts]);
+  }, [activeTab, fetchCounts, fetchMessages, fetchSystemAlerts, alertsPage, messagesPage]);
+
+  useEffect(() => {
+    setAlertsPage(1);
+    setMessagesPage(1);
+  }, [activeTab]);
 
   const markAsRead = async (id, type) => {
     try {
@@ -410,6 +424,11 @@ const Notifications = () => {
                     </div>
                   );
                 })}
+                <PaginationControls
+                  pagination={alertsPagination}
+                  onPageChange={setAlertsPage}
+                  itemLabel="alerts"
+                />
               </div>
             )}
           </div>
@@ -434,15 +453,16 @@ const Notifications = () => {
                 <p className="text-sm text-primary/40 mt-1">No messages found for this category</p>
               </div>
             ) : (
-              messages.map(msg => (
-                <div
-                  key={msg._id}
-                  className={`bg-white rounded-xl border overflow-hidden transition-all ${
-                    msg.status === "unread"
-                      ? "border-l-4 border-l-primary border-primary/15 shadow-sm"
-                      : "border-gray-200 opacity-70"
-                  }`}
-                >
+              <>
+                {messages.map(msg => (
+                  <div
+                    key={msg._id}
+                    className={`bg-white rounded-xl border overflow-hidden transition-all ${
+                      msg.status === "unread"
+                        ? "border-l-4 border-l-primary border-primary/15 shadow-sm"
+                        : "border-gray-200 opacity-70"
+                    }`}
+                  >
                   <div className="p-4 sm:p-5">
                     <div className="flex items-start gap-3">
                       {/* Unread indicator */}
@@ -494,8 +514,14 @@ const Notifications = () => {
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                  </div>
+                ))}
+                <PaginationControls
+                  pagination={messagesPagination}
+                  onPageChange={setMessagesPage}
+                  itemLabel="messages"
+                />
+              </>
             )}
           </div>
         )}

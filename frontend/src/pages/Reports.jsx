@@ -66,7 +66,10 @@ const Reports = () => {
 
   const analytics = useMemo(() => mlAnalytics || {}, [mlAnalytics]);
   const totalSchedules = analytics.totalSchedules || 0;
-  const modelInfo = analytics.modelInfo || { model: "GradientBoosting", r2Score: 0.974 };
+  const modelInfo = analytics.modelInfo || { model: "Unknown", r2Score: null };
+  const r2Label = Number.isFinite(Number(modelInfo.r2Score))
+    ? `${(Number(modelInfo.r2Score) * 100).toFixed(1)}%`
+    : "n/a";
 
   const wc = analytics.weeklyComparison || {};
   const thisWeekWaste = wc.thisWeekWaste || 0;
@@ -207,7 +210,7 @@ const Reports = () => {
         </div>
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 border border-primary/10 text-xs font-semibold text-primary">
           <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-          {modelInfo.model} &middot; R&sup2; {modelInfo.r2Score}
+          {modelInfo.model} &middot; R&sup2; {r2Label}
         </span>
       </div>
 
@@ -256,7 +259,7 @@ const Reports = () => {
             </div>
             <div className="bg-white rounded-2xl border border-primary/10 shadow-sm p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-primary/50">Model Accuracy</p>
-              <h3 className="mt-1 text-2xl font-bold text-primary">{(modelInfo.r2Score * 100).toFixed(1)}%</h3>
+              <h3 className="mt-1 text-2xl font-bold text-primary">{r2Label}</h3>
             </div>
             <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-5 bg-red-50/50">
               <p className="text-xs font-semibold uppercase tracking-wide text-red-600/80">Incomplete Areas</p>

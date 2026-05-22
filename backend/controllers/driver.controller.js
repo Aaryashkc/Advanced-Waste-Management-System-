@@ -3,6 +3,7 @@ import Driver from "../models/Driver.model.js";
 import Truck from "../models/Truck.model.js";
 import User from "../models/User.model.js";
 import { validateCoordinates } from "../utils/coordinateValidator.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 // ── GET /api/driver/me ────────────────────────────────────────────────────
 export const getMyProfile = async (req, res) => {
@@ -202,6 +203,7 @@ export const updateLocation = async (req, res) => {
 export const getAllDrivers = async (req, res) => {
   try {
     const { orgId } = req.user;
+    const pagination = getPagination(req.query);
 
     let userFilter = { role: 'driver' };
 
@@ -215,7 +217,12 @@ export const getAllDrivers = async (req, res) => {
     // 1. Find users who are drivers (with org populated)
     const driverUsers = await User.find(userFilter)
       .select('_id orgId')
-      .populate('orgId', 'name');
+      .populate('orgId', 'name')
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await User.countDocuments(userFilter);
     const driverUserIds = driverUsers.map(u => u._id);
 
     // Build a map of userId -> org info
@@ -234,7 +241,8 @@ export const getAllDrivers = async (req, res) => {
         path: 'assignedTruckId',
         select: 'licensePlate truckType capacity orgId',
         populate: { path: 'orgId', select: 'name' }
-      });
+      })
+      .lean();
 
     // Format for frontend
     const formattedDrivers = drivers.map(d => {
@@ -262,7 +270,8 @@ export const getAllDrivers = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: formattedDrivers
+      data: formattedDrivers,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
 
   } catch (error) {

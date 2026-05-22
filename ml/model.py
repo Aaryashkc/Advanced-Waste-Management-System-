@@ -16,25 +16,53 @@ from nepal_holidays import (
 
 MODEL_PATH = os.getenv("MODEL_PATH", "./models/waste_predictor.pkl")
 ENCODER_PATH = os.getenv("ENCODER_PATH", "./models/label_encoders.pkl")
+METRICS_PATH = os.getenv("METRICS_PATH", "./models/waste_predictor_metrics.pkl")
 
 # ── Global model/encoder references (loaded once) ───────────────────────────
 _model = None
 _encoders = None
-_r2_score = 0.974  # Stored from training
+_metrics = None
+
+
+DEFAULT_METRICS = {
+    "validation_strategy": "unknown_legacy_artifact",
+    "global": {"r2": None, "mae": None, "rmse": None, "n": 0},
+    "by_area": {},
+    "by_district_type": {},
+    "latest_data_date": None,
+    "data_sources": ["unknown"],
+}
 
 
 def load_model():
     """Load model and encoders from .pkl files."""
-    global _model, _encoders
+    global _model, _encoders, _metrics
     if _model is None:
         if not os.path.exists(MODEL_PATH):
             raise FileNotFoundError(
                 f"Model not found at {MODEL_PATH}. Run 'python train.py' first."
             )
-        _model = joblib.load(MODEL_PATH)
+        artifact = joblib.load(MODEL_PATH)
+        if isinstance(artifact, dict) and "model" in artifact:
+            _model = artifact["model"]
+            _metrics = artifact.get("metrics") or DEFAULT_METRICS
+        else:
+            _model = artifact
+            _metrics = DEFAULT_METRICS
+
+        if os.path.exists(METRICS_PATH):
+            _metrics = joblib.load(METRICS_PATH)
+
         _encoders = joblib.load(ENCODER_PATH)
         print(f"[Model] Loaded from {MODEL_PATH}")
     return _model, _encoders
+
+
+def get_metrics():
+    """Return stored training metrics, loading the model if needed."""
+    if _metrics is None:
+        load_model()
+    return _metrics or DEFAULT_METRICS
 
 
 # ── Season helper ────────────────────────────────────────────────────────────
@@ -109,6 +137,56 @@ def get_recommendation(waste_category, district, district_type):
     return recommendations.get(waste_category, f"Standard service for {district}.")
 
 
+def _days_since_latest_data(target_date, metrics):
+    latest = metrics.get("latest_data_date")
+    if not latest:
+        return None
+    try:
+        latest_date = date.fromisoformat(latest)
+        return max(0, (target_date - latest_date).days)
+    except ValueError:
+        return None
+
+
+def prediction_confidence(district, district_type, target_date, prediction_method="model"):
+    """
+    Estimate prediction confidence from validation error, data freshness, and
+    whether the area is directly known or inferred from a district type average.
+    """
+    metrics = get_metrics()
+    global_mae = ((metrics.get("global") or {}).get("mae")) or 1000
+    area_mae = ((metrics.get("by_area") or {}).get(district) or {}).get("mae")
+    type_mae = ((metrics.get("by_district_type") or {}).get(district_type) or {}).get("mae")
+    error_kg = area_mae or type_mae or global_mae
+
+    error_penalty = min(45, (error_kg / 5000) * 45)
+    freshness_days = _days_since_latest_data(target_date, metrics)
+    freshness_penalty = 0 if freshness_days is None else min(25, (freshness_days / 365) * 25)
+    method_penalty = 18 if prediction_method == "type_average" else 0
+
+    score = max(25, min(95, round(95 - error_penalty - freshness_penalty - method_penalty)))
+    if score >= 75:
+        label = "high"
+    elif score >= 55:
+        label = "medium"
+    else:
+        label = "low"
+
+    return {
+        "score": score,
+        "label": label,
+        "estimated_error_kg": round(float(error_kg), 1),
+        "basis": {
+            "prediction_method": prediction_method,
+            "area_known": prediction_method == "model",
+            "area_mae_kg": round(float(area_mae), 1) if area_mae is not None else None,
+            "district_type_mae_kg": round(float(type_mae), 1) if type_mae is not None else None,
+            "global_mae_kg": round(float(global_mae), 1) if global_mae is not None else None,
+            "data_freshness_days": freshness_days,
+        },
+    }
+
+
 # ── Prediction function ─────────────────────────────────────────────────────
 def predict_waste(district, target_date):
     """
@@ -174,6 +252,8 @@ def predict_waste(district, target_date):
         "is_holiday": bool(is_holiday),
         "holiday_name": holiday_name or None,
         "recommendation": get_recommendation(waste_category, district, district_type),
+        "prediction_method": "model",
+        "confidence": prediction_confidence(district, district_type, target_date, "model"),
     }
 
 
@@ -233,14 +313,18 @@ def predict_waste_by_type(district_name, district_type, target_date, scale_facto
         "prediction_method": "type_average",
         "scale_factor": scale_factor,
         "based_on_districts": same_type_districts,
+        "confidence": prediction_confidence(district_name, district_type, target_date, "type_average"),
     }
 
 
 def get_model_info():
     """Return model metadata."""
+    metrics = get_metrics()
+    global_metrics = metrics.get("global") or {}
     return {
         "model": "GradientBoosting",
-        "r2_score": _r2_score,
+        "r2_score": global_metrics.get("r2"),
+        "metrics": metrics,
         "districts": DISTRICTS,
         "district_types": DISTRICT_TYPES,
         "waste_categories": ["none", "low", "medium", "high", "critical"],

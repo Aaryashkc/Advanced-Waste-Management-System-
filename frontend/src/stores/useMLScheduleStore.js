@@ -3,6 +3,7 @@ import api from "../utils/api";
 
 const useMLScheduleStore = create((set, get) => ({
     schedules: [],
+    schedulePagination: null,
     currentSchedule: null,
     prediction: null,
     publicSchedule: null,
@@ -64,11 +65,12 @@ const useMLScheduleStore = create((set, get) => ({
             const params = new URLSearchParams();
             if (filters.status) params.append("status", filters.status);
             if (filters.page) params.append("page", filters.page);
-            if (filters.limit) params.append("limit", filters.limit);
+            params.append("limit", filters.limit || 10);
 
             const response = await api.get(`/ml-schedule?${params.toString()}`);
             set({
                 schedules: response.data.data || [],
+                schedulePagination: response.data.pagination || null,
                 loading: false,
             });
         } catch (error) {
@@ -211,11 +213,12 @@ const useMLScheduleStore = create((set, get) => ({
     },
 
     // Driver marks an area assignment as completed
-    completeAssignment: async (scheduleId, areaName, note = "") => {
+    completeAssignment: async (scheduleId, areaName, actualWasteKg, note = "") => {
         set({ loading: true, error: null });
         try {
             const response = await api.post(`/ml-schedule/${scheduleId}/complete-area`, {
                 area: areaName,
+                actualWasteKg,
                 note,
             });
             // Refresh driver assignments after completion
@@ -237,7 +240,7 @@ const useMLScheduleStore = create((set, get) => ({
     fetchCompletions: async (page = 1) => {
         set({ loading: true, error: null });
         try {
-            const response = await api.get(`/ml-schedule/completions?page=${page}&limit=50`);
+            const response = await api.get(`/ml-schedule/completions?page=${page}&limit=10`);
             set({ completions: response.data.data || [], loading: false });
         } catch (error) {
             console.error("Failed to fetch completions:", error);

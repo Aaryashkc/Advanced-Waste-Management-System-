@@ -3,6 +3,7 @@ import api from "../utils/api";
 
 const useScheduleStore = create((set, get) => ({
     schedules: [],
+    pagination: null,
     locations: [],
     drivers: [],
     loading: false,
@@ -17,11 +18,13 @@ const useScheduleStore = create((set, get) => ({
             if (filters.city) params.append("city", filters.city);
             if (filters.area) params.append("area", filters.area);
             if (filters.day) params.append("day", filters.day);
+            params.append("page", filters.page || 1);
+            params.append("limit", filters.limit || 10);
 
             const response = await api.get(`/schedule?${params.toString()}`);
             console.log('Schedules response:', response.data);
             const data = response.data?.data || response.data || [];
-            set({ schedules: data, loading: false });
+            set({ schedules: data, pagination: response.data?.pagination || null, loading: false });
         } catch (error) {
             console.error("Failed to fetch schedules:", error);
             set({

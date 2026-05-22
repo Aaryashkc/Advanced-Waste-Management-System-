@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
+import PaginationControls from "../shared/PaginationControls";
 
 const STATUS_BADGES = {
   draft: { bg: "bg-gray-100", text: "text-gray-700", label: "Draft" },
@@ -11,6 +12,7 @@ const STATUS_BADGES = {
 const MLScheduleHistory = () => {
   const {
     schedules,
+    schedulePagination,
     loading,
     error,
     fetchSchedules,
@@ -20,11 +22,16 @@ const MLScheduleHistory = () => {
   } = useMLScheduleStore();
 
   const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
   const [viewingId, setViewingId] = useState(null);
 
   useEffect(() => {
-    fetchSchedules({ status: statusFilter || undefined });
-  }, [fetchSchedules, statusFilter]);
+    fetchSchedules({ status: statusFilter || undefined, page, limit: 10 });
+  }, [fetchSchedules, statusFilter, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
 
   const handleView = async (id) => {
     setViewingId(id);
@@ -258,6 +265,11 @@ const MLScheduleHistory = () => {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            pagination={schedulePagination}
+            onPageChange={setPage}
+            itemLabel="schedules"
+          />
         </div>
       )}
 

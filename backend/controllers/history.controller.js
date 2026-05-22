@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import PickupRequest from "../models/PickupRequest.model.js";
 import User from "../models/User.model.js";
 import Driver from "../models/Driver.model.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 /**
  * GET /api/history/pickups
@@ -12,7 +13,8 @@ import Driver from "../models/Driver.model.js";
 export const getPickupHistory = async (req, res) => {
   try {
     const { role, orgId } = req.user;
-    const { status, category, page = 1, limit = 30 } = req.query;
+    const { status, category } = req.query;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
 
     const filter = {};
     if (role === "admin" && orgId) {
@@ -21,8 +23,6 @@ export const getPickupHistory = async (req, res) => {
     if (status) filter.status = status;
     if (category) filter.category = category;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
     // Parallel: fetch paginated pickups + total count + summary stats
     const [pickups, total, statusStats] = await Promise.all([
       PickupRequest.find(filter)
@@ -30,8 +30,8 @@ export const getPickupHistory = async (req, res) => {
         .populate("driverId", "name email phone")
         .populate("orgId", "name")
         .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
+        .skip(pagination.skip)
+        .limit(pagination.limit)
         .lean(),
 
       PickupRequest.countDocuments(filter),
@@ -102,10 +102,7 @@ export const getPickupHistory = async (req, res) => {
         pickups: formatted,
         stats,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / parseInt(limit)),
+          ...buildPaginationMeta({ ...pagination, total }),
         },
       },
     });
@@ -122,6 +119,7 @@ export const getPickupHistory = async (req, res) => {
 export const getCustomerHistory = async (req, res) => {
   try {
     const { role, orgId } = req.user;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
 
     const matchStage = {};
     if (role === "admin" && orgId) {
@@ -152,7 +150,7 @@ export const getCustomerHistory = async (req, res) => {
           avgResponseMs: { $avg: "$responseTimeMs" },
         },
       },
-      { $sort: { totalPickups: -1 } },
+      { $sort: { totalPickups: -1, lastPickupAt: -1, _id: 1 } },
       {
         $lookup: {
           from: "users",
@@ -184,14 +182,32 @@ export const getCustomerHistory = async (req, res) => {
           _id: 0,
         },
       },
+      {
+        $facet: {
+          data: [{ $skip: pagination.skip }, { $limit: pagination.limit }],
+          meta: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                totalPickups: { $sum: "$totalPickups" },
+              },
+            },
+          ],
+        },
+      },
     ]);
+    const customers = customerStats[0]?.data || [];
+    const total = customerStats[0]?.meta?.[0]?.total || 0;
+    const totalPickups = customerStats[0]?.meta?.[0]?.totalPickups || 0;
 
     res.status(200).json({
       success: true,
       data: {
-        customers: customerStats,
-        totalCustomers: customerStats.length,
-        totalPickups: customerStats.reduce((s, c) => s + c.totalPickups, 0),
+        customers,
+        totalCustomers: total,
+        totalPickups,
+        pagination: buildPaginationMeta({ ...pagination, total }),
       },
     });
   } catch (error) {
@@ -207,6 +223,7 @@ export const getCustomerHistory = async (req, res) => {
 export const getDriverHistory = async (req, res) => {
   try {
     const { role, orgId } = req.user;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
 
     const matchStage = { driverId: { $ne: null } };
     if (role === "admin" && orgId) {
@@ -237,7 +254,7 @@ export const getDriverHistory = async (req, res) => {
           avgTaskDurationMs: { $avg: "$taskDurationMs" },
         },
       },
-      { $sort: { completed: -1 } },
+      { $sort: { completed: -1, lastPickupAt: -1, _id: 1 } },
       {
         $lookup: {
           from: "users",
@@ -287,14 +304,32 @@ export const getDriverHistory = async (req, res) => {
           _id: 0,
         },
       },
+      {
+        $facet: {
+          data: [{ $skip: pagination.skip }, { $limit: pagination.limit }],
+          meta: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                totalPickups: { $sum: "$totalPickups" },
+              },
+            },
+          ],
+        },
+      },
     ]);
+    const drivers = driverStats[0]?.data || [];
+    const total = driverStats[0]?.meta?.[0]?.total || 0;
+    const totalPickups = driverStats[0]?.meta?.[0]?.totalPickups || 0;
 
     res.status(200).json({
       success: true,
       data: {
-        drivers: driverStats,
-        totalDrivers: driverStats.length,
-        totalPickups: driverStats.reduce((s, d) => s + d.totalPickups, 0),
+        drivers,
+        totalDrivers: total,
+        totalPickups,
+        pagination: buildPaginationMeta({ ...pagination, total }),
       },
     });
   } catch (error) {

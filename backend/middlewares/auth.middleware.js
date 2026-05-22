@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import { AuthenticationError, ForbiddenError } from "../utils/httpErrors.js";
+import { updateRequestContext } from "../utils/observability.js";
 
 export const authMiddleware = async (req, res, next) => {
   try {
@@ -22,6 +23,7 @@ export const authMiddleware = async (req, res, next) => {
     }
 
     req.user = user;
+    updateRequestContext({ userId: user._id, orgId: user.orgId });
     next();
   } catch (error) {
     next(

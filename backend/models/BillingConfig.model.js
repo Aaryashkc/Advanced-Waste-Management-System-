@@ -12,7 +12,6 @@ const billingConfigSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
       default: null,
-      index: true,
     },
 
     customerMonthlyFee: { type: Number, required: true, min: 0, default: 500 },

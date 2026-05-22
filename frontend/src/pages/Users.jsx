@@ -76,7 +76,7 @@ const Users = () => {
       role: roleFilter,
       status: statusFilter,
       page,
-      limit: 20,
+      limit: 10,
     });
   }, [debouncedSearch, roleFilter, statusFilter, page, fetchUsers]);
 
@@ -112,7 +112,7 @@ const Users = () => {
 
   const toggleActive = async (u) => {
     await updateUser(u.id, { isActive: !u.isActive });
-    fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 20 });
+    fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10 });
   };
 
   return (

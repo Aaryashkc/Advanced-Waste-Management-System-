@@ -18,7 +18,7 @@ import locationRoutes from "./routes/location.route.js";
 import pickupRoutes from "./routes/pickup.route.js";
 import contactRoutes from "./routes/contact.route.js";
 import internalMessageRoutes from "./routes/internalMessage.route.js";
-import mlScheduleRoutes from "./routes/mlSchedule.route.js";
+import mlScheduleRoutes from "./domains/ml-schedules/route.js";
 import areaRoutes from "./routes/area.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 import historyRoutes from "./routes/history.route.js";
@@ -26,13 +26,21 @@ import pricingConfigRoutes from "./routes/pricingConfig.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import billingRoutes from "./routes/billing.route.js";
 import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
-import { autoDispatchQualifiedMLSchedule, autoGenerateMLSchedule } from "./controllers/mlSchedule.controller.js";
+import { autoDispatchQualifiedMLSchedule, autoGenerateMLSchedule } from "./domains/ml-schedules/controller.js";
 import { runBillGeneration } from "./controllers/billing.controller.js";
 import { ensurePickupRequestIndexes, expireStalePendingPickups } from "./services/pickupExpiry.js";
 import { ensurePaymentIndexes } from "./services/paymentIndexes.js";
 import { refreshPickupDailySummaries } from "./services/pickupAnalytics.js";
 import { initSocket } from "./socket/socketServer.js";
 import { sendError } from "./utils/apiResponse.js";
+import {
+  instrumentMongoose,
+  logger,
+  metrics,
+  reportError,
+  requestObservability,
+  runObservedCron,
+} from "./utils/observability.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +64,7 @@ const LOCAL_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Kathmandu";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+instrumentMongoose();
 
 // -- CORS ------------------------------------------------------------------
 const corsOptions = {
@@ -72,6 +81,7 @@ app.use(cors(corsOptions));
 app.use(helmet());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: process.env.URLENCODED_BODY_LIMIT || "1mb" }));
+app.use(requestObservability);
 
 // -- REST routes -----------------------------------------------------------
 app.use("/api/auth", authRoutes);
@@ -105,6 +115,27 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/api/metrics", (req, res) => {
+  const secret = process.env.METRICS_SECRET;
+  if (secret && req.query.secret !== secret) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  res.type("text/plain").send(metrics.prometheus());
+});
+
+app.post("/api/errors/frontend", (req, res) => {
+  const { message, stack, source, route, componentStack, userAgent } = req.body || {};
+  reportError(new Error(message || "Frontend error"), {
+    source: "frontend",
+    route,
+    frontendSource: source,
+    componentStack,
+    userAgent,
+    stack,
+  });
+  return res.status(202).json({ accepted: true });
+});
+
 // External cron endpoint (optional; protect with CRON_SECRET in production)
 app.get("/api/cron/cleanup-uploads", async (req, res) => {
   const secret = process.env.CRON_SECRET;
@@ -115,14 +146,19 @@ app.get("/api/cron/cleanup-uploads", async (req, res) => {
     const result = await cleanupExpiredUploads();
     return res.status(200).json({ message: "Cleanup completed", ...result });
   } catch (err) {
-    console.error("Cleanup error:", err);
+    reportError(err, { source: "cron-endpoint", route: req.path });
     return res.status(500).json({ message: "Cleanup failed", error: err.message });
   }
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
+  reportError(err, {
+    source: "backend",
+    route: `${req.method} ${req.originalUrl}`,
+    userId: req.user?._id,
+    orgId: req.user?.orgId,
+  });
   return sendError(res, err, err.message || "Internal server error");
 });
 
@@ -131,13 +167,12 @@ const server = http.createServer(app);
 initSocket(server); // attach Socket.IO to the same HTTP server
 
 server.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(
-    `CORS enabled for: ${process.env.NODE_ENV === "production"
+  logger.info("Server started", { port: PORT });
+  logger.info("CORS configured", {
+    origin: process.env.NODE_ENV === "production"
       ? process.env.FRONTEND_URL || "http://localhost:5173"
-      : "all origins (development)"
-    }`
-  );
+      : "all origins (development)",
+  });
   try {
     await connectDB();
     await ensurePickupRequestIndexes();
@@ -145,73 +180,75 @@ server.listen(PORT, async () => {
     await refreshPickupDailySummaries();
     await expireStalePendingPickups();
   } catch (err) {
-    console.error("Startup database initialization failed:", err.message);
+    reportError(err, { source: "startup", message: "Startup database initialization failed" });
   }
 
   if (!cleanupCronScheduled) {
     cleanupCronScheduled = true;
-    cron.schedule(CRON_SCHEDULE, () => {
-      cleanupExpiredUploads()
-        .then((r) => {
-          if (r.total > 0)
-            console.log(`Cleanup: removed ${r.deleted} expired waste upload(s), errors=${r.errors}`);
-        })
-        .catch((e) => console.error("Cleanup error:", e));
-    });
+    cron.schedule(CRON_SCHEDULE, runObservedCron("cleanup-expired-uploads", async () => {
+      const result = await cleanupExpiredUploads();
+      if (result.total > 0) {
+        logger.info("Cleanup removed expired uploads", {
+          deleted: result.deleted,
+          errors: result.errors,
+          total: result.total,
+        });
+      }
+      return result;
+    }));
   }
 
   if (!pickupExpiryCronScheduled) {
     pickupExpiryCronScheduled = true;
-    cron.schedule(PICKUP_EXPIRY_CRON, () => {
-      expireStalePendingPickups()
-        .then((r) => {
-          if (r.modified > 0) console.log(`Pickup expiry: marked ${r.modified} request(s) as EXPIRED`);
-        })
-        .catch((e) => console.error("Pickup expiry error:", e));
-    });
+    cron.schedule(PICKUP_EXPIRY_CRON, runObservedCron("pickup-expiry", async () => {
+      const result = await expireStalePendingPickups();
+      if (result.modified > 0) {
+        logger.info("Pickup expiry marked stale requests", { modified: result.modified });
+      }
+      return result;
+    }));
   }
 
   if (!pickupSummaryCronScheduled) {
     pickupSummaryCronScheduled = true;
-    cron.schedule(PICKUP_SUMMARY_CRON, () => {
-      refreshPickupDailySummaries()
-        .catch((e) => console.error("Pickup summary refresh error:", e));
-    });
+    cron.schedule(PICKUP_SUMMARY_CRON, runObservedCron("pickup-summary-refresh", refreshPickupDailySummaries));
   }
 
   if (!mlScheduleCronScheduled) {
     mlScheduleCronScheduled = true;
-    cron.schedule(ML_SCHEDULE_CRON, () => {
-      autoGenerateMLSchedule()
-        .then((r) => console.log(`ML auto-schedule: ${r.message}`))
-        .catch((e) => console.error("ML auto-schedule error:", e));
-    }, { timezone: LOCAL_TIMEZONE });
+    cron.schedule(ML_SCHEDULE_CRON, runObservedCron("ml-auto-schedule", async () => {
+      const result = await autoGenerateMLSchedule();
+      logger.info("ML auto-schedule completed", { message: result.message });
+      return result;
+    }), { timezone: LOCAL_TIMEZONE });
 
     // Generate today's schedule on startup (if not already generated)
     // Delay slightly to ensure DB connection is ready
     setTimeout(() => {
-      autoGenerateMLSchedule()
-        .then((r) => console.log(`ML startup schedule: ${r.message}`))
-        .catch((e) => console.error("ML startup schedule error:", e));
+      runObservedCron("ml-startup-schedule", async () => {
+        const result = await autoGenerateMLSchedule();
+        logger.info("ML startup schedule completed", { message: result.message });
+        return result;
+      })();
     }, 5000);
   }
 
   if (!mlAutoDispatchCronScheduled) {
     mlAutoDispatchCronScheduled = true;
-    cron.schedule(ML_AUTO_DISPATCH_CRON, () => {
-      autoDispatchQualifiedMLSchedule()
-        .then((r) => console.log(`ML auto-dispatch: ${r.message}`))
-        .catch((e) => console.error("ML auto-dispatch error:", e));
-    }, { timezone: LOCAL_TIMEZONE });
+    cron.schedule(ML_AUTO_DISPATCH_CRON, runObservedCron("ml-auto-dispatch", async () => {
+      const result = await autoDispatchQualifiedMLSchedule();
+      logger.info("ML auto-dispatch completed", { message: result.message });
+      return result;
+    }), { timezone: LOCAL_TIMEZONE });
   }
 
   if (!billingCronScheduled) {
     billingCronScheduled = true;
-    cron.schedule(BILLING_CRON, () => {
-      runBillGeneration()
-        .then((r) => console.log(`Billing: ${r.message}`))
-        .catch((e) => console.error("Billing generation error:", e));
-    });
+    cron.schedule(BILLING_CRON, runObservedCron("billing-generation", async () => {
+      const result = await runBillGeneration();
+      logger.info("Billing generation completed", { message: result.message });
+      return result;
+    }));
 
     // Bills are created by the monthly cron above or explicit admin action.
     // Avoid startup generation so restarts do not look like daily bill runs.

@@ -1,6 +1,7 @@
 import ContactMessage from "../models/ContactMessage.model.js";
 import Organization from "../models/Organization.model.js";
 import { getIO } from "../socket/socketServer.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 // Submit a new contact message (Public)
 export const submitContactMessage = async (req, res) => {
@@ -81,11 +82,21 @@ export const getUnreadCount = async (req, res) => {
 // Optionally get all messages for a messages dashboard
 export const getMessages = async (req, res) => {
   try {
+    const pagination = getPagination(req.query);
     const messages = await ContactMessage.find()
+      .select("name email subject message status userId role orgId orgName createdAt updatedAt")
       .populate("userId", "name email role")
       .populate("orgId", "name")
-      .sort({ createdAt: -1 });
-    res.status(200).json({ success: true, data: messages });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await ContactMessage.countDocuments();
+    res.status(200).json({
+      success: true,
+      data: messages,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch messages", error: error.message });
   }

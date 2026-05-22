@@ -4,6 +4,7 @@ import useDriverStore from "../stores/useDriverStore";
 import useAuthStore from "../stores/useAuthStore";
 import { Truck, CheckCircle, Wrench, UserX } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
+import PaginationControls from "../components/shared/PaginationControls";
 import api from "../utils/api";
 
 const getDutyType = (capacity) => {
@@ -15,7 +16,7 @@ const getDutyType = (capacity) => {
 };
 
 const Vehicles = () => {
-  const { vehicles, isLoading, error, fetchVehicles, addVehicle, updateVehicle, deleteVehicle, unassignDriverFromTruck, assignDriverToTruck, requestDeletion } = useVehicleStore();
+  const { vehicles, pagination, isLoading, error, fetchVehicles, addVehicle, updateVehicle, deleteVehicle, unassignDriverFromTruck, assignDriverToTruck, requestDeletion } = useVehicleStore();
   const { drivers, fetchDrivers } = useDriverStore();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
@@ -32,7 +33,7 @@ const Vehicles = () => {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { fetchVehicles(); fetchDrivers(); }, [fetchVehicles, fetchDrivers]);
+  useEffect(() => { fetchVehicles({ page: 1, limit: 10 }); fetchDrivers({ page: 1, limit: 10 }); }, [fetchVehicles, fetchDrivers]);
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -88,6 +89,7 @@ const Vehicles = () => {
   };
 
   const openEdit = (v) => { setEditVehicle(v); setEditForm({ capacity: v.capacity, licensePlate: v.licensePlate, orgId: v.orgId || "", isAvailable: v.isAvailable }); setFormError(""); };
+  const totalCount = pagination?.total ?? vehicles.length;
 
   return (
     <div className="space-y-6">
@@ -104,7 +106,7 @@ const Vehicles = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatsCard title="Total Vehicles" value={vehicles.length} label="Fleet size" icon={<Truck className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
+        <StatsCard title="Total Vehicles" value={totalCount} label="Fleet size" icon={<Truck className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
         <StatsCard title="Available" value={vehicles.filter(v => v.isAvailable).length} label="Ready to dispatch" icon={<CheckCircle className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-100" valueColor="text-emerald-600" />
         <StatsCard title="In Use" value={vehicles.filter(v => !v.isAvailable).length} label="Currently active" icon={<Wrench className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" valueColor="text-amber-600" />
         <StatsCard title="No Driver" value={vehicles.filter(v => !v.assignedDriver).length} label="Needs assignment" icon={<UserX className="w-5 h-5 text-red-500" />} iconBg="bg-red-100" valueColor="text-red-500" />
@@ -176,6 +178,11 @@ const Vehicles = () => {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={(nextPage) => fetchVehicles({ page: nextPage, limit: 10 })}
+            itemLabel="vehicles"
+          />
         </div>
       )}
 

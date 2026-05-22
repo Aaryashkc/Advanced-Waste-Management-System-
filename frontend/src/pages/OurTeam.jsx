@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import Our_image from "../assets/ourteam.png"
+import Our_image from "../assets/ourteam.webp"
 
 /* ── Viewport observer ── */
 function useInView() {

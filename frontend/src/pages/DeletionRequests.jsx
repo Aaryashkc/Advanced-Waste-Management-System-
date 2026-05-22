@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import useAuthStore from "../stores/useAuthStore";
 import api from "../utils/api";
+import PaginationControls from "../components/shared/PaginationControls";
 
 const DeletionRequests = ({ onUpdate }) => {
   const user = useAuthStore((s) => s.user);
@@ -10,6 +11,8 @@ const DeletionRequests = ({ onUpdate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("pending");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [reviewTarget, setReviewTarget] = useState(null);
   const [reviewNote, setReviewNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -18,15 +21,20 @@ const DeletionRequests = ({ onUpdate }) => {
     setIsLoading(true); setError(null);
     try {
       const url = isSuperAdmin
-        ? `/super-admin/deletion-requests${filter ? `?status=${filter}` : ""}`
-        : "/org-admin/deletion-requests";
+        ? `/super-admin/deletion-requests?page=${page}&limit=10${filter ? `&status=${filter}` : ""}`
+        : `/org-admin/deletion-requests?page=${page}&limit=10`;
       const res = await api.get(url);
       setRequests(res.data.data || []);
+      setPagination(res.data.pagination || null);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch requests");
     }
     setIsLoading(false);
-  }, [filter, isSuperAdmin]);
+  }, [filter, isSuperAdmin, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   useEffect(() => {
     const timer = setTimeout(fetchRequests, 0);
@@ -132,6 +140,11 @@ const DeletionRequests = ({ onUpdate }) => {
               </div>
             </div>
           ))}
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={setPage}
+            itemLabel="requests"
+          />
         </div>
       )}
 

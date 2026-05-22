@@ -7,6 +7,7 @@ import {
 import { getSocket } from "../../utils/socket";
 import useAuthStore from "../../stores/useAuthStore";
 import api from "../../utils/api";
+import PaginationControls from "../shared/PaginationControls";
 
 const SEVERITY_CONFIG = {
   info:     { bg: "bg-blue-50",  border: "border-blue-200",  iconBg: "bg-blue-100",  iconColor: "text-blue-600",  badge: "bg-blue-100 text-blue-700" },
@@ -26,6 +27,8 @@ export default function DriverNotifications() {
   const navigate = useNavigate();
   const { token } = useAuthStore();
   const [notifications, setNotifications] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -33,15 +36,16 @@ export default function DriverNotifications() {
     if (!token) return;
     try {
       setLoading(true);
-      const res = await api.get("/notifications?limit=50&page=1");
+      const res = await api.get(`/notifications?limit=10&page=${page}`);
       setNotifications(res.data.data || []);
+      setPagination(res.data.pagination || null);
       setUnreadCount(res.data.unreadCount || 0);
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [page, token]);
 
   useEffect(() => {
     fetchNotifications();
@@ -186,6 +190,13 @@ export default function DriverNotifications() {
             </button>
           );
         })}
+        {!loading && (
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={setPage}
+            itemLabel="alerts"
+          />
+        )}
 
         {/* Empty state */}
         {!loading && notifications.length === 0 && (

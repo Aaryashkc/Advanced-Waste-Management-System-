@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import TruckLoader from "../shared/TruckLoader";
-import ScheduleBg from "../../assets/schedule_truck.png";
+import ScheduleBg from "../../assets/schedule_truck.jpg";
 import {
   ArrowLeft,
   Search,
@@ -55,8 +55,9 @@ function FadeIn({ children, delay = 0, className = "" }) {
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-        } ${className}`}
+      className={`transition-all duration-700 ease-out ${
+        inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+      } ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -67,9 +68,30 @@ function FadeIn({ children, delay = 0, className = "" }) {
 /* ── Constants ── */
 
 const ACTION_CONFIG = {
-  dispatch: { color: "bg-emerald-500", text: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-500/30", label: "Dispatch", icon: Truck },
-  skip: { color: "bg-gray-400", text: "text-gray-300", bg: "bg-gray-500/15", border: "border-gray-500/30", label: "Skip", icon: SkipForward },
-  reduced: { color: "bg-amber-500", text: "text-amber-300", bg: "bg-amber-500/15", border: "border-amber-500/30", label: "Reduced", icon: TrendingDown },
+  dispatch: {
+    color: "bg-emerald-500",
+    text: "text-emerald-300",
+    bg: "bg-emerald-500/15",
+    border: "border-emerald-500/30",
+    label: "Dispatch",
+    icon: Truck,
+  },
+  skip: {
+    color: "bg-gray-400",
+    text: "text-gray-300",
+    bg: "bg-gray-500/15",
+    border: "border-gray-500/30",
+    label: "Skip",
+    icon: SkipForward,
+  },
+  reduced: {
+    color: "bg-amber-500",
+    text: "text-amber-300",
+    bg: "bg-amber-500/15",
+    border: "border-amber-500/30",
+    label: "Reduced",
+    icon: TrendingDown,
+  },
 };
 
 const TYPE_CONFIG = {
@@ -102,17 +124,23 @@ function resolveAreas(schedule, publicSchedule) {
 }
 
 function resolveTotalWaste(schedule, publicSchedule) {
-  return schedule?.totalPredictedWasteKg
-    || schedule?.data?.totalPredictedWasteKg
-    || publicSchedule?.totalPredictedWasteKg
-    || publicSchedule?.data?.totalPredictedWasteKg
-    || 0;
+  return (
+    schedule?.totalPredictedWasteKg ||
+    schedule?.data?.totalPredictedWasteKg ||
+    publicSchedule?.totalPredictedWasteKg ||
+    publicSchedule?.data?.totalPredictedWasteKg ||
+    0
+  );
 }
 
 /* ── Normalize area item fields ── */
 
-function areaName(item) { return item.area || item.district || "Unknown"; }
-function areaType(item) { return item.areaType || item.districtType || "residential"; }
+function areaName(item) {
+  return item.area || item.district || "Unknown";
+}
+function areaType(item) {
+  return item.areaType || item.districtType || "residential";
+}
 
 /* ── Compact row for the list view ── */
 
@@ -127,18 +155,23 @@ function ScheduleRow({ item, isSelected, onClick, index }) {
     <FadeIn delay={index * 40}>
       <button
         onClick={onClick}
-        className={`group w-full text-left px-5 py-4 flex items-center gap-4 rounded-2xl border transition-all duration-300 mb-2 ${isSelected
-          ? "bg-white/15 border-white/25 shadow-lg shadow-white/5"
-          : isSkipped
-            ? "opacity-50 hover:opacity-80 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/15"
-            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-white/5"
-          }`}
+        className={`group w-full text-left px-5 py-4 flex items-center gap-4 rounded-2xl border transition-all duration-300 mb-2 ${
+          isSelected
+            ? "bg-white/15 border-white/25 shadow-lg shadow-white/5"
+            : isSkipped
+              ? "opacity-50 hover:opacity-80 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/15"
+              : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-white/5"
+        }`}
       >
         {/* Status dot */}
-        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${action.color} shadow-lg`} />
+        <span
+          className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${action.color} shadow-lg`}
+        />
 
         {/* Area type icon */}
-        <div className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center ${typeConf.bg} border border-white/10`}>
+        <div
+          className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center ${typeConf.bg} border border-white/10`}
+        >
           <TypeIcon className={`w-5 h-5 ${typeConf.color}`} />
         </div>
 
@@ -202,11 +235,15 @@ function DetailPanel({ item, onClose }) {
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {/* Status + Type */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${action.bg} ${action.text} ${action.border}`}>
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${action.bg} ${action.text} ${action.border}`}
+          >
             <ActionIcon className="w-3.5 h-3.5" />
             {action.label}
           </span>
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 ${typeConf.bg} ${typeConf.color}`}>
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 ${typeConf.bg} ${typeConf.color}`}
+          >
             <TypeIcon className="w-3.5 h-3.5" />
             {areaType(item)}
           </span>
@@ -226,7 +263,9 @@ function DetailPanel({ item, onClose }) {
           </div>
           <div className="flex items-center gap-1.5 mt-2">
             <span className={`w-2 h-2 rounded-full ${level.dot}`} />
-            <span className="text-xs text-white/55 font-medium">{level.label} volume</span>
+            <span className="text-xs text-white/55 font-medium">
+              {level.label} volume
+            </span>
           </div>
         </div>
 
@@ -288,7 +327,10 @@ function MobileDetailModal({ item, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="absolute inset-x-0 bottom-0 max-h-[85vh] bg-black/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl overflow-hidden animate-[modalIn_200ms_ease-out]">
         <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mt-3" />
         <DetailPanel item={item} onClose={onClose} />
@@ -305,7 +347,9 @@ function SchedulePage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedItem, setSelectedItem] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const { publicSchedule, loading, error, fetchPublicSchedule } = useMLScheduleStore();
+  const [page, setPage] = useState(1);
+  const { publicSchedule, loading, error, fetchPublicSchedule } =
+    useMLScheduleStore();
 
   useEffect(() => {
     fetchPublicSchedule();
@@ -315,14 +359,16 @@ function SchedulePage() {
 
   // Close panel on Escape
   useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") setSelectedItem(null); };
+    const handler = (e) => {
+      if (e.key === "Escape") setSelectedItem(null);
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
   const allAreas = useMemo(
     () => resolveAreas(schedule, publicSchedule),
-    [schedule, publicSchedule]
+    [schedule, publicSchedule],
   );
 
   const filteredAreas = useMemo(() => {
@@ -333,7 +379,7 @@ function SchedulePage() {
       items = items.filter(
         (d) =>
           areaName(d).toLowerCase().includes(q) ||
-          areaType(d).toLowerCase().includes(q)
+          areaType(d).toLowerCase().includes(q),
       );
     }
 
@@ -348,6 +394,16 @@ function SchedulePage() {
     return items;
   }, [allAreas, searchQuery, actionFilter, typeFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredAreas.length / 10));
+  const pagedAreas = useMemo(
+    () => filteredAreas.slice((page - 1) * 10, page * 10),
+    [filteredAreas, page],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, actionFilter, typeFilter]);
+
   const areaTypes = useMemo(() => {
     return [...new Set(allAreas.map((d) => areaType(d)).filter(Boolean))];
   }, [allAreas]);
@@ -359,12 +415,16 @@ function SchedulePage() {
   });
 
   const totalWaste = resolveTotalWaste(schedule, publicSchedule);
-  const dispatchedCount = allAreas.filter((d) => d.action === "dispatch").length;
+  const dispatchedCount = allAreas.filter(
+    (d) => d.action === "dispatch",
+  ).length;
   const skippedCount = allAreas.filter((d) => d.action === "skip").length;
   const totalAreas = allAreas.length;
 
   const handleSelectItem = useCallback((item) => {
-    setSelectedItem((prev) => (areaName(prev) === areaName(item) ? null : item));
+    setSelectedItem((prev) =>
+      areaName(prev) === areaName(item) ? null : item,
+    );
   }, []);
 
   const hasActiveFilters = actionFilter !== "all" || typeFilter !== "all";
@@ -379,7 +439,10 @@ function SchedulePage() {
   if (loading) {
     return (
       <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
-        <div className="fixed inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${ScheduleBg})` }} />
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${ScheduleBg})` }}
+        />
         <div className="fixed inset-0 z-0 bg-black/70 backdrop-blur-xs" />
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center gap-4">
@@ -397,7 +460,10 @@ function SchedulePage() {
   if (error) {
     return (
       <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
-        <div className="fixed inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${ScheduleBg})` }} />
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${ScheduleBg})` }}
+        />
         <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen gap-4 px-4">
           <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/20 flex items-center justify-center">
@@ -425,7 +491,10 @@ function SchedulePage() {
   if (!schedule) {
     return (
       <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">
-        <div className="fixed inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${ScheduleBg})` }} />
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${ScheduleBg})` }}
+        />
         <div className="fixed inset-0 z-0 bg-black/90 backdrop-blur-xs" />
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen gap-4 px-4">
           <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
@@ -478,7 +547,8 @@ function SchedulePage() {
 
           <FadeIn delay={200}>
             <p className="text-white/70 text-lg max-w-2xl mx-auto leading-relaxed mb-4">
-              AI-optimized waste collection routes and dispatch decisions for your city.
+              AI-optimized waste collection routes and dispatch decisions for
+              your city.
             </p>
             <div className="flex items-center justify-center gap-2 text-white/45 text-sm">
               <Clock className="w-4 h-4" />
@@ -504,16 +574,27 @@ function SchedulePage() {
               { icon: MapPin, value: totalAreas, label: "Total Areas" },
               { icon: Truck, value: dispatchedCount, label: "Dispatched" },
               { icon: SkipForward, value: skippedCount, label: "Skipped" },
-              { icon: Scale, value: totalWaste.toLocaleString(), label: "Predicted Waste", suffix: "kg" },
+              {
+                icon: Scale,
+                value: totalWaste.toLocaleString(),
+                label: "Predicted Waste",
+                suffix: "kg",
+              },
             ].map((stat, i) => (
               <FadeIn key={stat.label} delay={300 + i * 80}>
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center hover:bg-white/10 hover:border-white/20 transition-all duration-300">
                   <stat.icon className="w-5 h-5 text-white/40 mx-auto mb-2" />
                   <p className="text-2xl sm:text-3xl font-bold text-white">
                     {stat.value}
-                    {stat.suffix && <span className="text-lg font-normal ml-1 text-white/50">{stat.suffix}</span>}
+                    {stat.suffix && (
+                      <span className="text-lg font-normal ml-1 text-white/50">
+                        {stat.suffix}
+                      </span>
+                    )}
                   </p>
-                  <p className="text-white/50 text-sm mt-1 font-medium">{stat.label}</p>
+                  <p className="text-white/50 text-sm mt-1 font-medium">
+                    {stat.label}
+                  </p>
                 </div>
               </FadeIn>
             ))}
@@ -548,8 +629,11 @@ function SchedulePage() {
                 {/* Filter toggle (mobile) */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`sm:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${hasActiveFilters ? "bg-white/20 border-white/30 text-white" : "bg-white/10 border-white/10 text-white/50"
-                    }`}
+                  className={`sm:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-300 border ${
+                    hasActiveFilters
+                      ? "bg-white/20 border-white/30 text-white"
+                      : "bg-white/10 border-white/10 text-white/50"
+                  }`}
                 >
                   <Filter className="w-4 h-4" />
                 </button>
@@ -560,23 +644,48 @@ function SchedulePage() {
                     value={actionFilter}
                     onChange={(e) => setActionFilter(e.target.value)}
                     className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20 pr-8"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 8px center",
+                    }}
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">All Status</option>
-                    <option value="dispatch" className="bg-[#1a1a1a] text-white">Dispatched</option>
-                    <option value="skip" className="bg-[#1a1a1a] text-white">Skipped</option>
-                    <option value="reduced" className="bg-[#1a1a1a] text-white">Reduced</option>
+                    <option value="all" className="bg-[#1a1a1a] text-white">
+                      All Status
+                    </option>
+                    <option
+                      value="dispatch"
+                      className="bg-[#1a1a1a] text-white"
+                    >
+                      Dispatched
+                    </option>
+                    <option value="skip" className="bg-[#1a1a1a] text-white">
+                      Skipped
+                    </option>
+                    <option value="reduced" className="bg-[#1a1a1a] text-white">
+                      Reduced
+                    </option>
                   </select>
 
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
                     className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20 pr-8"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 8px center",
+                    }}
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">All Types</option>
+                    <option value="all" className="bg-[#1a1a1a] text-white">
+                      All Types
+                    </option>
                     {areaTypes.map((t) => (
-                      <option key={t} value={t} className="bg-[#1a1a1a] text-white">
+                      <option
+                        key={t}
+                        value={t}
+                        className="bg-[#1a1a1a] text-white"
+                      >
                         {t.charAt(0).toUpperCase() + t.slice(1)}
                       </option>
                     ))}
@@ -601,25 +710,45 @@ function SchedulePage() {
                     onChange={(e) => setActionFilter(e.target.value)}
                     className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">All Status</option>
-                    <option value="dispatch" className="bg-[#1a1a1a] text-white">Dispatched</option>
-                    <option value="skip" className="bg-[#1a1a1a] text-white">Skipped</option>
-                    <option value="reduced" className="bg-[#1a1a1a] text-white">Reduced</option>
+                    <option value="all" className="bg-[#1a1a1a] text-white">
+                      All Status
+                    </option>
+                    <option
+                      value="dispatch"
+                      className="bg-[#1a1a1a] text-white"
+                    >
+                      Dispatched
+                    </option>
+                    <option value="skip" className="bg-[#1a1a1a] text-white">
+                      Skipped
+                    </option>
+                    <option value="reduced" className="bg-[#1a1a1a] text-white">
+                      Reduced
+                    </option>
                   </select>
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
                     className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">All Types</option>
+                    <option value="all" className="bg-[#1a1a1a] text-white">
+                      All Types
+                    </option>
                     {areaTypes.map((t) => (
-                      <option key={t} value={t} className="bg-[#1a1a1a] text-white">
+                      <option
+                        key={t}
+                        value={t}
+                        className="bg-[#1a1a1a] text-white"
+                      >
                         {t.charAt(0).toUpperCase() + t.slice(1)}
                       </option>
                     ))}
                   </select>
                   {hasActiveFilters && (
-                    <button onClick={clearFilters} className="text-xs text-white/50 px-1">
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs text-white/50 px-1"
+                    >
                       Clear
                     </button>
                   )}
@@ -631,14 +760,22 @@ function SchedulePage() {
 
         {/* ── Main content: List + Detail panel ── */}
         <section className="px-6 md:px-16 lg:px-24 pb-20">
-          <div className="max-w-7xl mx-auto flex gap-6" style={{ minHeight: "calc(100vh - 500px)" }}>
+          <div
+            className="max-w-7xl mx-auto flex gap-6"
+            style={{ minHeight: "calc(100vh - 500px)" }}
+          >
             {/* List */}
-            <div className={`flex-1 min-w-0 ${selectedItem ? "hidden lg:block" : ""}`}>
+            <div
+              className={`flex-1 min-w-0 ${selectedItem ? "hidden lg:block" : ""}`}
+            >
               {/* Results count */}
               <div className="py-3 text-xs text-white/40 font-medium">
                 {filteredAreas.length === totalAreas
                   ? `${totalAreas} areas`
                   : `${filteredAreas.length} of ${totalAreas} areas`}
+                {filteredAreas.length > 10 && (
+                  <span className="ml-2 text-white/30">Page {page} of {totalPages}</span>
+                )}
               </div>
 
               {filteredAreas.length === 0 ? (
@@ -660,15 +797,41 @@ function SchedulePage() {
                 </div>
               ) : (
                 <div className="space-y-0">
-                  {filteredAreas.map((item, index) => (
+                  {pagedAreas.map((item, index) => (
                     <ScheduleRow
                       key={areaName(item)}
                       item={item}
                       index={index}
-                      isSelected={selectedItem && areaName(selectedItem) === areaName(item)}
+                      isSelected={
+                        selectedItem &&
+                        areaName(selectedItem) === areaName(item)
+                      }
                       onClick={() => handleSelectItem(item)}
                     />
                   ))}
+                  {filteredAreas.length > 10 && (
+                    <div className="flex items-center justify-between pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page <= 1}
+                        className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold text-white/60 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-xs text-white/35">
+                        Showing {(page - 1) * 10 + 1}-{Math.min(page * 10, filteredAreas.length)} of {filteredAreas.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages}
+                        className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold text-white/60 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -676,7 +839,10 @@ function SchedulePage() {
             {/* Desktop detail panel */}
             {selectedItem && (
               <div className="hidden lg:block w-[380px] flex-shrink-0 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-                <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+                <DetailPanel
+                  item={selectedItem}
+                  onClose={() => setSelectedItem(null)}
+                />
               </div>
             )}
 

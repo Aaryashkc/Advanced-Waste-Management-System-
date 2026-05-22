@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
+import { logger, metrics, reportError } from "../utils/observability.js";
 
 let io = null;
 
@@ -41,6 +42,7 @@ export function initSocket(httpServer) {
             socket.user = user; // attach user to socket for later use
             next();
         } catch (err) {
+            metrics.increment("socket_auth_failures_total");
             next(new Error("Invalid or expired token"));
         }
     });
@@ -48,6 +50,15 @@ export function initSocket(httpServer) {
     // ── Connection handler ─────────────────────────────────────────────────────
     io.on("connection", (socket) => {
         const { _id, role, orgId } = socket.user;
+        metrics.increment("socket_connections_total", { role, orgId });
+        metrics.setGauge("socket_connection_count", io.engine.clientsCount);
+        logger.info("Socket connected", {
+            userId: _id,
+            orgId,
+            role,
+            socketId: socket.id,
+            connectionCount: io.engine.clientsCount,
+        });
 
         // Every customer joins their personal room so the server can target them
         if (role === "customer_admin") {
@@ -77,11 +88,20 @@ export function initSocket(httpServer) {
         }
 
         socket.on("disconnect", () => {
+            metrics.increment("socket_disconnections_total", { role, orgId });
+            metrics.setGauge("socket_connection_count", io.engine.clientsCount);
+            logger.info("Socket disconnected", {
+                userId: _id,
+                orgId,
+                role,
+                socketId: socket.id,
+                connectionCount: io.engine.clientsCount,
+            });
             // rooms are cleaned up automatically
         });
     });
 
-    console.log("Socket.IO initialised");
+    logger.info("Socket.IO initialised");
     return io;
 }
 
@@ -100,7 +120,11 @@ export function getIO() {
  */
 export function emitNotification(notification) {
     if (!io) return;
-    io.to("admins").emit("notification:new", notification);
+    try {
+        io.to("admins").emit("notification:new", notification);
+    } catch (error) {
+        reportError(error, { source: "socket", event: "notification:new" });
+    }
 }
 
 /**
@@ -108,5 +132,9 @@ export function emitNotification(notification) {
  */
 export function emitUnreadCounts(counts) {
     if (!io) return;
-    io.to("admins").emit("notification:counts", counts);
+    try {
+        io.to("admins").emit("notification:counts", counts);
+    } catch (error) {
+        reportError(error, { source: "socket", event: "notification:counts" });
+    }
 }

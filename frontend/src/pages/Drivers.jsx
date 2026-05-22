@@ -4,10 +4,11 @@ import useDriverStore from "../stores/useDriverStore";
 import useAuthStore from "../stores/useAuthStore";
 import { Users, UserCheck, UserX, Truck } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
+import PaginationControls from "../components/shared/PaginationControls";
 import api from "../utils/api";
 
 const Drivers = () => {
-  const { drivers, isLoading, error, fetchDrivers, addDriver, updateDriver, deleteDriver, requestDeletion } = useDriverStore();
+  const { drivers, pagination, isLoading, error, fetchDrivers, addDriver, updateDriver, deleteDriver, requestDeletion } = useDriverStore();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
@@ -22,7 +23,7 @@ const Drivers = () => {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+  useEffect(() => { fetchDrivers({ page: 1, limit: 10 }); }, [fetchDrivers]);
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -66,6 +67,7 @@ const Drivers = () => {
 
   const openEdit = (d) => { setEditDriver(d); setEditForm({ name: d.name, email: d.email, phone: d.phone, orgId: d.orgId || "" }); setFormError(""); };
 
+  const totalCount = pagination?.total ?? drivers.length;
   const unassignedCount = drivers.filter(d => d.truck === "No Truck").length;
   const availableCount = drivers.filter(d => d.status === "Available").length;
   const busyCount = drivers.filter(d => d.status === "Busy").length;
@@ -85,7 +87,7 @@ const Drivers = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatsCard title="Total Drivers" value={drivers.length} label="All drivers" icon={<Users className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
+        <StatsCard title="Total Drivers" value={totalCount} label="All drivers" icon={<Users className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
         <StatsCard title="Available" value={availableCount} label="Ready for tasks" icon={<UserCheck className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-100" valueColor="text-emerald-600" />
         <StatsCard title="On Task" value={busyCount} label="Currently busy" icon={<UserX className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" valueColor="text-amber-600" />
         <StatsCard title="No Truck" value={unassignedCount} label="Unassigned" icon={<Truck className="w-5 h-5 text-red-500" />} iconBg="bg-red-100" valueColor="text-red-500" />
@@ -152,6 +154,11 @@ const Drivers = () => {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={(nextPage) => fetchDrivers({ page: nextPage, limit: 10 })}
+            itemLabel="drivers"
+          />
         </div>
       )}
 

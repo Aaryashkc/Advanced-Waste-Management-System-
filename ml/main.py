@@ -99,6 +99,7 @@ async def health_check():
         "service": "SafaBin ML Service",
         "model": info["model"],
         "r2_score": info["r2_score"],
+        "metrics": info["metrics"],
         "districts_count": len(info["districts"]),
     }
 

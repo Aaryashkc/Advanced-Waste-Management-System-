@@ -4,6 +4,7 @@ import useAuthStore from "../stores/useAuthStore";
 import { MapPin, CheckCircle, PauseCircle, Store } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
 import LocationPickerMap from "../components/shared/LocationPickerMap";
+import PaginationControls from "../components/shared/PaginationControls";
 import api from "../utils/api";
 
 const TYPE_BADGES = {
@@ -15,7 +16,7 @@ const TYPE_BADGES = {
 
 
 const Areas = () => {
-  const { areas, loading, error, fetchAreas, createArea, updateArea, deleteArea } = useAreaStore();
+  const { areas, pagination, loading, error, fetchAreas, createArea, updateArea, deleteArea } = useAreaStore();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -28,7 +29,7 @@ const Areas = () => {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { fetchAreas(); }, [fetchAreas]);
+  useEffect(() => { fetchAreas({ page: 1, limit: 10 }); }, [fetchAreas]);
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -91,6 +92,7 @@ const Areas = () => {
     setFormError("");
   };
 
+  const totalCount = pagination?.total ?? areas.length;
   const activeCount = areas.filter(d => d.isActive !== false).length;
   const inactiveCount = areas.filter(d => d.isActive === false).length;
   const typeCount = (type) => areas.filter(d => d.type === type).length;
@@ -112,7 +114,7 @@ const Areas = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatsCard title="Total Areas" value={areas.length} label="All collection areas" icon={<MapPin className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
+        <StatsCard title="Total Areas" value={totalCount} label="All collection areas" icon={<MapPin className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
         <StatsCard title="Active" value={activeCount} label="Currently served" icon={<CheckCircle className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-100" valueColor="text-emerald-600" />
         <StatsCard title="Inactive" value={inactiveCount} label="Paused areas" icon={<PauseCircle className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" valueColor="text-amber-600" />
         <StatsCard title="Commercial" value={typeCount("commercial")} label="Business areas" icon={<Store className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" valueColor="text-blue-600" />
@@ -191,6 +193,11 @@ const Areas = () => {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={(nextPage) => fetchAreas({ page: nextPage, limit: 10 })}
+            itemLabel="areas"
+          />
         </div>
       )}
 

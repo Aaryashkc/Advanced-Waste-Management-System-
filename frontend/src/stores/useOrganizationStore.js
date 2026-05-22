@@ -5,14 +5,25 @@ import useAuthStore from './useAuthStore';
 const useOrganizationStore = create((set, get) => ({
   organizations: [],
   currentOrg: null,
+  pagination: null,
   isLoading: false,
   error: null,
+  lastParams: { page: 1, limit: 10 },
 
-  fetchOrganizations: async () => {
+  fetchOrganizations: async (params = {}) => {
+    const nextParams = { ...get().lastParams, ...params, limit: params.limit || 10 };
     set({ isLoading: true, error: null });
     try {
-      const res = await api.get('/super-admin/organizations');
-      set({ organizations: res.data.organizations || [], isLoading: false });
+      const query = new URLSearchParams();
+      if (nextParams.page) query.set("page", nextParams.page);
+      if (nextParams.limit) query.set("limit", nextParams.limit);
+      const res = await api.get(`/super-admin/organizations?${query.toString()}`);
+      set({
+        organizations: res.data.organizations || [],
+        pagination: res.data.pagination || null,
+        lastParams: nextParams,
+        isLoading: false,
+      });
     } catch (error) {
       set({ error: error.response?.data?.message || 'Failed to fetch organizations', isLoading: false });
     }
@@ -40,7 +51,7 @@ const useOrganizationStore = create((set, get) => ({
   createOrganization: async (data) => {
     try {
       await api.post('/super-admin/organizations', data);
-      get().fetchOrganizations();
+      get().fetchOrganizations({ page: 1 });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to create organization' };

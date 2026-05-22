@@ -1,5 +1,6 @@
 import Area from "../models/Area.model.js";
 import Organization from "../models/Organization.model.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 /**
  * Get all areas
@@ -9,6 +10,7 @@ import Organization from "../models/Organization.model.js";
 export const getAreas = async (req, res) => {
   try {
     const filter = { isActive: true };
+    const pagination = getPagination(req.query);
 
     // Scoping: If not super_admin, force orgId
     if (req.user.role !== "super_admin") {
@@ -21,14 +23,19 @@ export const getAreas = async (req, res) => {
     }
 
     const areas = await Area.find(filter)
+      .select("name type coordinates address scaleFactor isActive orgId createdAt updatedAt")
       .populate("orgId", "name")
-      .sort({ name: 1 })
+      .sort({ name: 1, createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
+    const total = await Area.countDocuments(filter);
 
     res.status(200).json({
       success: true,
       data: areas,
       count: areas.length,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
   } catch (error) {
     console.error("Get areas error:", error);

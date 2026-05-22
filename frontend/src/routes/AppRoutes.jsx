@@ -51,8 +51,10 @@ const DriverStatusToast = lazy(() => import("../components/Driver/DriverStatusTo
 const DriverNavbar = lazy(() => import("../components/Driver/DriverNavbar"));
 const DriverNotifications = lazy(() => import("../components/Driver/DriverNotifications"));
 const ScheduleToast = lazy(() => import("../components/ml/ScheduleToast"));
-const DebugScheduleData = lazy(() => import("../components/debug/DebugScheduleData"));
 const HelpSupportPage = lazy(() => import("../pages/HelpandSupport"));
+const DebugScheduleData = import.meta.env.DEV
+  ? lazy(() => import("../components/debug/DebugScheduleData"))
+  : null;
 
 const RouteFallback = () => (
   <div className="flex min-h-[50vh] items-center justify-center px-4 text-sm text-primary">
@@ -277,8 +279,12 @@ const AppRoutes = () => {
           } />
         </Route>
 
-        {/* Debug Route - for testing */}
-        <Route path="/debug-schedule" element={<DebugScheduleData />} />
+        {import.meta.env.DEV && (
+          <Route
+            path="/debug-schedule"
+            element={<DebugScheduleData />}
+          />
+        )}
 
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />

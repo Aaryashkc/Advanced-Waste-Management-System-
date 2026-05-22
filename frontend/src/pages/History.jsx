@@ -94,7 +94,7 @@ const History = () => {
   useEffect(() => {
     if (activeTab !== "pickups") return;
     setLoading(true);
-    const params = new URLSearchParams({ page: currentPage, limit: 30 });
+    const params = new URLSearchParams({ page: currentPage, limit: 10 });
     if (statusFilter) params.set("status", statusFilter);
     if (categoryFilter) params.set("category", categoryFilter);
 
@@ -257,7 +257,7 @@ const History = () => {
             </select>
             {pagination.total > 0 && (
               <span className="text-xs text-primary/40 ml-auto">
-                Showing {(pagination.page - 1) * 30 + 1}-{Math.min(pagination.page * 30, pagination.total)} of {pagination.total}
+                Showing {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
               </span>
             )}
           </div>

@@ -8,6 +8,7 @@ import {
   decodeAndVerifyCallback,
   verifyTransactionStatus,
 } from "../services/esewaService.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -278,12 +279,6 @@ async function buildAdminBillingFilter(req, { forceStatus, includeStatus = true 
   return filter;
 }
 
-function parsePositiveInt(value, fallback, max = 100) {
-  const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
-  return Math.min(parsed, max);
-}
-
 async function markOverdueBills(filter = {}) {
   const overdueFilter = { ...filter };
   delete overdueFilter.status;
@@ -304,6 +299,7 @@ async function markOverdueBills(filter = {}) {
 export const getMyBills = async (req, res) => {
   try {
     const now = new Date();
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     await ensureBillsForUser(req.user, { throughDate: now });
     await Billing.updateMany(
       { customerId: req.user._id, status: "UNPAID", dueDate: { $lt: now } },
@@ -311,8 +307,27 @@ export const getMyBills = async (req, res) => {
     );
 
     const bills = await Billing.find({ customerId: req.user._id })
-      .sort({ billingYear: -1, billingMonth: -1 })
+      .select("billingMonth billingYear amount currency status paidAt paymentMethod dueDate notes createdAt updatedAt")
+      .sort({ billingYear: -1, billingMonth: -1, createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
+    const [total, summaryAgg] = await Promise.all([
+      Billing.countDocuments({ customerId: req.user._id }),
+      Billing.aggregate([
+        { $match: { customerId: new mongoose.Types.ObjectId(req.user._id) } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            paid: { $sum: { $cond: [{ $eq: ["$status", "PAID"] }, 1, 0] } },
+            unpaid: { $sum: { $cond: [{ $in: ["$status", OPEN_BILL_STATUSES] }, 1, 0] } },
+            totalPaid: { $sum: { $cond: [{ $eq: ["$status", "PAID"] }, "$amount", 0] } },
+            totalDue: { $sum: { $cond: [{ $in: ["$status", OPEN_BILL_STATUSES] }, "$amount", 0] } },
+          },
+        },
+      ]),
+    ]);
 
     // Mark overdue locally for display
     const updatedBills = bills.map((b) => {
@@ -322,19 +337,14 @@ export const getMyBills = async (req, res) => {
       return b;
     });
 
-    const summary = {
-      total: updatedBills.length,
-      paid: updatedBills.filter((b) => b.status === "PAID").length,
-      unpaid: updatedBills.filter((b) => OPEN_BILL_STATUSES.includes(b.status)).length,
-      totalPaid: updatedBills
-        .filter((b) => b.status === "PAID")
-        .reduce((sum, b) => sum + b.amount, 0),
-      totalDue: updatedBills
-        .filter((b) => OPEN_BILL_STATUSES.includes(b.status))
-        .reduce((sum, b) => sum + b.amount, 0),
-    };
+    const summary = summaryAgg[0] || { total: 0, paid: 0, unpaid: 0, totalPaid: 0, totalDue: 0 };
+    delete summary._id;
 
-    res.json({ bills: updatedBills, summary });
+    res.json({
+      bills: updatedBills,
+      summary,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    });
   } catch (err) {
     console.error("getMyBills error:", err);
     res.status(500).json({ message: "Failed to fetch bills" });
@@ -517,14 +527,22 @@ export const esewaBillingFailure = async (req, res) => {
  */
 export const getPaymentHistory = async (req, res) => {
   try {
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     const history = await Billing.find({
       customerId: req.user._id,
       status: { $in: ["PAID", "WAIVED"] },
     })
-      .sort({ paidAt: -1 })
+      .select("billingMonth billingYear amount currency status paidAt paymentMethod notes createdAt updatedAt")
+      .sort({ paidAt: -1, createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
+    const total = await Billing.countDocuments({
+      customerId: req.user._id,
+      status: { $in: ["PAID", "WAIVED"] },
+    });
 
-    res.json({ history });
+    res.json({ history, pagination: buildPaginationMeta({ ...pagination, total }) });
   } catch (err) {
     console.error("getPaymentHistory error:", err);
     res.status(500).json({ message: "Failed to fetch payment history" });
@@ -543,8 +561,8 @@ export const getPaymentHistory = async (req, res) => {
  */
 export const getBillingOverview = async (req, res) => {
   try {
-    const page = parsePositiveInt(req.query.page, 1, 10000);
-    const limit = parsePositiveInt(req.query.limit, 25, 100);
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
+    const { page, limit } = pagination;
     const filter = await buildAdminBillingFilter(req);
 
     await markOverdueBills(filter);
@@ -729,6 +747,7 @@ export const getBillingOverview = async (req, res) => {
 export const getBillingAccountDetails = async (req, res) => {
   try {
     const { customerId } = req.params;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     if (!mongoose.Types.ObjectId.isValid(customerId)) {
       return res.status(400).json({ message: "Invalid account id" });
     }
@@ -741,9 +760,12 @@ export const getBillingAccountDetails = async (req, res) => {
     const bills = await Billing.find(filter)
       .populate("customerId", "name email phone address role")
       .populate("orgId", "name")
-      .sort({ billingYear: -1, billingMonth: -1 })
-      .limit(120)
+      .select("customerId orgId billedRole billingMonth billingYear amount currency status paidAt paymentMethod dueDate resolvedBy notes createdAt updatedAt")
+      .sort({ billingYear: -1, billingMonth: -1, createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
+    const total = await Billing.countDocuments(filter);
 
     const summary = bills.reduce((acc, bill) => {
       acc.totalBills += 1;
@@ -774,6 +796,7 @@ export const getBillingAccountDetails = async (req, res) => {
       account: bills[0]?.customerId || null,
       bills,
       summary,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
   } catch (err) {
     console.error("getBillingAccountDetails error:", err);
@@ -907,25 +930,37 @@ export const generateMonthlyBills = async (req, res) => {
 export const getBillingConfig = async (req, res) => {
   try {
     const isSuperAdmin = req.user.role === "super_admin";
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
 
     let configs;
+    let total;
     if (isSuperAdmin) {
       configs = await BillingConfig.find()
+        .select("orgId customerMonthlyFee adminMonthlyFee updatedBy createdAt updatedAt")
         .populate("orgId", "name")
         .populate("updatedBy", "name")
         .sort({ orgId: 1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
         .lean();
+      total = await BillingConfig.countDocuments();
     } else {
       configs = await BillingConfig.find({
         orgId: { $in: [req.user.orgId, null] },
       })
+        .select("orgId customerMonthlyFee adminMonthlyFee updatedBy createdAt updatedAt")
         .populate("orgId", "name")
         .populate("updatedBy", "name")
+        .sort({ orgId: 1 })
+        .limit(2)
         .lean();
+      total = configs.length;
     }
 
-    // Calculate the effective fees the caller would see
-    const globalConfig = configs.find((c) => !c.orgId);
+    // Calculate the effective fees from the canonical config, not just the current page.
+    const globalConfig = await BillingConfig.findOne({ orgId: null })
+      .select("customerMonthlyFee adminMonthlyFee")
+      .lean();
     const activeFees = {
       customerFee: globalConfig?.customerMonthlyFee ?? DEFAULT_CUSTOMER_FEE,
       adminFee: globalConfig?.adminMonthlyFee ?? DEFAULT_ADMIN_FEE,
@@ -944,6 +979,7 @@ export const getBillingConfig = async (req, res) => {
       configs,
       activeFees,
       defaults: { customerFee: DEFAULT_CUSTOMER_FEE, adminFee: DEFAULT_ADMIN_FEE },
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
   } catch (err) {
     console.error("getBillingConfig error:", err);

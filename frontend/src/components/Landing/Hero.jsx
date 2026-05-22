@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
 import { getDashboardRoute } from '../../utils/roleRouting';
 import { useRef, useState, useEffect } from 'react';
-import HERO_IMAGE from "../../assets/hero.png"
+import HERO_IMAGE from "../../assets/hero.webp"
 
 const DEFAULT_OBSERVER_OPTIONS = {};
 

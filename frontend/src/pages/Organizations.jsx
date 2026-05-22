@@ -15,6 +15,7 @@ import {
 import useOrganizationStore from "../stores/useOrganizationStore";
 import LocationPickerMap from "../components/shared/LocationPickerMap";
 import StatsCard from "../components/dashboard/StatsCard";
+import PaginationControls from "../components/shared/PaginationControls";
 
 const ORG_COLORS = [
   {
@@ -62,7 +63,7 @@ const ORG_COLORS = [
 ];
 
 const Organizations = () => {
-  const { organizations, isLoading, error, fetchOrganizations, createOrganization, updateOrganization, addAdmin } = useOrganizationStore();
+  const { organizations, pagination, isLoading, error, fetchOrganizations, createOrganization, updateOrganization, addAdmin } = useOrganizationStore();
   const navigate = useNavigate();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -75,7 +76,7 @@ const Organizations = () => {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { fetchOrganizations(); }, [fetchOrganizations]);
+  useEffect(() => { fetchOrganizations({ page: 1, limit: 10 }); }, [fetchOrganizations]);
 
   const handleCreate = async (e) => {
     e.preventDefault(); setFormError("");
@@ -117,6 +118,7 @@ const Organizations = () => {
     else setFormError(result.error);
   };
 
+  const totalOrganizations = pagination?.total ?? organizations.length;
   const totalAdmins = organizations.reduce((sum, o) => sum + (o.admins?.length || 0), 0);
   const totalFleet = organizations.reduce((sum, o) => sum + (o.fleet?.length || 0), 0);
   const totalDrivers = organizations.reduce((sum, o) => sum + (o.driverCount || 0), 0);
@@ -157,7 +159,7 @@ const Organizations = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatsCard
           title="Organizations"
-          value={organizations.length}
+          value={totalOrganizations}
           label="Registered partners"
           icon={<Building2 className="w-5 h-5 text-primary" />}
           iconBg="bg-primary/8"
@@ -203,8 +205,9 @@ const Organizations = () => {
           <p className="text-primary/40 font-medium">No organizations yet. Create your first one!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {organizations.map((org, i) => {
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {organizations.map((org, i) => {
             const tone = ORG_COLORS[i % ORG_COLORS.length];
             const admins = org.admins || [];
             const trucks = org.fleet?.length || 0;
@@ -336,8 +339,14 @@ const Organizations = () => {
                 </div>
               </article>
             );
-          })}
-        </div>
+            })}
+          </div>
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={(nextPage) => fetchOrganizations({ page: nextPage, limit: 10 })}
+            itemLabel="organizations"
+          />
+        </>
       )}
 
       {/* ===== Create Organization Modal ===== */}

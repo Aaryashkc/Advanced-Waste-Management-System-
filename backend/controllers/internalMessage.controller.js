@@ -1,5 +1,6 @@
 import InternalMessage from "../models/InternalMessage.model.js";
 import { getIO } from "../socket/socketServer.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 async function emitInternalMessageCounts(type) {
   try {
@@ -14,17 +15,27 @@ async function emitInternalMessageCounts(type) {
 export const getMessagesByType = async (req, res) => {
   try {
     const { type } = req.params;
+    const pagination = getPagination(req.query);
     
     if (!["org_admin", "driver"].includes(type)) {
       return res.status(400).json({ message: "Invalid message type" });
     }
 
     const messages = await InternalMessage.find({ type })
+      .select("type fromUser orgId title message status createdAt updatedAt")
       .populate("fromUser", "name email role")
       .populate("orgId", "name")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await InternalMessage.countDocuments({ type });
       
-    res.status(200).json({ success: true, data: messages });
+    res.status(200).json({
+      success: true,
+      data: messages,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch internal messages", error: error.message });
   }

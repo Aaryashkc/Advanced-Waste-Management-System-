@@ -16,7 +16,7 @@ const useUserStore = create((set) => ({
       if (params.role) query.set("role", params.role);
       if (params.status) query.set("status", params.status);
       if (params.page) query.set("page", params.page);
-      if (params.limit) query.set("limit", params.limit);
+      query.set("limit", params.limit || 10);
 
       const res = await api.get(`/super-admin/users?${query.toString()}`);
       set({

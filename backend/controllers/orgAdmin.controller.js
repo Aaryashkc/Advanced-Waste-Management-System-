@@ -11,6 +11,7 @@ import { cacheDashboardResponse } from "../services/dashboardCache.js";
 import { getIO } from "../socket/socketServer.js";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 async function buildOrganizationDetail(orgId) {
   const org = await Organization.findById(orgId)
@@ -18,15 +19,25 @@ async function buildOrganizationDetail(orgId) {
 
   if (!org) return null;
 
-  const trucks = await Truck.find({ orgId: org._id }).lean();
+  const trucks = await Truck.find({ orgId: org._id })
+    .select("licensePlate truckType capacity dutyType isAvailable createdAt")
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
   const orgDriverUsers = await User.find({ orgId: org._id, role: "driver" })
     .select("_id name email phone isActive createdAt")
+    .sort({ createdAt: -1 })
+    .limit(100)
     .lean();
   const driverUserIds = orgDriverUsers.map((u) => u._id);
   const drivers = await Driver.find({ userId: { $in: driverUserIds } })
     .populate("assignedTruckId", "licensePlate truckType capacity")
     .lean();
-  const areas = await Area.find({ orgId: org._id, isActive: true }).lean();
+  const areas = await Area.find({ orgId: org._id, isActive: true })
+    .select("name type boundary isActive createdAt")
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
 
   const driversWithUser = drivers.map((driver) => {
     const user = orgDriverUsers.find((u) => u._id.toString() === driver.userId.toString());
@@ -142,6 +153,7 @@ export const updateMyOrganization = async (req, res) => {
 export const getOrgAdmins = async (req, res) => {
   try {
     const { role, orgId } = req.user;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     const isSuperAdmin = role === "super_admin";
 
     let filter;
@@ -157,7 +169,11 @@ export const getOrgAdmins = async (req, res) => {
     const admins = await User.find(filter)
       .select("name email phone role orgId createdAt isActive")
       .populate("orgId", "name")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await User.countDocuments(filter);
 
     const orgName = isSuperAdmin ? "All Organizations" : (await Organization.findById(orgId).select("name"))?.name || "Unknown";
 
@@ -193,7 +209,8 @@ export const getOrgAdmins = async (req, res) => {
       success: true,
       orgName,
       data: adminData,
-      orgGroups
+      orgGroups,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch admins", error: error.message });
@@ -608,13 +625,22 @@ export const updateDriverByAdmin = async (req, res) => {
 export const getOrgTrucks = async (req, res) => {
   try {
     const orgId = req.user.orgId;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
     if (!orgId) {
       return res.status(403).json({ message: "Organization ID required" });
     }
 
-    const trucks = await Truck.find({ orgId }).sort({ createdAt: -1 });
+    const trucks = await Truck.find({ orgId })
+      .select("truckType dutyType capacity licensePlate isAvailable createdAt")
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await Truck.countDocuments({ orgId });
     const truckIds = trucks.map((truck) => truck._id);
-    const assignedDrivers = await Driver.find({ assignedTruckId: { $in: truckIds } }).populate("userId", "name email");
+    const assignedDrivers = await Driver.find({ assignedTruckId: { $in: truckIds } })
+      .populate("userId", "name email")
+      .lean();
 
     const driverByTruck = {};
     assignedDrivers.forEach((driver) => {
@@ -638,7 +664,11 @@ export const getOrgTrucks = async (req, res) => {
       createdAt: t.createdAt
     }));
 
-    res.status(200).json({ success: true, data: formatted });
+    res.status(200).json({
+      success: true,
+      data: formatted,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch trucks", error: error.message });
   }
@@ -801,13 +831,23 @@ export const requestDeletion = async (req, res) => {
 export const getMyDeletionRequests = async (req, res) => {
   try {
     const orgId = req.user.orgId;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
 
     const requests = await DeletionRequest.find({ orgId })
+      .select("type targetId targetName reason status requestedBy reviewedBy reviewNote reviewedAt createdAt updatedAt")
       .populate("requestedBy", "name email")
       .populate("reviewedBy", "name")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await DeletionRequest.countDocuments({ orgId });
 
-    res.status(200).json({ success: true, data: requests });
+    res.status(200).json({
+      success: true,
+      data: requests,
+      pagination: buildPaginationMeta({ ...pagination, total }),
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch deletion requests", error: error.message });
   }

@@ -1,4 +1,5 @@
 import User from "../models/User.model.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -6,10 +7,9 @@ export const getAllUsers = async (req, res) => {
       search = "",
       role = "",
       status = "",
-      page = 1,
-      limit = 20,
       sort = "-createdAt",
     } = req.query;
+    const pagination = getPagination(req.query);
 
     const filter = {};
 
@@ -28,15 +28,13 @@ export const getAllUsers = async (req, res) => {
     if (status === "active") filter.isActive = true;
     else if (status === "inactive") filter.isActive = false;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
     const [users, total] = await Promise.all([
       User.find(filter)
         .select("-passwordHash -loginOtp -twoFactor")
         .populate("orgId", "name")
         .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit))
+        .skip(pagination.skip)
+        .limit(pagination.limit)
         .lean(),
       User.countDocuments(filter),
     ]);
@@ -71,12 +69,7 @@ export const getAllUsers = async (req, res) => {
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
       })),
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit)),
-      },
+      pagination: buildPaginationMeta({ ...pagination, total }),
       stats,
     });
   } catch (error) {

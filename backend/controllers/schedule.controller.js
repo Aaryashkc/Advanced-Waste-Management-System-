@@ -1,6 +1,7 @@
 import Schedule from "../models/Schedule.model.js";
 import Truck from "../models/Truck.model.js";
 import Driver from "../models/Driver.model.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 /**
  * Get all schedules
@@ -10,6 +11,7 @@ import Driver from "../models/Driver.model.js";
 export const getSchedules = async (req, res) => {
   try {
     const { city, area, day } = req.query;
+    const pagination = getPagination(req.query);
 
     const filter = { isActive: true };
 
@@ -46,7 +48,10 @@ export const getSchedules = async (req, res) => {
       })
       .populate('orgId', 'name')
       .sort({ day: 1, time: 1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
+    const total = await Schedule.countDocuments(filter);
 
     // Format response to match frontend expectations
     const formattedSchedules = schedules.map(schedule => ({
@@ -68,7 +73,8 @@ export const getSchedules = async (req, res) => {
     res.status(200).json({
       success: true,
       data: formattedSchedules,
-      count: formattedSchedules.length
+      count: formattedSchedules.length,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
   } catch (error) {
     console.error("Get schedules error:", error);

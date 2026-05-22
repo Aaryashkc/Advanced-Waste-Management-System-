@@ -9,7 +9,12 @@ Nepal-context truck capacity tiers:
   - Heavy duty:  > 3,500 kg  (Compactors, Ashok Leyland — main roads)
 """
 
-from model import predict_waste, predict_waste_by_type, DISTRICTS, DISTRICT_TYPES, categorize_waste
+import math
+
+from model import predict_waste, predict_waste_by_type, get_model_info, DISTRICTS, DISTRICT_TYPES, categorize_waste
+
+EXACT_TRUCK_LIMIT = 16
+BEAM_WIDTH = 250
 
 
 def get_duty_type_for_waste(waste_kg):
@@ -72,6 +77,128 @@ def score_truck_for_district(truck, district, predicted_kg):
         score += 0.50 * 0.2
 
     return round(score, 4)
+
+
+def _distance_km(left, right):
+    if not left or not right:
+        return 0.0
+    if not left.get("latitude") or not left.get("longitude"):
+        return 0.0
+    if not right.get("latitude") or not right.get("longitude"):
+        return 0.0
+
+    earth_radius_km = 6371
+    lat1 = math.radians(left["latitude"])
+    lat2 = math.radians(right["latitude"])
+    d_lat = math.radians(right["latitude"] - left["latitude"])
+    d_lon = math.radians(right["longitude"] - left["longitude"])
+    h = (
+        math.sin(d_lat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(d_lon / 2) ** 2
+    )
+    return 2 * earth_radius_km * math.asin(math.sqrt(h))
+
+
+def _subset_cost(area, subset):
+    predicted_kg = area.get("predicted_waste_kg", 0) or 0
+    area_org_id = area.get("org_id")
+    area_location = area.get("location") or area.get("coordinates")
+    capacity = sum(t.get("capacity_kg", 0) or 0 for t in subset)
+    uncovered = max(0, predicted_kg - capacity)
+    excess = max(0, capacity - predicted_kg)
+    cross_org = sum(
+        1 for t in subset
+        if area_org_id and t.get("org_id") != area_org_id
+    )
+    driverless = sum(1 for t in subset if not t.get("driver_id"))
+    distance = sum(
+        _distance_km(area_location, t.get("location") or t.get("driver_location"))
+        for t in subset
+    )
+
+    return {
+        "capacity": capacity,
+        "uncovered": uncovered,
+        "excess": excess,
+        "cost": (
+            uncovered * 1_000_000
+            + excess * 1_000
+            + cross_org * 10_000
+            + driverless * 50_000
+            + distance * 25
+            + len(subset) * 5
+        ),
+    }
+
+
+def _build_subset_options(area, trucks):
+    ranked = sorted(
+        [t for t in trucks if (t.get("capacity_kg", 0) or 0) > 0],
+        key=lambda t: _subset_cost(area, [t])["cost"],
+    )[:EXACT_TRUCK_LIMIT]
+
+    options = [{"mask": 0, "trucks": [], **_subset_cost(area, [])}]
+    for mask in range(1, 1 << len(ranked)):
+        subset = [ranked[idx] for idx in range(len(ranked)) if mask & (1 << idx)]
+        global_mask = 0
+        for truck in subset:
+            global_mask |= truck["_bit"]
+        options.append({"mask": global_mask, "trucks": subset, **_subset_cost(area, subset)})
+
+    return sorted(options, key=lambda o: o["cost"])[:350]
+
+
+def optimize_truck_assignments(predictions, available_trucks):
+    """
+    Optimize all area assignments together instead of assigning each area greedily.
+
+    Objective priorities are encoded as weighted costs:
+      - minimize uncovered waste first
+      - then minimize excess truck capacity
+      - prefer same-organization trucks
+      - prefer nearby trucks/drivers when coordinates exist
+      - penalize driverless trucks
+    """
+    trucks = [
+        {**truck, "_bit": 1 << idx}
+        for idx, truck in enumerate(available_trucks)
+        if (truck.get("capacity_kg", 0) or 0) > 0
+    ]
+    service_areas = [
+        p for p in predictions
+        if p.get("waste_category") != "none" and (p.get("predicted_waste_kg", 0) or 0) > 0
+    ]
+    service_areas.sort(key=lambda p: p.get("predicted_waste_kg", 0) or 0, reverse=True)
+
+    states = {0: {"cost": 0, "assignment": {}}}
+    for area in service_areas:
+        area_key = area["district"]
+        subset_options = _build_subset_options(area, trucks)
+        next_states = {}
+        for used_mask, state in states.items():
+            for option in subset_options:
+                if used_mask & option["mask"]:
+                    continue
+                next_mask = used_mask | option["mask"]
+                next_cost = state["cost"] + option["cost"]
+                existing = next_states.get(next_mask)
+                if existing is None or next_cost < existing["cost"]:
+                    assignment = dict(state["assignment"])
+                    assignment[area_key] = option
+                    next_states[next_mask] = {"cost": next_cost, "assignment": assignment}
+
+        sorted_states = sorted(next_states.items(), key=lambda item: item[1]["cost"])
+        if len(trucks) <= EXACT_TRUCK_LIMIT:
+            states = dict(sorted_states)
+        else:
+            states = dict(sorted_states[:BEAM_WIDTH])
+
+    if not states:
+        return {}, "exact-bitmask-dp" if len(trucks) <= EXACT_TRUCK_LIMIT else "beam-search-dp"
+
+    best = min(states.values(), key=lambda state: state["cost"])
+    method = "exact-bitmask-dp" if len(trucks) <= EXACT_TRUCK_LIMIT else "beam-search-dp"
+    return best["assignment"], method
 
 
 def assign_trucks_to_district(district, predicted_kg, waste_category, available_trucks):
@@ -142,7 +269,6 @@ def generate_schedule(target_date, trucks, unavailable_drivers=None, extra_areas
         if t.get("driver_id") not in unavailable
     ]
 
-    used_truck_ids = set()
     district_results = []
     total_predicted = 0
 
@@ -169,43 +295,42 @@ def generate_schedule(target_date, trucks, unavailable_drivers=None, extra_areas
             # Skip areas with invalid types
             continue
 
-    # 3. Sort by predicted waste descending (prioritize high-waste districts)
-    predictions.sort(key=lambda p: p["predicted_waste_kg"], reverse=True)
+    # 3. Optimize truck assignment across all districts in one pass.
+    optimized_assignments, optimizer_method = optimize_truck_assignments(predictions, available_trucks)
+    used_truck_ids = {
+        truck["id"]
+        for option in optimized_assignments.values()
+        for truck in option.get("trucks", [])
+    }
 
-    # 4. Assign trucks to each district
+    # 4. Build district schedule rows from optimized assignment choices.
     for pred in predictions:
         district = pred["district"]
         predicted_kg = pred["predicted_waste_kg"]
         waste_category = pred["waste_category"]
+        option = optimized_assignments.get(district, {"trucks": [], "capacity": 0, "uncovered": predicted_kg})
+        assigned = []
+        for truck in option.get("trucks", []):
+            assigned.append({
+                "truck_id": truck["id"],
+                "license_plate": truck["license_plate"],
+                "truck_type": truck.get("duty_type", "medium duty"),
+                "capacity_kg": truck["capacity_kg"],
+                "org_id": truck.get("org_id"),
+                "org_name": truck.get("org_name"),
+                "driver_id": truck.get("driver_id"),
+                "driver_name": truck.get("driver_name", "Unassigned"),
+                "score": score_truck_for_district(truck, district, predicted_kg),
+            })
 
-        # Determine action
         if waste_category == "none":
             action = "skip"
-            assigned = []
+        elif not assigned:
+            action = "skip"
+        elif option.get("uncovered", predicted_kg) <= 0:
+            action = "dispatch"
         else:
-            # Filter out already-used trucks
-            remaining_trucks = [t for t in available_trucks if t["id"] not in used_truck_ids]
-
-            if not remaining_trucks:
-                action = "skip"
-                assigned = []
-            else:
-                assigned = assign_trucks_to_district(
-                    district, predicted_kg, waste_category, remaining_trucks
-                )
-
-                if assigned:
-                    action = "dispatch"
-                    for a in assigned:
-                        used_truck_ids.add(a["truck_id"])
-                else:
-                    action = "skip"
-
-        # Reduced service: if we couldn't fully cover the waste
-        if action == "dispatch":
-            total_assigned_capacity = sum(a["capacity_kg"] for a in assigned)
-            if total_assigned_capacity < predicted_kg * 0.7:
-                action = "reduced"
+            action = "reduced"
 
         total_predicted += predicted_kg
 
@@ -218,6 +343,9 @@ def generate_schedule(target_date, trucks, unavailable_drivers=None, extra_areas
             "recommendation": pred["recommendation"],
             "is_holiday": pred["is_holiday"],
             "holiday_name": pred.get("holiday_name"),
+            "prediction_method": pred.get("prediction_method", "model"),
+            "confidence": pred.get("confidence"),
+            "optimizer": optimizer_method,
             "assigned_trucks": assigned,
         })
 
@@ -234,6 +362,10 @@ def generate_schedule(target_date, trucks, unavailable_drivers=None, extra_areas
     return {
         "date": target_date.isoformat(),
         "day_name": day_names[target_date.weekday()],
+        "model_info": {
+            "model": "GradientBoosting",
+            "metrics": get_model_info().get("metrics"),
+        },
         "summary": {
             "total_districts": len(predictions),
             "dispatched": dispatched,

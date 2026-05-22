@@ -7,7 +7,7 @@ import ThankYouPage from "./ThankYouPage";
 import { getSocket } from "../../utils/socket";
 import usePickupStore from "../../stores/usePickupStore";
 import usePaymentStore from "../../stores/usePaymentStore";
-import SearchingBg from "../../assets/ourteam.png";
+import SearchingBg from "../../assets/ourteam.webp";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;

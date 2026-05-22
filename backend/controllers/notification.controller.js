@@ -1,5 +1,6 @@
 import Notification from "../models/notification.model.js";
 import { emitNotification, getIO } from "../socket/socketServer.js";
+import { buildPaginationMeta, getPagination } from "../utils/pagination.js";
 
 /**
  * Get notifications for the current user based on their role.
@@ -8,7 +9,8 @@ import { emitNotification, getIO } from "../socket/socketServer.js";
 export const getNotifications = async (req, res) => {
   try {
     const { role, orgId, _id: userId } = req.user;
-    const { unreadOnly, limit = 50, page = 1 } = req.query;
+    const { unreadOnly } = req.query;
+    const pagination = getPagination(req.query, { defaultLimit: 10 });
 
     const filter = {
       targetRoles: role,
@@ -31,12 +33,11 @@ export const getNotifications = async (req, res) => {
       filter.readBy = { $ne: userId };
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
     const notifications = await Notification.find(filter)
+      .select("type title message severity from targetRoles orgId relatedData targetUserId readBy createdAt")
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
+      .skip(pagination.skip)
+      .limit(pagination.limit)
       .lean();
 
     // Add isRead flag for current user
@@ -56,7 +57,8 @@ export const getNotifications = async (req, res) => {
       data,
       total,
       unreadCount,
-      page: parseInt(page),
+      page: pagination.page,
+      pagination: buildPaginationMeta({ ...pagination, total }),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to fetch notifications", error: error.message });

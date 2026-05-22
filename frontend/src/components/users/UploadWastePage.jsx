@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useUploadStore from '../../stores/useUploadStore';
-import UploadBg from '../../assets/ourteam.png';
+import UploadBg from '../../assets/ourteam.webp';
 
 /* ── Viewport observer (same pattern as OurTeam / SchedulePage) ── */
 

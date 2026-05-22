@@ -6,6 +6,10 @@ const wasteLogSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  districtType: {
+    type: String,
+    trim: true
+  },
   date: {
     type: Date,
     required: true
@@ -29,6 +33,11 @@ const wasteLogSchema = new mongoose.Schema({
   notes: {
     type: String,
     trim: true
+  },
+  source: {
+    type: String,
+    enum: ["driver_completion", "admin_entry", "import"],
+    default: "driver_completion"
   },
   createdAt: {
     type: Date,
