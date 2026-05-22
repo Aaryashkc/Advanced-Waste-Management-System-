@@ -29,13 +29,14 @@ const MLScheduleHistory = () => {
     fetchSchedules({ status: statusFilter || undefined, page, limit: 10 });
   }, [fetchSchedules, statusFilter, page]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [statusFilter]);
-
   const handleView = async (id) => {
     setViewingId(id);
     await fetchScheduleById(id);
+  };
+
+  const handleStatusFilterChange = (nextStatus) => {
+    setStatusFilter(nextStatus);
+    setPage(1);
   };
 
   const handleBack = () => {
@@ -179,7 +180,7 @@ const MLScheduleHistory = () => {
         {/* Filter */}
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => handleStatusFilterChange(e.target.value)}
           className="px-4 py-2 rounded-xl border border-primary/15 text-sm
                      focus:outline-none focus:ring-2 focus:ring-accent/30
                      text-primary"

@@ -33,13 +33,14 @@ const DeletionRequests = ({ onUpdate }) => {
   }, [filter, isSuperAdmin, page]);
 
   useEffect(() => {
-    setPage(1);
-  }, [filter]);
-
-  useEffect(() => {
     const timer = setTimeout(fetchRequests, 0);
     return () => clearTimeout(timer);
   }, [fetchRequests]);
+
+  const handleFilterChange = (nextFilter) => {
+    setFilter(nextFilter);
+    setPage(1);
+  };
 
   const handleReview = async (action) => {
     setSubmitting(true);
@@ -71,7 +72,7 @@ const DeletionRequests = ({ onUpdate }) => {
         {isSuperAdmin && (
           <div className="flex items-center gap-1 bg-primary/5 rounded-xl p-1">
             {["pending", "approved", "rejected", ""].map(f => (
-              <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${filter === f ? "bg-white text-primary shadow-sm" : "text-primary/50 hover:text-primary"}`}>
+              <button key={f} onClick={() => handleFilterChange(f)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${filter === f ? "bg-white text-primary shadow-sm" : "text-primary/50 hover:text-primary"}`}>
                 {f || "All"}
               </button>
             ))}

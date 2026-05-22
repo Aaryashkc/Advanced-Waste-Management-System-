@@ -395,14 +395,11 @@ function SchedulePage() {
   }, [allAreas, searchQuery, actionFilter, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAreas.length / 10));
+  const currentPage = Math.min(page, totalPages);
   const pagedAreas = useMemo(
-    () => filteredAreas.slice((page - 1) * 10, page * 10),
-    [filteredAreas, page],
+    () => filteredAreas.slice((currentPage - 1) * 10, currentPage * 10),
+    [filteredAreas, currentPage],
   );
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, actionFilter, typeFilter]);
 
   const areaTypes = useMemo(() => {
     return [...new Set(allAreas.map((d) => areaType(d)).filter(Boolean))];
@@ -427,12 +424,28 @@ function SchedulePage() {
     );
   }, []);
 
+  const handleSearchChange = (nextQuery) => {
+    setSearchQuery(nextQuery);
+    setPage(1);
+  };
+
+  const handleActionFilterChange = (nextAction) => {
+    setActionFilter(nextAction);
+    setPage(1);
+  };
+
+  const handleTypeFilterChange = (nextType) => {
+    setTypeFilter(nextType);
+    setPage(1);
+  };
+
   const hasActiveFilters = actionFilter !== "all" || typeFilter !== "all";
 
   const clearFilters = () => {
     setActionFilter("all");
     setTypeFilter("all");
     setSearchQuery("");
+    setPage(1);
   };
 
   /* Loading */
@@ -612,13 +625,13 @@ function SchedulePage() {
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     placeholder="Search areas..."
                     className="w-full pl-9 pr-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 transition-all"
                   />
                   {searchQuery && (
                     <button
-                      onClick={() => setSearchQuery("")}
+                      onClick={() => handleSearchChange("")}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -642,7 +655,7 @@ function SchedulePage() {
                 <div className="hidden sm:flex items-center gap-2">
                   <select
                     value={actionFilter}
-                    onChange={(e) => setActionFilter(e.target.value)}
+                    onChange={(e) => handleActionFilterChange(e.target.value)}
                     className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20 pr-8"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
@@ -669,7 +682,7 @@ function SchedulePage() {
 
                   <select
                     value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
+                    onChange={(e) => handleTypeFilterChange(e.target.value)}
                     className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20 pr-8"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
@@ -707,7 +720,7 @@ function SchedulePage() {
                 <div className="sm:hidden flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
                   <select
                     value={actionFilter}
-                    onChange={(e) => setActionFilter(e.target.value)}
+                    onChange={(e) => handleActionFilterChange(e.target.value)}
                     className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
                   >
                     <option value="all" className="bg-[#1a1a1a] text-white">
@@ -728,7 +741,7 @@ function SchedulePage() {
                   </select>
                   <select
                     value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
+                    onChange={(e) => handleTypeFilterChange(e.target.value)}
                     className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
                   >
                     <option value="all" className="bg-[#1a1a1a] text-white">
@@ -774,7 +787,7 @@ function SchedulePage() {
                   ? `${totalAreas} areas`
                   : `${filteredAreas.length} of ${totalAreas} areas`}
                 {filteredAreas.length > 10 && (
-                  <span className="ml-2 text-white/30">Page {page} of {totalPages}</span>
+                  <span className="ml-2 text-white/30">Page {currentPage} of {totalPages}</span>
                 )}
               </div>
 
@@ -814,18 +827,18 @@ function SchedulePage() {
                       <button
                         type="button"
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page <= 1}
+                        disabled={currentPage <= 1}
                         className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold text-white/60 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         Previous
                       </button>
                       <span className="text-xs text-white/35">
-                        Showing {(page - 1) * 10 + 1}-{Math.min(page * 10, filteredAreas.length)} of {filteredAreas.length}
+                        Showing {(currentPage - 1) * 10 + 1}-{Math.min(currentPage * 10, filteredAreas.length)} of {filteredAreas.length}
                       </span>
                       <button
                         type="button"
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={page >= totalPages}
+                        disabled={currentPage >= totalPages}
                         className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold text-white/60 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         Next
