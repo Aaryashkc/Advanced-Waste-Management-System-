@@ -1,4 +1,4 @@
-import { ArrowRight, LogOut, Menu, X, User, ChevronDown } from "lucide-react";
+import { ArrowRight, LogOut, Menu, X, User, ChevronDown, Download } from "lucide-react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import useAuthStore from "../../stores/useAuthStore";
@@ -12,8 +12,9 @@ export function Header() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const profileRef = useRef(null);
+  const isCustomer = user?.role === "customer_admin";
 
-  const transparentHeaderRoutes = new Set(["/", "/about-us", "/contact-us", "/help-support", "/login", "/signup", "/our-team", "/schedule", "/upload-waste", "/customer-dashboard", "/billing"]);
+  const transparentHeaderRoutes = new Set(["/", "/about-us", "/contact-us", "/help-support", "/login", "/signup", "/our-team", "/schedule", "/upload-waste", "/customer-dashboard", "/billing", "/download-app"]);
   const isTransparentRoute = transparentHeaderRoutes.has(location.pathname);
 
   // Track scroll position
@@ -263,6 +264,16 @@ export function Header() {
                     <User size={16} className="text-primary" />
                     My Profile
                   </Link>
+                  {isCustomer && (
+                    <Link
+                      to="/download-app"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition w-full text-left cursor-pointer"
+                    >
+                      <Download size={16} className="text-primary" />
+                      Download app
+                    </Link>
+                  )}
                   <div className="border-t border-gray-100 my-1" />
                   <button
                     onClick={handleLogout}
@@ -330,6 +341,16 @@ export function Header() {
               >
                 My Profile
               </Link>
+              {isCustomer && (
+                <Link
+                  to="/download-app"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-4 py-3 text-sm font-medium text-white cursor-pointer mb-3"
+                >
+                  <Download size={16} />
+                  Download app
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-red-400/40 px-4 py-3 text-sm font-medium text-red-300 cursor-pointer"

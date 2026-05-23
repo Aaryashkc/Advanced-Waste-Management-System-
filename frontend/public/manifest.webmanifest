@@ -1,0 +1,19 @@
+{
+  "name": "SafaBin",
+  "short_name": "SafaBin",
+  "description": "Schedule waste pickups and manage recycling from your phone.",
+  "start_url": "/customer-dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f1e8",
+  "theme_color": "#354f52",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/safabin-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

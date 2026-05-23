@@ -17,6 +17,7 @@ const AboutUs = lazy(() => import("../pages/AboutUs"));
 const OurTeam = lazy(() => import("../pages/OurTeam"));
 const ContactUs = lazy(() => import("../pages/ContactUs"));
 const Profile = lazy(() => import("../pages/Profile"));
+const DownloadApp = lazy(() => import("../pages/DownloadApp"));
 const CustomerDashboard = lazy(() => import("../components/users/CustomerDashboard"));
 const SchedulePage = lazy(() => import("../components/users/SchedulePage"));
 const UploadWastePage = lazy(() => import("../components/users/UploadWastePage"));
@@ -165,6 +166,14 @@ const AppRoutes = () => {
         <Route
           path="/billing"
           element={<CustomerBillingRoute />}
+        />
+        <Route
+          path="/download-app"
+          element={
+            <ProtectedRoute allowedRoles={['customer_admin']}>
+              <DownloadApp />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/searching"
