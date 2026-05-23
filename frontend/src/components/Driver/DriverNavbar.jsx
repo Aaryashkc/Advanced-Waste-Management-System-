@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, ClipboardCheck, Calendar, Bell, User } from "lucide-react";
 import { getSocket } from "../../utils/socket";
@@ -15,6 +15,11 @@ const NAV_ITEMS = [
   { to: "/profile", label: "Profile", Icon: User },
 ];
 
+async function fetchUnreadCount(signal) {
+  const res = await api.get("/notifications/unread-count", { signal });
+  return res.data.count || 0;
+}
+
 export default function DriverNavbar() {
   const { token } = useAuthStore();
   const { driverAssignments } = useMLScheduleStore();
@@ -23,29 +28,35 @@ export default function DriverNavbar() {
 
   const isTaskPage = location.pathname.includes("/task-route") || location.pathname.includes("/task-flow");
 
-  const fetchUnread = useCallback(async (signal) => {
-    if (!token) return;
-    try {
-      const res = await api.get("/notifications/unread-count", { signal });
-      setUnreadCount(res.data.count || 0);
-    } catch (error) {
-      if (!isAbortError(error)) console.error("Failed to fetch unread notifications:", error);
-    }
-  }, [token]);
-
   useEffect(() => {
     if (!token) return undefined;
 
     const controller = new AbortController();
-    fetchUnread(controller.signal);
+    fetchUnreadCount(controller.signal)
+      .then(setUnreadCount)
+      .catch((error) => {
+        if (!isAbortError(error)) console.error("Failed to fetch unread notifications:", error);
+      });
 
     const socket = getSocket();
     const onNew = () => setUnreadCount((prev) => prev + 1);
     const onCounts = (data) => {
       if (typeof data?.notifications === "number") setUnreadCount(data.notifications);
-      else fetchUnread();
+      else {
+        fetchUnreadCount()
+          .then(setUnreadCount)
+          .catch((error) => {
+            if (!isAbortError(error)) console.error("Failed to fetch unread notifications:", error);
+          });
+      }
     };
-    const onSchedule = () => fetchUnread();
+    const onSchedule = () => {
+      fetchUnreadCount()
+        .then(setUnreadCount)
+        .catch((error) => {
+          if (!isAbortError(error)) console.error("Failed to fetch unread notifications:", error);
+        });
+    };
 
     socket.on("notification:new", onNew);
     socket.on("notification:counts", onCounts);
@@ -57,7 +68,7 @@ export default function DriverNavbar() {
       socket.off("notification:counts", onCounts);
       socket.off("schedule:confirmed", onSchedule);
     };
-  }, [fetchUnread, token]);
+  }, [token]);
 
   if (isTaskPage) return null;
 

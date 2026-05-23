@@ -17,7 +17,9 @@ maskey-1/
 - [What This App Does](#what-this-app-does)
 - [Architecture](#architecture)
 - [Roles and Access](#roles-and-access)
+- [Repository Tour](#repository-tour)
 - [Setup](#setup)
+- [Dependency Guide](#dependency-guide)
 - [Environment Variables](#environment-variables)
 - [How to Run](#how-to-run)
 - [Quality Gates, CI, and Tests](#quality-gates-ci-and-tests)
@@ -32,7 +34,7 @@ maskey-1/
 - [Backend API Map](#backend-api-map)
 - [Data Models](#data-models)
 - [Development Notes](#development-notes)
-- [Troubleshooting](#troubleshooting)
+- [Troubleshooting](#why-something-will-not-work)
 
 ## What This App Does
 
@@ -140,6 +142,106 @@ Important access rules:
 - Drivers can only update pickups assigned to their own user id.
 - Customers can only pay or inspect pickups/bills they own.
 
+## Repository Tour
+
+This repository is organized as a practical full-stack system. The root folder owns the backend runtime, shared scripts, root lockfile, and CI-facing commands. The frontend and ML service each keep their own dependency files because they run as separate applications.
+
+```text
+maskey-1/
+  .github/workflows/ci.yml       GitHub Actions workflow for backend tests and frontend lint/build
+  .env                           Local secrets and runtime configuration; never commit real secrets
+  .env.example                   Safe template showing required environment keys
+  package.json                   Root Node package for backend commands and shared scripts
+  package-lock.json              Exact installed root Node dependency graph
+  README.md                      Main project documentation
+  backend/                       Express API, MongoDB models, controllers, services, domains, sockets, tests
+  frontend/                      React/Vite single page app
+  ml/                            FastAPI waste prediction and scheduling service
+  scripts/                       Root-level seed scripts
+```
+
+### Backend Folder
+
+```text
+backend/
+  server.js                      Starts MongoDB, HTTP server, Socket.IO, cron jobs, and route mounting
+  app.js                         Builds the Express app, middleware stack, and API route table
+  config/                        Database, JWT, Cloudinary, and other integration configuration
+  controllers/                   Request/response handlers for older route modules
+  domains/                       Newer domain-oriented modules split by route/controller/service/repository/policy
+  middlewares/                   Auth, role checks, rate limits, uploads, and request protection
+  models/                        Mongoose schemas and database indexes
+  routes/                        Express routers for legacy and application routes
+  services/                      Business logic and integration helpers used by controllers
+  socket/                        Socket.IO server setup and room/event helpers
+  tests/                         Node test runner tests for app-level behavior
+  utils/                         Shared helpers for responses, errors, roles, validation, OTP, coordinates
+  scripts/                       Backend data migration/backfill scripts
+```
+
+Important backend idea: this codebase currently has two styles side by side. Older features use `routes/`, `controllers/`, `models/`, and `services/`. Newer features under `domains/` are more modular and keep route, controller, service, repository, policy, validation, and tests close together.
+
+### Frontend Folder
+
+```text
+frontend/
+  index.html                     Vite HTML entry
+  package.json                   Frontend dependency and script list
+  vite.config.js                 Vite, React, and Tailwind integration
+  eslint.config.js               ESLint flat config
+  src/main.jsx                   React app bootstrap
+  src/App.jsx                    App shell
+  src/routes/AppRoutes.jsx       Role-aware frontend route definitions
+  src/pages/                     Page-level screens
+  src/components/                Reusable UI, dashboard, driver, user, landing, map, ML, and auth components
+  src/stores/                    Zustand stores for auth, users, pickups, billing, schedules, vehicles, etc.
+  src/utils/                     API client, request helpers, socket setup, role routing, error reporting
+  src/hooks/                     Shared React hooks
+  src/context/                   Dashboard theme context/provider
+  src/assets/                    Local images used by landing and UI pages
+```
+
+Important frontend idea: pages are mostly thin screens that compose components and stores. Zustand stores own async calls and shared state for each feature area. API requests go through `src/utils/api.js` and related helpers.
+
+### ML Folder
+
+```text
+ml/
+  main.py                        FastAPI app exposing health, prediction, and scheduling endpoints
+  model.py                       Waste prediction model loading and prediction helpers
+  scheduler.py                   Schedule generation logic using predictions and constraints
+  train.py                       Training script for the saved scikit-learn model
+  data_generator.py              Synthetic Kathmandu Valley waste dataset generator
+  nepal_holidays.py              Nepal holiday/festival features for model inputs
+  requirements.txt               Python dependencies
+  data/kathmandu_waste_data.csv  Training data used by the model
+  models/*.pkl                   Saved trained model, encoders, and metrics
+```
+
+Important ML idea: the backend calls this service over HTTP through `backend/services/mlClient.js`. The ML service does not directly own MongoDB data. It predicts and returns scheduling information; the backend converts those results into persistent `MLSchedule` records.
+
+### Root Scripts
+
+Root `package.json` scripts:
+
+| Script | Command | What it is for |
+| --- | --- | --- |
+| `npm start` | `node backend/server.js` | Starts the backend once, normally used for production-like local runs. |
+| `npm run dev` | `nodemon backend/server.js` | Starts the backend in development and restarts when backend files change. |
+| `npm test` | `node --test` | Runs backend and domain tests with Node's built-in test runner. |
+| `npm run lint:frontend` | `npm --prefix frontend run lint -- --max-warnings=0` | Runs frontend ESLint from the root and fails on warnings. |
+| `npm run build:frontend` | `npm --prefix frontend run build` | Builds the production frontend bundle from the root. |
+| `npm run seed` | `node scripts/seed.js` | Seeds initial data for local development. |
+
+Frontend `package.json` scripts:
+
+| Script | Command | What it is for |
+| --- | --- | --- |
+| `npm run dev` | `vite` | Starts the React dev server. |
+| `npm run build` | `vite build` | Creates the optimized production bundle. |
+| `npm run lint` | `eslint .` | Runs ESLint across the frontend source. |
+| `npm run preview` | `vite preview` | Serves the already-built production bundle locally. |
+
 ## Setup
 
 ### Requirements
@@ -180,6 +282,108 @@ python train.py
 
 `train.py` loads `ml/data/kathmandu_waste_data.csv`. If the CSV does not exist, it generates synthetic Kathmandu Valley data first.
 
+## Dependency Guide
+
+This section explains what every declared package is doing in this project. Version numbers are controlled by the package files and lockfiles; the explanations here focus on purpose.
+
+### Root Backend Dependencies
+
+These packages are declared in the root `package.json` and are used mainly by the Express backend, shared scripts, and server-side integrations.
+
+| Package | Used for |
+| --- | --- |
+| `@tailwindcss/vite` | Tailwind's Vite integration. It is mostly frontend-oriented, but it is present in the root dependency list too. |
+| `axios` | Server-side HTTP client. Used when backend code needs to call another service such as the ML service, eSewa status APIs, or other HTTP integrations. |
+| `bcryptjs` | Password hashing and password comparison for login/register flows. It lets the app store password hashes instead of plain passwords. |
+| `cloudinary` | Cloudinary SDK for uploading, storing, and deleting customer waste images. |
+| `cookie-parser` | Parses incoming HTTP cookies into `req.cookies`. Useful when routes need cookie-based data, even though JWT bearer auth is the main auth style. |
+| `cors` | Enables controlled cross-origin requests from the React frontend to the backend API. |
+| `dotenv` | Loads `.env` variables into `process.env` during local/runtime startup. |
+| `express` | Main backend web framework. It defines middleware, JSON parsing, API routes, health checks, and error flow. |
+| `express-rate-limit` | Protects sensitive endpoints such as auth and OTP routes from abuse by limiting repeated requests. |
+| `helmet` | Adds common HTTP security headers to reduce browser-side attack surface. |
+| `jsonwebtoken` | Creates and verifies JWT access tokens used by protected API routes and Socket.IO auth. |
+| `mongoose` | MongoDB object modeling library. Defines schemas, models, indexes, queries, and document updates. |
+| `multer` | Handles multipart form uploads. In this project it receives waste image files before streaming them to Cloudinary. |
+| `node-cron` | Runs scheduled background jobs such as upload cleanup, pickup expiry, ML schedule generation, and monthly billing. |
+| `nodemailer` | Sends OTP and notification emails through SMTP. |
+| `nodemon` | Development server watcher. Restarts the backend when files change. |
+| `socket.io` | Realtime backend server for pickup dispatch, status updates, admin notifications, and driver/customer rooms. |
+| `streamifier` | Converts upload buffers into readable streams, which is useful for streaming Multer memory uploads into Cloudinary. |
+| `tailwindcss` | Utility-first CSS framework dependency. The frontend uses Tailwind; it is also declared at the root. |
+| `websocket` | WebSocket protocol package. Socket.IO is the primary realtime library, so this package is likely legacy or reserved for direct WebSocket needs. |
+
+### Frontend Runtime Dependencies
+
+These packages are declared in `frontend/package.json` under `dependencies` and are shipped or bundled for the React app.
+
+| Package | Used for |
+| --- | --- |
+| `@gsap/react` | React integration helpers for GSAP animations. |
+| `@react-three/drei` | Ready-made helpers for React Three Fiber, such as controls, loaders, camera helpers, and common 3D utilities. |
+| `@react-three/fiber` | React renderer for Three.js. Used to build 3D scenes with React components. |
+| `@tailwindcss/vite` | Connects Tailwind CSS v4 to the Vite build pipeline. |
+| `axios` | Browser HTTP client used by stores and API helpers to call backend endpoints. |
+| `chart.js` | Charting engine for dashboard analytics and reports. |
+| `gsap` | Animation library used for richer UI motion. |
+| `leaflet` | Map rendering library used for location picking, route display, and map-based UI. |
+| `lucide-react` | Icon library used for buttons, navigation, dashboards, and compact UI actions. |
+| `motion` | Animation library for React UI transitions and interactive motion. |
+| `react` | Core UI library for building the frontend component tree. |
+| `react-chartjs-2` | React wrapper around Chart.js so charts can be used as React components. |
+| `react-dom` | React package that renders the app into the browser DOM. |
+| `react-hot-toast` | Toast notification UI for success/error/status feedback. |
+| `react-leaflet` | React bindings for Leaflet maps. |
+| `react-router-dom` | Client-side routing and navigation for public, customer, driver, admin, and super admin pages. |
+| `socket.io-client` | Browser Socket.IO client for realtime pickup and notification events. |
+| `tailwindcss` | Utility-first CSS framework used by the frontend styling system. |
+| `three` | Core 3D rendering library used by React Three Fiber components. |
+| `zustand` | Lightweight state management. Stores live under `frontend/src/stores/`. |
+
+### Frontend Development Dependencies
+
+These packages support linting, type hints, Vite, and build analysis. They are not business features by themselves.
+
+| Package | Used for |
+| --- | --- |
+| `@eslint/js` | Base ESLint JavaScript rules for the flat ESLint config. |
+| `@types/react` | Type metadata for React APIs. Helpful for editor intelligence even in a JavaScript project. |
+| `@types/react-dom` | Type metadata for React DOM APIs. |
+| `@vitejs/plugin-react` | Official Vite plugin for React transform, Fast Refresh, and JSX handling. |
+| `eslint` | Static analysis tool that catches many code quality, import, hook, and syntax issues before runtime. |
+| `eslint-plugin-react-hooks` | Enforces React hook rules such as stable hook order and dependency arrays. |
+| `eslint-plugin-react-refresh` | Helps keep Vite React Fast Refresh boundaries valid. |
+| `globals` | Provides known browser/global variable definitions for ESLint. |
+| `rollup-plugin-visualizer` | Bundle analysis tool for inspecting production build size and dependency contribution. |
+| `vite` | Frontend dev server and production bundler. |
+
+### Python ML Dependencies
+
+These packages are declared in `ml/requirements.txt`.
+
+| Package | Used for |
+| --- | --- |
+| `fastapi` | Python web API framework for the ML service. |
+| `uvicorn` | ASGI server that runs the FastAPI app. |
+| `scikit-learn` | Machine learning library used for `GradientBoostingRegressor` and preprocessing utilities. |
+| `pandas` | Dataframe library used for loading, cleaning, generating, and transforming tabular waste data. |
+| `numpy` | Numeric computing library used under pandas/scikit-learn and for feature/math operations. |
+| `joblib` | Saves and loads trained model and encoder `.pkl` files. |
+| `python-dotenv` | Lets Python code load `.env` configuration where needed. |
+| `pydantic` | Request/response validation and typed data models used by FastAPI. |
+
+### Dependency Files and Lockfiles
+
+| File | Purpose |
+| --- | --- |
+| `package.json` | Root Node dependency list and backend/shared scripts. |
+| `package-lock.json` | Exact root Node package tree. Commit this so installs are reproducible. |
+| `frontend/package.json` | Frontend dependency list and frontend scripts. |
+| `frontend/package-lock.json` | Exact frontend package tree. Commit this for reproducible frontend installs. |
+| `ml/requirements.txt` | Python package requirements for the ML service. |
+
+Use `npm install <package>` only when intentionally adding or updating a dependency. Use `npm ci` when you want a clean install that exactly follows the lockfile, like CI does.
+
 ## Environment Variables
 
 Create `.env` in the project root. The backend loads it from `../.env` relative to `backend/server.js`.
@@ -188,6 +392,7 @@ Create `.env` in the project root. The backend loads it from `../.env` relative 
 # Server
 PORT=5000
 NODE_ENV=development
+APP_TIMEZONE=Asia/Kathmandu
 BACKEND_URL=http://localhost:5000
 FRONTEND_URL=http://localhost:5173
 
@@ -208,6 +413,7 @@ CLOUDINARY_API_SECRET=your-api-secret
 
 # Optional cleanup endpoint protection
 CRON_SECRET=your-cron-secret
+METRICS_SECRET=your-metrics-secret
 
 # OTP email
 SMTP_HOST=smtp.gmail.com
@@ -215,6 +421,8 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 FROM_EMAIL=noreply@safabin.com
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password
 
 # Routes
 ORS_API_KEY=your-openrouteservice-key
@@ -223,6 +431,13 @@ ORS_API_KEY=your-openrouteservice-key
 ESEWA_PRODUCT_CODE=your-product-code
 ESEWA_SECRET_KEY=your-secret-key
 ESEWA_BASE_URL=https://rc-epay.esewa.com.np
+
+# Request size and rate limits
+JSON_BODY_LIMIT=1mb
+URLENCODED_BODY_LIMIT=1mb
+AUTH_RATE_LIMIT_MAX=20
+OTP_REQUEST_RATE_LIMIT_MAX=5
+OTP_VERIFY_RATE_LIMIT_MAX=10
 ```
 
 Create `frontend/.env`:
@@ -236,8 +451,53 @@ Notes:
 
 - Some frontend stores use `VITE_API_BASE_URL`; some older stores use `VITE_API_URL`.
 - If these are missing, the frontend falls back to `http://localhost:5000/api`, matching the backend default.
+- `.env.example` may use `PORT=5001`; either port is fine as long as `BACKEND_URL`, `FRONTEND_URL`, and frontend API env values agree.
 - eSewa needs `BACKEND_URL` because callbacks are generated as backend URLs.
 - ML service defaults to `http://localhost:8000` if `ML_SERVICE_URL` is not set.
+
+### Backend Environment Variable Reference
+
+| Variable | Required | What it controls |
+| --- | --- | --- |
+| `PORT` | No | Backend HTTP port. Defaults to `5000` in `backend/server.js`. |
+| `NODE_ENV` | No | Runtime mode. In production, CORS is restricted to `FRONTEND_URL`. |
+| `APP_TIMEZONE` | No | Timezone used for scheduled jobs. Defaults to `Asia/Kathmandu`. |
+| `BACKEND_URL` | Yes for payments | Public backend URL used for eSewa callbacks and generated backend links. |
+| `FRONTEND_URL` | Yes | Browser app origin used by CORS, Socket.IO, and payment redirects. |
+| `MONGO_URL` | Yes | MongoDB connection string. |
+| `JWT_SECRET` | Yes | Secret used to sign and verify access tokens. Use a long random value. |
+| `JWT_EXPIRES_IN` | No | JWT lifetime, such as `7d`. |
+| `ML_SERVICE_URL` | No | FastAPI ML service URL. Defaults to `http://localhost:8000` in the ML client. |
+| `CLOUDINARY_CLOUD_NAME` | Yes for uploads | Cloudinary cloud name for waste image storage. |
+| `CLOUDINARY_API_KEY` | Yes for uploads | Cloudinary API key. |
+| `CLOUDINARY_API_SECRET` | Yes for uploads | Cloudinary API secret. |
+| `CRON_SECRET` | Recommended | Protects manual cron cleanup endpoint when set. |
+| `METRICS_SECRET` | Optional | Protects the metrics endpoint when set. |
+| `SMTP_HOST` | Yes for email | SMTP server hostname. |
+| `SMTP_PORT` | Yes for email | SMTP server port, commonly `587`. |
+| `SMTP_USER` | Yes for email | SMTP username. |
+| `SMTP_PASS` | Yes for email | SMTP password or app password. |
+| `FROM_EMAIL` | Yes for email | Sender address shown on OTP/support emails. |
+| `EMAIL_USER` | Legacy/optional | Older email helper credential key. Prefer SMTP keys where possible. |
+| `EMAIL_PASS` | Legacy/optional | Older email helper password key. Prefer SMTP keys where possible. |
+| `ORS_API_KEY` | Optional | OpenRouteService key for road distance routing. Without it, pickup estimate can fall back to haversine distance. |
+| `ESEWA_PRODUCT_CODE` | Yes for eSewa | eSewa merchant/product code. |
+| `ESEWA_SECRET_KEY` | Yes for eSewa | Secret used to sign and verify eSewa payloads. |
+| `ESEWA_BASE_URL` | Yes for eSewa | eSewa base URL. Use sandbox/RC URL for testing. |
+| `JSON_BODY_LIMIT` | No | Max JSON request body size. Defaults to `1mb`. |
+| `URLENCODED_BODY_LIMIT` | No | Max form-urlencoded request body size. Defaults to `1mb`. |
+| `AUTH_RATE_LIMIT_MAX` | No | Maximum auth attempts per rate-limit window. Defaults to `20`. |
+| `OTP_REQUEST_RATE_LIMIT_MAX` | No | Maximum OTP request attempts per window. Defaults to `5`. |
+| `OTP_VERIFY_RATE_LIMIT_MAX` | No | Maximum OTP verification attempts per window. Defaults to `10`. |
+
+### Frontend Environment Variable Reference
+
+| Variable | Required | What it controls |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | Recommended | Main API base URL used by most frontend API helpers. |
+| `VITE_API_URL` | Recommended | Older API base URL used by some stores. Keep it equal to `VITE_API_BASE_URL`. |
+
+All Vite environment variables exposed to browser code must start with `VITE_`.
 
 ## How to Run
 
