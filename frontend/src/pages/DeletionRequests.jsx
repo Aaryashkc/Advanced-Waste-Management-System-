@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import useAuthStore from "../stores/useAuthStore";
 import api from "../utils/api";
 import PaginationControls from "../components/shared/PaginationControls";
+import { AdminEmptyState, AdminErrorState, ListSkeleton } from "../components/shared/AdminListStates";
+import { ClipboardList } from "lucide-react";
 
 const DeletionRequests = ({ onUpdate }) => {
   const user = useAuthStore((s) => s.user);
@@ -43,13 +45,17 @@ const DeletionRequests = ({ onUpdate }) => {
   };
 
   const handleReview = async (action) => {
+    const previousRequests = requests;
+    const nextStatus = action === "approved" ? "approved" : "rejected";
     setSubmitting(true);
+    setRequests(prev => prev.map(r => r._id === reviewTarget._id ? { ...r, status: nextStatus, reviewNote } : r));
     try {
       await api.put(`/super-admin/deletion-requests/${reviewTarget._id}`, { action, reviewNote });
       setReviewTarget(null); setReviewNote("");
       fetchRequests();
       if (onUpdate) onUpdate();
     } catch (err) {
+      setRequests(previousRequests);
       alert(err.response?.data?.message || "Failed to review request");
     }
     setSubmitting(false);
@@ -100,11 +106,11 @@ const DeletionRequests = ({ onUpdate }) => {
 
       {/* Request Cards */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-48 bg-white/50 rounded-2xl border border-primary/10"><div className="w-8 h-8 border-4 border-primary/20 border-t-accent rounded-full animate-spin" /></div>
+        <ListSkeleton rows={5} />
       ) : error ? (
-        <div className="p-6 bg-red-50 rounded-2xl border border-red-200 text-red-600 text-center font-medium">{error}</div>
+        <AdminErrorState message={error} onRetry={fetchRequests} />
       ) : requests.length === 0 ? (
-        <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center text-primary/40">No deletion requests found.</div>
+        <AdminEmptyState icon={ClipboardList} title="No deletion requests found" message={isSuperAdmin ? "Requests from organization admins will appear here." : "Submitted deletion requests will appear here."} />
       ) : (
         <div className="space-y-3">
           {requests.map(r => (

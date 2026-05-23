@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import api from '../utils/api';
 import useAuthStore from './useAuthStore';
+import { isAbortError } from '../utils/requests';
 
 const useVehicleStore = create((set, get) => ({
   vehicles: [],
@@ -10,7 +11,8 @@ const useVehicleStore = create((set, get) => ({
   lastParams: { page: 1, limit: 10 },
 
   fetchVehicles: async (params = {}) => {
-    const nextParams = { ...get().lastParams, ...params, limit: params.limit || 10 };
+    const { signal, ...queryParams } = params;
+    const nextParams = { ...get().lastParams, ...queryParams, limit: params.limit || 10 };
     set({ isLoading: true, error: null });
     try {
       const user = useAuthStore.getState().user;
@@ -19,7 +21,9 @@ const useVehicleStore = create((set, get) => ({
       const query = new URLSearchParams();
       if (nextParams.page) query.set("page", nextParams.page);
       if (nextParams.limit) query.set("limit", nextParams.limit);
-      const res = await api.get(`${url}?${query.toString()}`);
+      const res = await api.get(`${url}?${query.toString()}`, {
+        signal,
+      });
       set({
         vehicles: res.data.data,
         pagination: res.data.pagination || null,
@@ -27,6 +31,7 @@ const useVehicleStore = create((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
+      if (isAbortError(error)) return;
       set({ error: error.response?.data?.message || 'Failed to fetch vehicles', isLoading: false });
     }
   },
@@ -43,7 +48,16 @@ const useVehicleStore = create((set, get) => ({
     }
   },
 
-  updateVehicle: async (vehicleId, data) => {
+  updateVehicle: async (vehicleId, data, options = {}) => {
+    let previousVehicles = null;
+    if (options.optimistic) {
+      previousVehicles = get().vehicles;
+      set((state) => ({
+        vehicles: state.vehicles.map((v) =>
+          v.id === vehicleId ? { ...v, ...data } : v
+        ),
+      }));
+    }
     try {
       const user = useAuthStore.getState().user;
       const url = user?.role === 'super_admin'
@@ -53,6 +67,7 @@ const useVehicleStore = create((set, get) => ({
       get().fetchVehicles();
       return { success: true };
     } catch (error) {
+      if (previousVehicles) set({ vehicles: previousVehicles });
       return { success: false, error: error.response?.data?.message || 'Failed to update vehicle' };
     }
   },

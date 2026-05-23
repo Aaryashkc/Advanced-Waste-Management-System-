@@ -1,33 +1,7 @@
 import React, { useMemo } from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Bar, Line, Doughnut } from "react-chartjs-2";
 import { useDashboardTheme } from "../../hooks/useDashboardTheme";
 import { CircleHelp } from "lucide-react";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
+import LazyChart from "../charts/LazyChart";
 
 /* ── Color palettes (match the rest of the app) ── */
 
@@ -609,7 +583,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         >
           <div className="h-72">
             {monthlyRevenue.length > 0 || monthlyBillRevenue.length > 0 ? (
-              <Line data={revenueComparisonData} options={revenueOptions} />
+              <LazyChart type="line" data={revenueComparisonData} options={revenueOptions} />
             ) : (
               <EmptyState message="No pickup or monthly bill revenue yet" />
             )}
@@ -623,7 +597,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         >
           <div className="h-72">
             {billRoleRevenue.some((row) => (row.revenue || 0) > 0) ? (
-              <Bar data={billRoleRevenueData} options={billRoleRevenueOptions} />
+              <LazyChart type="bar" data={billRoleRevenueData} options={billRoleRevenueOptions} />
             ) : (
               <EmptyState message="No paid monthly bills yet" />
             )}
@@ -649,7 +623,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
             >
               <div className="h-72">
                 {scheduleTrend.length > 0 ? (
-                  <Bar data={scheduleTrendData} options={themedCartesianOptions} />
+                  <LazyChart type="bar" data={scheduleTrendData} options={themedCartesianOptions} />
                 ) : (
                   <EmptyState message="No scheduled work in the last 30 days" />
                 )}
@@ -663,7 +637,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
             >
               <div className="h-72">
                 {scheduledAreas.length > 0 ? (
-                  <Bar data={scheduledAreaData} options={horizontalBarOptions} />
+                  <LazyChart type="bar" data={scheduledAreaData} options={horizontalBarOptions} />
                 ) : (
                   <EmptyState message="No scheduled area completions yet" />
                 )}
@@ -709,7 +683,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         >
           <div className="h-72 w-full">
             {dailyTrend.length > 0 ? (
-              <Line data={trendData} options={themedCartesianOptions} />
+              <LazyChart type="line" data={trendData} options={themedCartesianOptions} />
             ) : (
               <EmptyState message="No pickup activity in the last 30 days" />
             )}
@@ -724,7 +698,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
           >
             <div className="h-72">
               {orgBreakdown.some((org) => (org.revenue || 0) > 0) ? (
-                <Bar data={orgRevenueData} options={orgRevenueOptions} />
+                <LazyChart type="bar" data={orgRevenueData} options={orgRevenueOptions} />
               ) : (
                 <EmptyState message="No organization revenue yet" />
               )}
@@ -738,7 +712,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
           >
             <div className="h-72">
               {monthlyRevenue.length > 0 ? (
-                <Line data={monthlyRevenueData} options={revenueOptions} />
+                <LazyChart type="line" data={monthlyRevenueData} options={revenueOptions} />
               ) : (
                 <EmptyState message="No monthly revenue yet" />
               )}
@@ -752,7 +726,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         <ChartCard title="Status Breakdown" subtitle="Where pickups currently are" hint="Distribution of pickups by their current workflow status.">
           <div className="h-60">
             {statusDistribution.length > 0 ? (
-              <Doughnut data={statusData} options={themedDoughnutOptions} />
+              <LazyChart type="doughnut" data={statusData} options={themedDoughnutOptions} />
             ) : (
               <EmptyState message="No pickups yet" />
             )}
@@ -762,7 +736,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         <ChartCard title="By Category" subtitle="Recyclable vs non-recyclable" hint="How customers classify waste during pickup requests.">
           <div className="h-60">
             {categoryDistribution.length > 0 ? (
-              <Doughnut data={categoryData} options={themedDoughnutOptions} />
+              <LazyChart type="doughnut" data={categoryData} options={themedDoughnutOptions} />
             ) : (
               <EmptyState message="No category data" />
             )}
@@ -772,7 +746,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         <ChartCard title="By Difficulty" subtitle="Easy / medium / hard" hint="Pickup difficulty mix, useful for workload and driver planning.">
           <div className="h-60">
             {levelDistribution.length > 0 ? (
-              <Doughnut data={levelData} options={themedDoughnutOptions} />
+              <LazyChart type="doughnut" data={levelData} options={themedDoughnutOptions} />
             ) : (
               <EmptyState message="No difficulty data" />
             )}
@@ -789,7 +763,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         >
           <div className="h-72">
             {hourlyDistribution.length > 0 ? (
-              <Bar data={hourlyData} options={themedCartesianOptions} />
+              <LazyChart type="bar" data={hourlyData} options={themedCartesianOptions} />
             ) : (
               <EmptyState message="No hourly data" />
             )}
@@ -803,7 +777,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         >
           <div className="h-72">
             {breakdown.length > 0 ? (
-              <Bar data={breakdownData} options={horizontalBarOptions} />
+              <LazyChart type="bar" data={breakdownData} options={horizontalBarOptions} />
             ) : (
               <EmptyState message={isSuperAdmin ? "No organizations with pickups" : "No area data"} />
             )}

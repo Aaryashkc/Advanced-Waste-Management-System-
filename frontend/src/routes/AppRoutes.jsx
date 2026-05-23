@@ -1,7 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
-import DashboardLayout from "../components/layout/DashboardLayout";
 import { Footer } from "../components/Headers/Footer";
 import { Header } from "../components/Headers/Header";
 // OTP is now handled via modal inside Login/Signup pages
@@ -9,6 +8,7 @@ import ProtectedRoute from "../components/auth/ProtectedRoute";
 import useAuthStore from "../stores/useAuthStore";
 
 const Dashboard = lazy(() => import("../pages/Dashboard"));
+const DashboardLayout = lazy(() => import("../components/layout/DashboardLayout"));
 const HomePage = lazy(() => import("../pages/HomePage"));
 const CustomerLoginPage = lazy(() => import("../components/auth/CustomerLogin"));
 const CustomerSignUpPage = lazy(() => import("../components/auth/CustomerSignup"));

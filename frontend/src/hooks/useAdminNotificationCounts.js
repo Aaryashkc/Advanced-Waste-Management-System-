@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../utils/api";
 import { getSocket } from "../utils/socket";
 import useAuthStore from "../stores/useAuthStore";
+import { isAbortError } from "../utils/requests";
 
 const EMPTY_COUNTS = {
   alerts: 0,
@@ -31,6 +32,7 @@ function appliesToCurrentAdmin(notification, user) {
 export function useAdminNotificationCounts() {
   const { user, token } = useAuthStore();
   const [counts, setCounts] = useState(EMPTY_COUNTS);
+  const countsControllerRef = useRef(null);
 
   const totalUnread = useMemo(
     () => Object.values(counts).reduce((sum, count) => sum + normalizeCount(count), 0),
@@ -40,6 +42,10 @@ export function useAdminNotificationCounts() {
   const fetchCounts = useCallback(async () => {
     if (!token || !user) return;
 
+    countsControllerRef.current?.abort();
+    const controller = new AbortController();
+    countsControllerRef.current = controller;
+
     try {
       const deletionCountUrl =
         user.role === "super_admin"
@@ -47,11 +53,11 @@ export function useAdminNotificationCounts() {
           : "/org-admin/deletion-requests/pending-count";
 
       const [alertsRes, clientsRes, orgAdminRes, driverRes, deletionsRes] = await Promise.all([
-        api.get("/notifications/unread-count"),
-        api.get("/contact/unread-count"),
-        api.get("/internal-messages/org_admin/unread-count"),
-        api.get("/internal-messages/driver/unread-count"),
-        api.get(deletionCountUrl),
+        api.get("/notifications/unread-count", { signal: controller.signal }),
+        api.get("/contact/unread-count", { signal: controller.signal }),
+        api.get("/internal-messages/org_admin/unread-count", { signal: controller.signal }),
+        api.get("/internal-messages/driver/unread-count", { signal: controller.signal }),
+        api.get(deletionCountUrl, { signal: controller.signal }),
       ]);
 
       setCounts({
@@ -62,13 +68,17 @@ export function useAdminNotificationCounts() {
         deletions: normalizeCount(deletionsRes.data.count),
       });
     } catch (err) {
+      if (isAbortError(err)) return;
       console.error("Failed to fetch notification counts:", err);
     }
   }, [token, user]);
 
   useEffect(() => {
     const timer = setTimeout(fetchCounts, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      countsControllerRef.current?.abort();
+    };
   }, [fetchCounts]);
 
   useEffect(() => {

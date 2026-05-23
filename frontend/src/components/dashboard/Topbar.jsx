@@ -24,19 +24,23 @@ const Topbar = ({ onMenuToggle }) => {
   useEffect(() => {
     if (!shouldShowAdminBilling) return;
 
-    fetchMyBills();
+    const controller = new AbortController();
+    fetchMyBills({ signal: controller.signal });
 
     const refetch = () => fetchMyBills();
     const onVisible = () => {
       if (document.visibilityState === "visible") refetch();
     };
-    const interval = setInterval(refetch, 60000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") refetch();
+    }, 60000);
 
     window.addEventListener("focus", refetch);
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       clearInterval(interval);
+      controller.abort();
       window.removeEventListener("focus", refetch);
       document.removeEventListener("visibilitychange", onVisible);
     };

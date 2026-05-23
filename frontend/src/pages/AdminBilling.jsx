@@ -39,7 +39,9 @@ export default function AdminBilling() {
   const [notice, setNotice] = useState(null);
 
   useEffect(() => {
-    fetchMyBills();
+    const controller = new AbortController();
+    fetchMyBills({ signal: controller.signal });
+    return () => controller.abort();
   }, [fetchMyBills]);
 
   useEffect(() => {
@@ -49,9 +51,13 @@ export default function AdminBilling() {
     };
     window.addEventListener("focus", refetch);
     document.addEventListener("visibilitychange", onVisible);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") refetch();
+    }, 60000);
     return () => {
       window.removeEventListener("focus", refetch);
       document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
     };
   }, [fetchMyBills]);
 
@@ -119,8 +125,14 @@ export default function AdminBilling() {
     [bills]
   );
   const oldestOpenBill = openBills[0];
-  const totalDue = openBills.reduce((sum, bill) => sum + (bill.amount || 0), 0);
-  const overdueCount = openBills.filter((bill) => bill.status === "OVERDUE").length;
+  const totalDue = useMemo(
+    () => openBills.reduce((sum, bill) => sum + (bill.amount || 0), 0),
+    [openBills]
+  );
+  const overdueCount = useMemo(
+    () => openBills.filter((bill) => bill.status === "OVERDUE").length,
+    [openBills]
+  );
   const orgName = user?.orgId?.name || user?.organization?.name || "Your Organization";
 
   return (

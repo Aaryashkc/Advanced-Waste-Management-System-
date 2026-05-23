@@ -67,6 +67,7 @@ function MapSearchBar({ onLocationSelect, disabled }) {
   const [showResults, setShowResults] = useState(false);
   const wrapperRef = useRef(null);
   const debounceRef = useRef(null);
+  const searchControllerRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
@@ -79,21 +80,35 @@ function MapSearchBar({ onLocationSelect, disabled }) {
   const handleChange = useCallback((val) => {
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    searchControllerRef.current?.abort();
     if (val.length < 3) { setResults([]); setShowResults(false); return; }
 
     debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      searchControllerRef.current = controller;
       setSearching(true);
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&countrycodes=np&limit=6&addressdetails=1`,
-          { headers: { "Accept-Language": "en" } }
+          { headers: { "Accept-Language": "en" }, signal: controller.signal }
         );
         const data = await res.json();
         setResults(data);
         setShowResults(data.length > 0);
-      } catch { setResults([]); }
-      finally { setSearching(false); }
+      } catch (error) {
+        if (error?.name !== "AbortError") setResults([]);
+      }
+      finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
     }, 400);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      searchControllerRef.current?.abort();
+    };
   }, []);
 
   const selectResult = (r) => {
@@ -411,6 +426,7 @@ function SearchPage() {
   useEffect(() => {
     if (flow !== "found") { clearInterval(intervalRef.current); return; }
     intervalRef.current = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       setSecondsLeft((s) => { if (s <= 1) { clearInterval(intervalRef.current); return 0; } return s - 1; });
     }, 1000);
     return () => clearInterval(intervalRef.current);

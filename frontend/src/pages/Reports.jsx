@@ -1,26 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Bar, Line, Pie, Doughnut } from "react-chartjs-2";
 import useMLScheduleStore from "../stores/useMLScheduleStore";
 import useAuthStore from "../stores/useAuthStore";
 import { BarChart3, AlertTriangle, Truck } from "lucide-react";
-
-ChartJS.register(
-  CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, ArcElement, Title, Tooltip, Legend, Filler
-);
+import LazyChart from "../components/charts/LazyChart";
 
 const REASON_COLORS = {
   "No trucks with assigned drivers available": "#ef4444",
@@ -274,14 +256,14 @@ const Reports = () => {
               <h3 className="text-base font-bold text-primary mb-1">Waste Prediction Trend</h3>
               <p className="text-sm text-primary/50 mb-4">Last 30 days</p>
               <div className="h-72 w-full">
-                {trendValues.length > 0 ? <Line data={trendChartData} options={{ ...commonOptions, interaction: { mode: "index", intersect: false } }} /> : <p className="text-primary/40 flex items-center justify-center h-full text-sm">No data</p>}
+                {trendValues.length > 0 ? <LazyChart type="line" data={trendChartData} options={{ ...commonOptions, interaction: { mode: "index", intersect: false } }} /> : <p className="text-primary/40 flex items-center justify-center h-full text-sm">No data</p>}
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-primary/10 shadow-sm p-6">
               <h3 className="text-base font-bold text-primary mb-1">Area Waste Comparison</h3>
               <p className="text-sm text-primary/50 mb-4">Average predicted waste by area</p>
               <div className="h-72 w-full">
-                {areaBreakdown.length > 0 ? <Bar data={areaChartData} options={{ ...commonOptions, indexAxis: "y", plugins: { ...commonOptions.plugins, legend: { display: false } } }} /> : <p className="text-primary/40 flex items-center justify-center h-full text-sm">No data</p>}
+                {areaBreakdown.length > 0 ? <LazyChart type="bar" data={areaChartData} options={{ ...commonOptions, indexAxis: "y", plugins: { ...commonOptions.plugins, legend: { display: false } } }} /> : <p className="text-primary/40 flex items-center justify-center h-full text-sm">No data</p>}
               </div>
             </div>
           </div>
@@ -292,21 +274,21 @@ const Reports = () => {
               <h3 className="text-base font-bold text-primary mb-1">Waste Categories</h3>
               <p className="text-sm text-primary/50 mb-4">Distribution by severity</p>
               <div className="h-64 w-full flex justify-center">
-                {categoryDist.length > 0 ? <Pie data={categoryChartData} options={pieBaseOptions} /> : <p className="text-primary/40 flex items-center h-full text-sm">No data</p>}
+                {categoryDist.length > 0 ? <LazyChart type="pie" data={categoryChartData} options={pieBaseOptions} /> : <p className="text-primary/40 flex items-center h-full text-sm">No data</p>}
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-primary/10 shadow-sm p-6">
               <h3 className="text-base font-bold text-primary mb-1">Schedule Status</h3>
               <p className="text-sm text-primary/50 mb-4">By schedule state</p>
               <div className="h-64 w-full flex justify-center">
-                {scheduleStats.length > 0 ? <Doughnut data={statusChartData} options={doughnutBaseOptions} /> : <p className="text-primary/40 flex items-center h-full text-sm">No data</p>}
+                {scheduleStats.length > 0 ? <LazyChart type="doughnut" data={statusChartData} options={doughnutBaseOptions} /> : <p className="text-primary/40 flex items-center h-full text-sm">No data</p>}
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-primary/10 shadow-sm p-6">
               <h3 className="text-base font-bold text-primary mb-1">Action Distribution</h3>
               <p className="text-sm text-primary/50 mb-4">Dispatch vs skip vs reduced</p>
               <div className="h-64 w-full flex justify-center">
-                {actionDist.length > 0 ? <Doughnut data={actionChartData} options={doughnutBaseOptions} /> : <p className="text-primary/40 flex items-center h-full text-sm">No data</p>}
+                {actionDist.length > 0 ? <LazyChart type="doughnut" data={actionChartData} options={doughnutBaseOptions} /> : <p className="text-primary/40 flex items-center h-full text-sm">No data</p>}
               </div>
             </div>
           </div>
@@ -347,7 +329,7 @@ const Reports = () => {
               <p className="text-sm text-primary/50 mb-4">Why areas were not served</p>
               <div className="h-64 w-full flex justify-center">
                 {reasonBreakdown.length > 0 ? (
-                  <Doughnut data={reasonChartData} options={doughnutBaseOptions} />
+                  <LazyChart type="doughnut" data={reasonChartData} options={doughnutBaseOptions} />
                 ) : (
                   <p className="text-green-600 flex items-center h-full text-sm font-medium">All areas served!</p>
                 )}
@@ -436,7 +418,7 @@ const Reports = () => {
             <p className="text-sm text-primary/50 mb-4">Trucks without assigned drivers per schedule</p>
             <div className="h-72 w-full">
               {driverlessTruckStats.length > 0 ? (
-                <Line data={driverlessChartData} options={{ ...commonOptions, interaction: { mode: "index", intersect: false } }} />
+                <LazyChart type="line" data={driverlessChartData} options={{ ...commonOptions, interaction: { mode: "index", intersect: false } }} />
               ) : (
                 <p className="text-green-600 flex items-center justify-center h-full text-sm font-medium">All trucks have drivers assigned!</p>
               )}

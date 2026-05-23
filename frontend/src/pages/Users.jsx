@@ -17,6 +17,7 @@ import {
   MapPin,
 } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
+import { AdminEmptyState, AdminErrorState, TableSkeleton } from "../components/shared/AdminListStates";
 
 const ROLES = [
   { value: "", label: "All Roles" },
@@ -71,13 +72,16 @@ const Users = () => {
 
   // Fetch users when filters change
   useEffect(() => {
+    const controller = new AbortController();
     fetchUsers({
       search: debouncedSearch,
       role: roleFilter,
       status: statusFilter,
       page,
       limit: 10,
+      signal: controller.signal,
     });
+    return () => controller.abort();
   }, [debouncedSearch, roleFilter, statusFilter, page, fetchUsers]);
 
   const openEdit = (u) => {
@@ -111,8 +115,12 @@ const Users = () => {
   };
 
   const toggleActive = async (u) => {
-    await updateUser(u.id, { isActive: !u.isActive });
-    fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10 });
+    const result = await updateUser(u.id, { isActive: !u.isActive }, { optimistic: true });
+    if (result.success) {
+      fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10 });
+    } else {
+      setFormError(result.error);
+    }
   };
 
   return (
@@ -205,13 +213,9 @@ const Users = () => {
 
       {/* Users Table */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-primary/10">
-          <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
+        <TableSkeleton columns={6} rows={8} />
       ) : error ? (
-        <div className="p-6 bg-white rounded-2xl border border-primary/10 text-primary/50 text-center text-sm">
-          {error}
-        </div>
+        <AdminErrorState message={error} onRetry={() => fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10 })} />
       ) : (
         <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden">
           <div className="overflow-x-auto">
@@ -229,10 +233,12 @@ const Users = () => {
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-primary/30 text-sm">
-                      {debouncedSearch || roleFilter || statusFilter
-                        ? "No users match your filters."
-                        : "No users found."}
+                    <td colSpan={6} className="p-0">
+                      <AdminEmptyState
+                        icon={UsersIcon}
+                        title={debouncedSearch || roleFilter || statusFilter ? "No users match your filters" : "No users found"}
+                        message={debouncedSearch || roleFilter || statusFilter ? "Adjust the search or filters to broaden the result." : "Registered accounts will appear here."}
+                      />
                     </td>
                   </tr>
                 ) : (

@@ -1,19 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Bubble } from 'react-chartjs-2';
 import useZoneStore from '../stores/useZoneStore';
 import useAuthStore from '../stores/useAuthStore';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, ArcElement, Title, Tooltip, Legend);
+import LazyChart from '../components/charts/LazyChart';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -444,7 +432,7 @@ function ZonesBubbleChart({ zones, organizations, isSuperAdmin }) {
       </div>
     );
   }
-  return <Bubble data={chartData} options={options} />;
+  return <LazyChart type="bubble" data={chartData} options={options} />;
 }
 
 // ─── Main Zones Page ───────────────────────────────────────────────────────────

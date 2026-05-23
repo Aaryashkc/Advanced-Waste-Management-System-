@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import api from "../utils/api";
+import { isAbortError } from "../utils/requests";
 
 const useMLScheduleStore = create((set, get) => ({
     schedules: [],
@@ -59,7 +60,7 @@ const useMLScheduleStore = create((set, get) => ({
     },
 
     // Fetch all ML schedules (history)
-    fetchSchedules: async (filters = {}) => {
+    fetchSchedules: async (filters = {}, config = {}) => {
         set({ loading: true, error: null });
         try {
             const params = new URLSearchParams();
@@ -67,13 +68,14 @@ const useMLScheduleStore = create((set, get) => ({
             if (filters.page) params.append("page", filters.page);
             params.append("limit", filters.limit || 10);
 
-            const response = await api.get(`/ml-schedule?${params.toString()}`);
+            const response = await api.get(`/ml-schedule?${params.toString()}`, config);
             set({
                 schedules: response.data.data || [],
                 schedulePagination: response.data.pagination || null,
                 loading: false,
             });
         } catch (error) {
+            if (isAbortError(error)) return;
             console.error("Failed to fetch ML schedules:", error);
             set({
                 error: error.response?.data?.message || "Failed to fetch schedules",

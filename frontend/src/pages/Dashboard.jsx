@@ -1,14 +1,7 @@
-import React, { useMemo, useEffect } from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-} from "chart.js";
-import { Bar } from "react-chartjs-2";
+import React, { useMemo, useEffect, useRef } from "react";
 import StatsCard from "../components/dashboard/StatsCard";
 import AnalyticsCharts from "../components/dashboard/AnalyticsCharts";
+import LazyChart from "../components/charts/LazyChart";
 import useAnalyticsStore from "../stores/useAnalyticsStore";
 import useAuthStore from "../stores/useAuthStore";
 import useMLScheduleStore from "../stores/useMLScheduleStore";
@@ -29,8 +22,6 @@ import {
   Users,
 } from "lucide-react";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
-
 const InfoHint = ({ text }) => (
   <span className="group/help relative inline-flex">
     <CircleHelp className="h-4 w-4 text-primary/35 transition-colors hover:text-primary/65" aria-hidden />
@@ -49,12 +40,15 @@ const Dashboard = () => {
   const role = user?.role;
   const isSuperAdmin = role === "super_admin";
   const isDark = theme === "dark";
+  const dashboardRefreshRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
-    fetchAnalytics();
-    fetchSchedules();
-    fetchBillingOverview({ limit: 1 });
+    const controller = new AbortController();
+    fetchAnalytics({ signal: controller.signal });
+    fetchSchedules({}, { signal: controller.signal });
+    fetchBillingOverview({ limit: 1 }, { signal: controller.signal });
+    return () => controller.abort();
   }, [user, fetchAnalytics, fetchSchedules, fetchBillingOverview]);
 
   useEffect(() => {
@@ -62,9 +56,12 @@ const Dashboard = () => {
 
     const socket = getSocket();
     const refreshDashboardData = () => {
-      fetchAnalytics();
-      fetchSchedules();
-      fetchBillingOverview({ limit: 1 });
+      dashboardRefreshRef.current?.abort();
+      const controller = new AbortController();
+      dashboardRefreshRef.current = controller;
+      fetchAnalytics({ signal: controller.signal });
+      fetchSchedules({}, { signal: controller.signal });
+      fetchBillingOverview({ limit: 1 }, { signal: controller.signal });
     };
     const events = [
       "pickup:created",
@@ -78,6 +75,7 @@ const Dashboard = () => {
 
     events.forEach((event) => socket.on(event, refreshDashboardData));
     return () => {
+      dashboardRefreshRef.current?.abort();
       events.forEach((event) => socket.off(event, refreshDashboardData));
     };
   }, [user, fetchAnalytics, fetchSchedules, fetchBillingOverview]);
@@ -362,7 +360,7 @@ const Dashboard = () => {
                 </div>
                 <div className="h-36">
                   {top5Areas.length > 0 ? (
-                    <Bar data={top5ChartData} options={top5ChartOptions} />
+                    <LazyChart type="bar" data={top5ChartData} options={top5ChartOptions} />
                   ) : (
                     <p className="text-sm text-primary/50 text-center py-6">
                       No area data

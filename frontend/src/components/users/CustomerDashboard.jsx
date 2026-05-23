@@ -1,19 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Bar, Doughnut, Line } from "react-chartjs-2";
-import {
   Package,
   CheckCircle2,
   XCircle,
@@ -31,18 +18,7 @@ import useAuthStore from "../../stores/useAuthStore";
 import useBillingStore from "../../stores/useBillingStore";
 import TruckLoader from "../shared/TruckLoader";
 import { getSocket } from "../../utils/socket";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  Filler,
-);
+import LazyChart from "../charts/LazyChart";
 
 /* ── Viewport observer (same pattern as OurTeam / SchedulePage) ── */
 
@@ -742,7 +718,7 @@ function CustomerDashboard() {
               <ChartCard title="Monthly Trend">
                 {monthlyChartData ? (
                   <div className="h-64">
-                    <Line data={monthlyChartData} options={lineOptions} />
+                    <LazyChart type="line" data={monthlyChartData} options={lineOptions} />
                   </div>
                 ) : (
                   <EmptyChart message="No monthly data yet" />
@@ -754,7 +730,8 @@ function CustomerDashboard() {
               <ChartCard title="Status Breakdown">
                 {statusChartData ? (
                   <div className="h-64 flex items-center justify-center">
-                    <Doughnut
+                    <LazyChart
+                      type="doughnut"
                       data={statusChartData}
                       options={doughnutOptions}
                     />
@@ -774,7 +751,8 @@ function CustomerDashboard() {
               <ChartCard title="By Category">
                 {categoryChartData ? (
                   <div className="h-52 flex items-center justify-center">
-                    <Doughnut
+                    <LazyChart
+                      type="doughnut"
                       data={categoryChartData}
                       options={doughnutOptions}
                     />
@@ -789,7 +767,7 @@ function CustomerDashboard() {
               <ChartCard title="By Difficulty">
                 {levelChartData ? (
                   <div className="h-52 flex items-center justify-center">
-                    <Doughnut data={levelChartData} options={doughnutOptions} />
+                    <LazyChart type="doughnut" data={levelChartData} options={doughnutOptions} />
                   </div>
                 ) : (
                   <EmptyChart message="No data" />

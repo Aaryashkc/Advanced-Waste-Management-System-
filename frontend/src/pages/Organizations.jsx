@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -13,9 +13,17 @@ import {
   UsersRound,
 } from "lucide-react";
 import useOrganizationStore from "../stores/useOrganizationStore";
-import LocationPickerMap from "../components/shared/LocationPickerMap";
 import StatsCard from "../components/dashboard/StatsCard";
 import PaginationControls from "../components/shared/PaginationControls";
+import { AdminEmptyState, AdminErrorState, CardGridSkeleton } from "../components/shared/AdminListStates";
+
+const LocationPickerMap = lazy(() => import("../components/shared/LocationPickerMap"));
+
+const MapFallback = () => (
+  <div className="flex h-72 items-center justify-center rounded-2xl border border-primary/15 bg-primary/5 text-sm font-medium text-primary/60">
+    Loading map...
+  </div>
+);
 
 const ORG_COLORS = [
   {
@@ -192,18 +200,11 @@ const Organizations = () => {
 
       {/* Org Grid */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-48 bg-white/50 rounded-2xl border border-primary/10">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-accent rounded-full animate-spin" />
-        </div>
+        <CardGridSkeleton cards={6} />
       ) : error ? (
-        <div className="p-6 bg-red-50 rounded-2xl border border-red-200 text-red-600 text-center font-medium">{error}</div>
+        <AdminErrorState message={error} onRetry={() => fetchOrganizations({ page: pagination?.page || 1, limit: 10 })} />
       ) : organizations.length === 0 ? (
-        <div className="p-16 bg-white rounded-2xl border border-primary/10 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/5 flex items-center justify-center">
-            <svg className="w-8 h-8 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-          </div>
-          <p className="text-primary/40 font-medium">No organizations yet. Create your first one!</p>
-        </div>
+        <AdminEmptyState icon={Building2} title="No organizations yet" message="Create the first partner organization to start assigning admins, fleet, and drivers." />
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -360,14 +361,16 @@ const Organizations = () => {
                 <label className="block text-sm font-medium text-primary/70 mb-1">Organization Name</label>
                 <input type="text" value={createForm.name} onChange={e => setCreateForm({...createForm, name: e.target.value})} placeholder="e.g. EcoWaste Logistics" className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent" />
               </div>
-              <LocationPickerMap
-                label="Depot / Office Location"
-                required
-                placeholder="Search for office location..."
-                height="250px"
-                value={{ latitude: createForm.latitude, longitude: createForm.longitude, address: createForm.address }}
-                onChange={({ latitude, longitude, address }) => setCreateForm({ ...createForm, latitude, longitude, address })}
-              />
+              <Suspense fallback={<MapFallback />}>
+                <LocationPickerMap
+                  label="Depot / Office Location"
+                  required
+                  placeholder="Search for office location..."
+                  height="250px"
+                  value={{ latitude: createForm.latitude, longitude: createForm.longitude, address: createForm.address }}
+                  onChange={({ latitude, longitude, address }) => setCreateForm({ ...createForm, latitude, longitude, address })}
+                />
+              </Suspense>
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
               <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition disabled:opacity-50">
                 {submitting ? "Creating..." : "Create Organization"}
@@ -388,14 +391,16 @@ const Organizations = () => {
                 <label className="block text-sm font-medium text-primary/70 mb-1">Organization Name</label>
                 <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent" />
               </div>
-              <LocationPickerMap
-                label="Depot / Office Location"
-                required
-                placeholder="Search for office location..."
-                height="250px"
-                value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
-                onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
-              />
+              <Suspense fallback={<MapFallback />}>
+                <LocationPickerMap
+                  label="Depot / Office Location"
+                  required
+                  placeholder="Search for office location..."
+                  height="250px"
+                  value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
+                  onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
+                />
+              </Suspense>
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
               <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition disabled:opacity-50">
                 {submitting ? "Saving..." : "Save Changes"}

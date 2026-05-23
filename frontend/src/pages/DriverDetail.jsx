@@ -2,19 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/useAuthStore";
 import api from "../utils/api";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+import LazyChart from "../components/charts/LazyChart";
 
 const STATUS_COLORS = {
   COMPLETED: "bg-green-100 text-green-700",
@@ -153,13 +141,13 @@ const DriverDetail = () => {
         <div className="bg-white rounded-2xl border border-primary/10 p-6">
           <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Pickups by Category</h3>
           <div className="h-56">
-            <Doughnut data={categoryData} options={{ responsive: true, maintainAspectRatio: false, cutout: "65%", plugins: { legend: { position: "bottom", labels: { padding: 16, usePointStyle: true } } } }} />
+            <LazyChart type="doughnut" data={categoryData} options={{ responsive: true, maintainAspectRatio: false, cutout: "65%", plugins: { legend: { position: "bottom", labels: { padding: 16, usePointStyle: true } } } }} />
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-primary/10 p-6">
           <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Pickups by Difficulty</h3>
           <div className="h-56">
-            <Bar data={levelData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" } }, x: { grid: { display: false } } } }} />
+            <LazyChart type="bar" data={levelData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" } }, x: { grid: { display: false } } } }} />
           </div>
         </div>
       </div>

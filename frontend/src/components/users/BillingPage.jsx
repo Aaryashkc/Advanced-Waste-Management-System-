@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Receipt,
@@ -43,7 +43,9 @@ function BillingPage() {
   const [paymentNotice, setPaymentNotice] = useState(null);
 
   useEffect(() => {
-    fetchMyBills();
+    const controller = new AbortController();
+    fetchMyBills({ signal: controller.signal });
+    return () => controller.abort();
   }, [fetchMyBills]);
 
   useEffect(() => {
@@ -53,9 +55,13 @@ function BillingPage() {
     };
     window.addEventListener("focus", refetch);
     document.addEventListener("visibilitychange", onVisible);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") refetch();
+    }, 60000);
     return () => {
       window.removeEventListener("focus", refetch);
       document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
     };
   }, [fetchMyBills]);
 
@@ -99,8 +105,14 @@ function BillingPage() {
     }
   };
 
-  const unpaidBills = bills.filter((b) => ["UNPAID", "OVERDUE", "CASH_PENDING"].includes(b.status));
-  const paidBills = bills.filter((b) => b.status === "PAID" || b.status === "WAIVED");
+  const unpaidBills = useMemo(
+    () => bills.filter((b) => ["UNPAID", "OVERDUE", "CASH_PENDING"].includes(b.status)),
+    [bills]
+  );
+  const paidBills = useMemo(
+    () => bills.filter((b) => b.status === "PAID" || b.status === "WAIVED"),
+    [bills]
+  );
 
   return (
     <div className="relative min-h-screen font-['Outfit',sans-serif] bg-black">

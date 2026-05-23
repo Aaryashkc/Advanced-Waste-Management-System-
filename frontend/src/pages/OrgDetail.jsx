@@ -1,21 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useOrganizationStore from "../stores/useOrganizationStore";
 import useAuthStore from "../stores/useAuthStore";
-import LocationPickerMap from "../components/shared/LocationPickerMap";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
+import LazyChart from "../components/charts/LazyChart";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+const LocationPickerMap = lazy(() => import("../components/shared/LocationPickerMap"));
+
+const MapFallback = () => (
+  <div className="flex h-72 items-center justify-center rounded-2xl border border-primary/15 bg-primary/5 text-sm font-medium text-primary/60">
+    Loading map...
+  </div>
+);
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -201,14 +196,14 @@ const OrgDetail = ({ myOrganization = false }) => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Resource Distribution</h3>
               <div className="h-64">
-                <Doughnut data={resourceDoughnutData} options={doughnutOptions} />
+                <LazyChart type="doughnut" data={resourceDoughnutData} options={doughnutOptions} />
               </div>
             </div>
             {trucks.length > 0 && (
               <div className="bg-white rounded-2xl border border-primary/10 p-6">
                 <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Truck Capacities</h3>
                 <div className="h-64">
-                  <Bar data={capacityBarData} options={barOptions} />
+                  <LazyChart type="bar" data={capacityBarData} options={barOptions} />
                 </div>
                 <p className="text-xs text-primary/40 mt-2 text-center">
                   <span className="inline-block w-3 h-3 rounded bg-green-500 mr-1 align-middle" /> Has driver
@@ -425,14 +420,16 @@ const OrgDetail = ({ myOrganization = false }) => {
                   className="w-full px-4 py-2.5 rounded-xl border border-primary/15 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
-              <LocationPickerMap
-                label="Depot / Office Location"
-                required
-                placeholder="Search for office location..."
-                height="250px"
-                value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
-                onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
-              />
+              <Suspense fallback={<MapFallback />}>
+                <LocationPickerMap
+                  label="Depot / Office Location"
+                  required
+                  placeholder="Search for office location..."
+                  height="250px"
+                  value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
+                  onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
+                />
+              </Suspense>
               {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
               <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition disabled:opacity-50">
                 {submitting ? "Saving..." : "Save Changes"}

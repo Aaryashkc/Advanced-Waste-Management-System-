@@ -20,6 +20,7 @@ import {
 import useBillingStore from "../stores/useBillingStore";
 import useAuthStore from "../stores/useAuthStore";
 import useOrganizationStore from "../stores/useOrganizationStore";
+import { AdminEmptyState, ListSkeleton } from "../components/shared/AdminListStates";
 
 const STATUS_BADGE = {
   UNPAID: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200/60" },
@@ -560,14 +561,11 @@ export default function BillingOverview() {
         )}
 
         {adminLoading && billingAccounts.length === 0 ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <div className="p-5">
+            <ListSkeleton rows={5} />
           </div>
         ) : billingAccounts.length === 0 ? (
-          <div className="text-center py-16">
-            <Receipt className="w-10 h-10 text-primary/20 mx-auto mb-3" />
-            <p className="text-primary/40 text-sm">No {roleLabel.toLowerCase()} accounts found</p>
-          </div>
+          <AdminEmptyState icon={Receipt} title={`No ${roleLabel.toLowerCase()} accounts found`} message="Billing accounts will appear here after bills are generated." />
         ) : (
           <>
             <div className={`divide-y divide-primary/8 transition-opacity ${isRefreshingOverview ? "opacity-60" : "opacity-100"}`}>

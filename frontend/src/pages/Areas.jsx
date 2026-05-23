@@ -1,11 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import useAreaStore from "../stores/useAreaStore";
 import useAuthStore from "../stores/useAuthStore";
 import { MapPin, CheckCircle, PauseCircle, Store } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
-import LocationPickerMap from "../components/shared/LocationPickerMap";
 import PaginationControls from "../components/shared/PaginationControls";
+import { AdminEmptyState, AdminErrorState, TableSkeleton } from "../components/shared/AdminListStates";
 import api from "../utils/api";
+
+const LocationPickerMap = lazy(() => import("../components/shared/LocationPickerMap"));
+
+const MapFallback = () => (
+  <div className="flex h-72 items-center justify-center rounded-2xl border border-primary/15 bg-primary/5 text-sm font-medium text-primary/60">
+    Loading map...
+  </div>
+);
 
 const TYPE_BADGES = {
   commercial: { cls: "bg-blue-100 text-blue-700", icon: "C" },
@@ -65,7 +73,7 @@ const Areas = () => {
       ...(editForm.latitude && editForm.longitude ? { coordinates: { latitude: Number(editForm.latitude), longitude: Number(editForm.longitude) }, address: editForm.address } : {}),
       ...(isSuperAdmin && editForm.orgId ? { orgId: editForm.orgId } : {}),
     };
-    const result = await updateArea(editArea._id, payload);
+    const result = await updateArea(editArea._id, payload, { optimistic: true });
     setSubmitting(false);
     if (result.success) setEditArea(null); else setFormError(result.error);
   };
@@ -122,11 +130,9 @@ const Areas = () => {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-primary/10">
-          <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
+        <TableSkeleton columns={isSuperAdmin ? 6 : 5} rows={7} />
       ) : error ? (
-        <div className="p-6 bg-white rounded-2xl border border-red-200 text-red-600 text-center text-sm">{error}</div>
+        <AdminErrorState message={error} onRetry={() => fetchAreas({ page: pagination?.page || 1, limit: 10 })} />
       ) : (
         <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
@@ -143,7 +149,11 @@ const Areas = () => {
               </thead>
               <tbody>
                 {areas.length === 0 ? (
-                  <tr><td colSpan={isSuperAdmin ? 7 : 5} className="px-6 py-12 text-center text-primary/30 text-sm">No collection areas found.</td></tr>
+                  <tr>
+                    <td colSpan={isSuperAdmin ? 6 : 5} className="p-0">
+                      <AdminEmptyState icon={MapPin} title="No collection areas found" message="Collection areas will appear here once they are added." />
+                    </td>
+                  </tr>
                 ) : areas.map(d => {
                   const badge = TYPE_BADGES[d.type] || { cls: "bg-gray-100 text-gray-700", icon: "?" };
                   const hasCoords = d.coordinates?.latitude && d.coordinates?.longitude;
@@ -230,13 +240,15 @@ const Areas = () => {
                   <p className="text-[11px] text-primary/40 mt-1">ML size multiplier (1.0 = avg)</p>
                 </div>
               </div>
-              <LocationPickerMap
-                label="Area Center Location"
-                placeholder="Search area location..."
-                height="220px"
-                value={{ latitude: form.latitude, longitude: form.longitude, address: form.address }}
-                onChange={({ latitude, longitude, address }) => setForm({ ...form, latitude, longitude, address })}
-              />
+              <Suspense fallback={<MapFallback />}>
+                <LocationPickerMap
+                  label="Area Center Location"
+                  placeholder="Search area location..."
+                  height="220px"
+                  value={{ latitude: form.latitude, longitude: form.longitude, address: form.address }}
+                  onChange={({ latitude, longitude, address }) => setForm({ ...form, latitude, longitude, address })}
+                />
+              </Suspense>
               {isSuperAdmin && (
                 <div>
                   <label className="block text-sm font-medium text-primary/60 mb-1">Organization *</label>
@@ -282,13 +294,15 @@ const Areas = () => {
                   <p className="text-[11px] text-primary/40 mt-1">ML size multiplier (1.0 = avg)</p>
                 </div>
               </div>
-              <LocationPickerMap
-                label="Area Center Location"
-                placeholder="Search area location..."
-                height="220px"
-                value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
-                onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
-              />
+              <Suspense fallback={<MapFallback />}>
+                <LocationPickerMap
+                  label="Area Center Location"
+                  placeholder="Search area location..."
+                  height="220px"
+                  value={{ latitude: editForm.latitude, longitude: editForm.longitude, address: editForm.address }}
+                  onChange={({ latitude, longitude, address }) => setEditForm({ ...editForm, latitude, longitude, address })}
+                />
+              </Suspense>
               {isSuperAdmin && (
                 <div>
                   <label className="block text-sm font-medium text-primary/60 mb-1">Organization</label>

@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import api from "../utils/api";
 import useAuthStore from "../stores/useAuthStore";
 import { getSocket } from "../utils/socket";
+import { isAbortError } from "../utils/requests";
 import DeletionRequests from "./DeletionRequests";
 import { Bell, AlertTriangle, CheckCircle, Info, Truck, User, Ban, RotateCcw, Clock, CheckCheck, Filter, RefreshCw } from "lucide-react";
 import PaginationControls from "../components/shared/PaginationControls";
+import { AdminEmptyState, AdminErrorState, ListSkeleton } from "../components/shared/AdminListStates";
 
 const SEVERITY_CONFIG = {
   critical: { border: "border-l-red-500", bg: "bg-red-50/60", badge: "bg-red-100 text-red-700", icon: <AlertTriangle className="w-5 h-5 text-red-500" /> },
@@ -43,50 +45,61 @@ const Notifications = () => {
 
   const totalUnread = counts.alerts + counts.clients + counts.org_admin + counts.driver + counts.deletions;
 
-  const fetchSystemAlerts = useCallback(async (page = alertsPage) => {
+  const fetchSystemAlerts = useCallback(async (page = alertsPage, signal) => {
     try {
-      const res = await api.get(`/notifications?page=${page}&limit=10`);
+      const res = await api.get(`/notifications?page=${page}&limit=10`, { signal });
       setSystemAlerts(res.data.data || []);
       setAlertsPagination(res.data.pagination || null);
       return res.data.unreadCount || 0;
     } catch (err) {
+      if (isAbortError(err)) return 0;
       console.error("Failed to fetch system alerts", err);
       return 0;
     }
   }, [alertsPage]);
 
   const markAlertRead = async (id) => {
+    const previousAlerts = systemAlerts;
+    const wasUnread = previousAlerts.some(a => a._id === id && !a.isRead);
+    setSystemAlerts(prev => prev.map(a =>
+      a._id === id ? { ...a, isRead: true } : a
+    ));
+    if (wasUnread) setCounts(prev => ({ ...prev, alerts: Math.max(0, prev.alerts - 1) }));
     try {
       await api.put(`/notifications/${id}/read`, {});
-      setSystemAlerts(prev => prev.map(a =>
-        a._id === id ? { ...a, isRead: true } : a
-      ));
-      setCounts(prev => ({ ...prev, alerts: Math.max(0, prev.alerts - 1) }));
     } catch (err) {
+      setSystemAlerts(previousAlerts);
+      if (wasUnread) setCounts(prev => ({ ...prev, alerts: prev.alerts + 1 }));
       console.error("Failed to mark alert as read", err);
     }
   };
 
   const markAllAlertsRead = async () => {
+    const previousAlerts = systemAlerts;
+    const previousAlertCount = counts.alerts;
+    setSystemAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
+    setCounts(prev => ({ ...prev, alerts: 0 }));
     try {
       await api.put('/notifications/read-all', {});
-      setSystemAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
-      setCounts(prev => ({ ...prev, alerts: 0 }));
     } catch (err) {
+      setSystemAlerts(previousAlerts);
+      setCounts(prev => ({ ...prev, alerts: previousAlertCount }));
       console.error("Failed to mark all alerts as read", err);
     }
   };
 
-  const fetchCounts = useCallback(async () => {
+  const fetchCounts = useCallback(async (signal) => {
     try {
       const [alertsCount, clientsRes, orgAdminRes, driverRes, deletionsRes] = await Promise.all([
-        fetchSystemAlerts(),
-        api.get('/contact/unread-count'),
-        api.get('/internal-messages/org_admin/unread-count'),
-        api.get('/internal-messages/driver/unread-count'),
-        api.get(user?.role === "super_admin"
-          ? '/super-admin/deletion-requests/pending-count'
-          : '/org-admin/deletion-requests/pending-count'
+        fetchSystemAlerts(undefined, signal),
+        api.get('/contact/unread-count', { signal }),
+        api.get('/internal-messages/org_admin/unread-count', { signal }),
+        api.get('/internal-messages/driver/unread-count', { signal }),
+        api.get(
+          user?.role === "super_admin"
+            ? '/super-admin/deletion-requests/pending-count'
+            : '/org-admin/deletion-requests/pending-count',
+          { signal }
         ),
       ]);
       setCounts({
@@ -97,11 +110,12 @@ const Notifications = () => {
         deletions: deletionsRes.data.count || 0
       });
     } catch (err) {
+      if (isAbortError(err)) return;
       console.error("Failed to fetch notification counts", err);
     }
   }, [user?.role, fetchSystemAlerts]);
 
-  const fetchMessages = useCallback(async (type, page = messagesPage) => {
+  const fetchMessages = useCallback(async (type, page = messagesPage, signal) => {
     setLoading(true);
     setError(null);
     try {
@@ -115,13 +129,14 @@ const Notifications = () => {
         return;
       }
 
-      const response = await api.get(endpoint);
+      const response = await api.get(endpoint, { signal });
       setMessages(response.data.data || []);
       setMessagesPagination(response.data.pagination || null);
     } catch (err) {
+      if (isAbortError(err)) return;
       setError(err.response?.data?.message || "Failed to load messages");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [messagesPage]);
 
@@ -202,12 +217,14 @@ const Notifications = () => {
   }, [activeTab, fetchCounts, fetchMessages, messagesPage]);
 
   useEffect(() => {
-    fetchCounts();
+    const controller = new AbortController();
+    fetchCounts(controller.signal);
     if (activeTab === "alerts") {
-      fetchSystemAlerts(alertsPage);
+      fetchSystemAlerts(alertsPage, controller.signal);
     } else if (activeTab !== "deletions") {
-      fetchMessages(activeTab, messagesPage);
+      fetchMessages(activeTab, messagesPage, controller.signal);
     }
+    return () => controller.abort();
   }, [activeTab, fetchCounts, fetchMessages, fetchSystemAlerts, alertsPage, messagesPage]);
 
   useEffect(() => {
@@ -216,23 +233,30 @@ const Notifications = () => {
   }, [activeTab]);
 
   const markAsRead = async (id, type) => {
+    const previousMessages = messages;
+    const wasUnread = previousMessages.some(msg => msg._id === id && msg.status === "unread");
+    setMessages(prev => prev.map(msg => msg._id === id ? { ...msg, status: "read" } : msg));
+    if (wasUnread) setCounts(prev => ({ ...prev, [type]: Math.max(0, prev[type] - 1) }));
     try {
       const endpoint = type === "clients"
         ? `/contact/${id}/read`
         : `/internal-messages/${id}/read`;
 
       await api.put(endpoint, {});
-
-      setMessages(prev => prev.map(msg => msg._id === id ? { ...msg, status: "read" } : msg));
-      setCounts(prev => ({ ...prev, [type]: Math.max(0, prev[type] - 1) }));
     } catch (err) {
+      setMessages(previousMessages);
+      if (wasUnread) setCounts(prev => ({ ...prev, [type]: prev[type] + 1 }));
       console.error("Failed to mark message as read", err);
     }
   };
 
-  const filteredAlerts = filterSeverity === "all"
-    ? systemAlerts
-    : systemAlerts.filter(a => a.severity === filterSeverity);
+  const filteredAlerts = useMemo(
+    () =>
+      filterSeverity === "all"
+        ? systemAlerts
+        : systemAlerts.filter((a) => a.severity === filterSeverity),
+    [filterSeverity, systemAlerts]
+  );
 
   const tabs = [
     { id: "alerts", label: "System Alerts", icon: <AlertTriangle className="w-4 h-4" /> },
@@ -348,11 +372,7 @@ const Notifications = () => {
             </div>
 
             {filteredAlerts.length === 0 ? (
-              <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center">
-                <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                <p className="font-semibold text-primary/60">No alerts</p>
-                <p className="text-sm text-primary/40 mt-1">Everything is running smoothly</p>
-              </div>
+              <AdminEmptyState icon={CheckCircle} title="No alerts" message="Everything is running smoothly." />
             ) : (
               <div className="space-y-3">
                 {filteredAlerts.map(alert => {
@@ -439,19 +459,11 @@ const Notifications = () => {
         ) : (
           <div className="space-y-3">
             {loading ? (
-              <div className="flex items-center justify-center h-48 bg-white/50 rounded-2xl border border-primary/10">
-                <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-              </div>
+              <ListSkeleton rows={5} />
             ) : error ? (
-              <div className="p-6 bg-red-50 rounded-2xl border border-red-200 text-red-600 text-center font-medium">
-                {error}
-              </div>
+              <AdminErrorState message={error} onRetry={() => fetchMessages(activeTab, messagesPage)} />
             ) : messages.length === 0 ? (
-              <div className="p-12 bg-white rounded-2xl border border-primary/10 text-center">
-                <Bell className="w-12 h-12 text-primary/20 mx-auto mb-3" />
-                <p className="font-semibold text-primary/60">No messages</p>
-                <p className="text-sm text-primary/40 mt-1">No messages found for this category</p>
-              </div>
+              <AdminEmptyState icon={Bell} title="No messages" message="No messages found for this category." />
             ) : (
               <>
                 {messages.map(msg => (

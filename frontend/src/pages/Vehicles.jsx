@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import useVehicleStore from "../stores/useVehicleStore";
 import useDriverStore from "../stores/useDriverStore";
 import useAuthStore from "../stores/useAuthStore";
 import { Truck, CheckCircle, Wrench, UserX } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
 import PaginationControls from "../components/shared/PaginationControls";
+import { AdminEmptyState, AdminErrorState, TableSkeleton } from "../components/shared/AdminListStates";
 import api from "../utils/api";
 
 const getDutyType = (capacity) => {
@@ -33,12 +34,19 @@ const Vehicles = () => {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { fetchVehicles({ page: 1, limit: 10 }); fetchDrivers({ page: 1, limit: 10 }); }, [fetchVehicles, fetchDrivers]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchVehicles({ page: 1, limit: 10, signal: controller.signal });
+    fetchDrivers({ page: 1, limit: 10, signal: controller.signal });
+    return () => controller.abort();
+  }, [fetchVehicles, fetchDrivers]);
 
   useEffect(() => {
     if (isSuperAdmin) {
-      api.get("/super-admin/organizations")
+      const controller = new AbortController();
+      api.get("/super-admin/organizations", { signal: controller.signal })
         .then(({ data }) => setOrgs(data.organizations || [])).catch(() => {});
+      return () => controller.abort();
     }
   }, [isSuperAdmin]);
 
@@ -54,7 +62,7 @@ const Vehicles = () => {
 
   const handleEdit = async (e) => {
     e.preventDefault(); setFormError(""); setSubmitting(true);
-    const result = await updateVehicle(editVehicle.id, { ...editForm, capacity: Number(editForm.capacity) });
+    const result = await updateVehicle(editVehicle.id, { ...editForm, capacity: Number(editForm.capacity) }, { optimistic: true });
     setSubmitting(false);
     if (result.success) setEditVehicle(null); else setFormError(result.error);
   };
@@ -90,6 +98,14 @@ const Vehicles = () => {
 
   const openEdit = (v) => { setEditVehicle(v); setEditForm({ capacity: v.capacity, licensePlate: v.licensePlate, orgId: v.orgId || "", isAvailable: v.isAvailable }); setFormError(""); };
   const totalCount = pagination?.total ?? vehicles.length;
+  const vehicleStats = useMemo(
+    () => ({
+      available: vehicles.filter((v) => v.isAvailable).length,
+      inUse: vehicles.filter((v) => !v.isAvailable).length,
+      noDriver: vehicles.filter((v) => !v.assignedDriver).length,
+    }),
+    [vehicles]
+  );
 
   return (
     <div className="space-y-6">
@@ -107,18 +123,16 @@ const Vehicles = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatsCard title="Total Vehicles" value={totalCount} label="Fleet size" icon={<Truck className="w-5 h-5 text-primary" />} iconBg="bg-primary/8" />
-        <StatsCard title="Available" value={vehicles.filter(v => v.isAvailable).length} label="Ready to dispatch" icon={<CheckCircle className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-100" valueColor="text-emerald-600" />
-        <StatsCard title="In Use" value={vehicles.filter(v => !v.isAvailable).length} label="Currently active" icon={<Wrench className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" valueColor="text-amber-600" />
-        <StatsCard title="No Driver" value={vehicles.filter(v => !v.assignedDriver).length} label="Needs assignment" icon={<UserX className="w-5 h-5 text-red-500" />} iconBg="bg-red-100" valueColor="text-red-500" />
+        <StatsCard title="Available" value={vehicleStats.available} label="Ready to dispatch" icon={<CheckCircle className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-100" valueColor="text-emerald-600" />
+        <StatsCard title="In Use" value={vehicleStats.inUse} label="Currently active" icon={<Wrench className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" valueColor="text-amber-600" />
+        <StatsCard title="No Driver" value={vehicleStats.noDriver} label="Needs assignment" icon={<UserX className="w-5 h-5 text-red-500" />} iconBg="bg-red-100" valueColor="text-red-500" />
       </div>
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-primary/10">
-          <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
+        <TableSkeleton columns={isSuperAdmin ? 6 : 5} rows={7} />
       ) : error ? (
-        <div className="p-6 bg-white rounded-2xl border border-red-200 text-red-600 text-center text-sm">{error}</div>
+        <AdminErrorState message={error} onRetry={() => fetchVehicles({ page: pagination?.page || 1, limit: 10 })} />
       ) : (
         <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
@@ -135,7 +149,11 @@ const Vehicles = () => {
               </thead>
               <tbody>
                 {vehicles.length === 0 ? (
-                  <tr><td colSpan={isSuperAdmin ? 6 : 5} className="px-6 py-12 text-center text-primary/30 text-sm">No vehicles found.</td></tr>
+                  <tr>
+                    <td colSpan={isSuperAdmin ? 6 : 5} className="p-0">
+                      <AdminEmptyState icon={Truck} title="No vehicles found" message="Fleet vehicles will appear here once they are added." />
+                    </td>
+                  </tr>
                 ) : vehicles.map(v => {
                   const duty = getDutyType(v.capacity);
                   return (

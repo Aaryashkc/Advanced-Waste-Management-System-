@@ -1,24 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { Chart as ChartJS } from "chart.js";
 import useAuthStore from "../stores/useAuthStore";
 import { useDashboardTheme } from "../hooks/useDashboardTheme";
 import api from "../utils/api";
-
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Bar, Doughnut, Line } from "react-chartjs-2";
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+import LazyChart from "../components/charts/LazyChart";
 
 const fmt = (ms) => {
   if (!ms) return "--";
@@ -137,7 +122,8 @@ const PickupStats = () => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Status Distribution</h3>
               <div className="h-56">
-                <Doughnut
+                <LazyChart
+                  type="doughnut"
                   data={{
                     labels: statusDistribution.map((s) => s.status),
                     datasets: [{
@@ -154,7 +140,8 @@ const PickupStats = () => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Category Breakdown</h3>
               <div className="h-56">
-                <Doughnut
+                <LazyChart
+                  type="doughnut"
                   data={{
                     labels: categoryDistribution.map((c) => c.category || "Unknown"),
                     datasets: [{
@@ -171,7 +158,8 @@ const PickupStats = () => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Difficulty Levels</h3>
               <div className="h-56">
-                <Bar
+                <LazyChart
+                  type="bar"
                   data={{
                     labels: levelDistribution.map((l) => l.level || "Unknown"),
                     datasets: [{
@@ -196,7 +184,8 @@ const PickupStats = () => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Pickup Activity by Hour</h3>
               <div className="h-56">
-                <Bar
+                <LazyChart
+                  type="bar"
                   data={{
                     labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`),
                     datasets: [{
@@ -230,7 +219,8 @@ const PickupStats = () => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Daily Pickup Trend (30 Days)</h3>
               <div className="h-72">
-                <Line
+                <LazyChart
+                  type="line"
                   data={{
                     labels: pickupTrend.map((d) => d.date?.slice(5)),
                     datasets: [
@@ -280,7 +270,8 @@ const PickupStats = () => {
                 <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-1">Avg Response Time (30 Days)</h3>
                 <p className="text-xs text-primary/40 mb-4">Time from request creation to driver acceptance</p>
                 <div className="h-56">
-                  <Line
+                  <LazyChart
+                    type="line"
                     data={{
                       labels: responseTimeTrend.map((r) => r.date?.slice(5)),
                       datasets: [{
@@ -312,7 +303,8 @@ const PickupStats = () => {
                 <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-1">Avg Task Duration (30 Days)</h3>
                 <p className="text-xs text-primary/40 mb-4">Time from acceptance to completion</p>
                 <div className="h-56">
-                  <Line
+                  <LazyChart
+                    type="line"
                     data={{
                       labels: responseTimeTrend.map((r) => r.date?.slice(5)),
                       datasets: [{
@@ -347,7 +339,8 @@ const PickupStats = () => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Completed Pickups Per Day</h3>
               <div className="h-48">
-                <Bar
+                <LazyChart
+                  type="bar"
                   data={{
                     labels: responseTimeTrend.map((r) => r.date?.slice(5)),
                     datasets: [{
@@ -507,7 +500,8 @@ const PickupStats = () => {
             <div className="bg-white rounded-2xl border border-primary/10 p-6">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Top Drivers by Completed Pickups</h3>
               <div className="h-64">
-                <Bar
+                <LazyChart
+                  type="bar"
                   data={{
                     labels: topDrivers.map((d) => d.driverName || "Unknown"),
                     datasets: [{
@@ -605,7 +599,8 @@ const PickupStats = () => {
               <div className="bg-white rounded-2xl border border-primary/10 p-6">
                 <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Pickups by Area</h3>
                 <div className="h-72">
-                  <Bar
+                  <LazyChart
+                    type="bar"
                     data={{
                       labels: areaBreakdown.map((d) => d.area),
                       datasets: [
@@ -692,7 +687,8 @@ const PickupStats = () => {
               <div className="bg-white rounded-2xl border border-primary/10 p-6">
                 <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Pickups by Organization</h3>
                 <div className="h-72">
-                  <Bar
+                  <LazyChart
+                    type="bar"
                     data={{
                       labels: orgBreakdown.map((o) => o.organization),
                       datasets: [

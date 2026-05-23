@@ -77,6 +77,7 @@ const LocationPickerMap = ({
   const [mapZoom, setMapZoom] = useState(value.latitude ? 15 : 12);
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
+  const searchControllerRef = useRef(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -93,6 +94,7 @@ const LocationPickerMap = ({
   const handleSearch = useCallback((query) => {
     setSearchQuery(query);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    searchControllerRef.current?.abort();
 
     if (query.length < 3) {
       setSearchResults([]);
@@ -101,21 +103,31 @@ const LocationPickerMap = ({
     }
 
     debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      searchControllerRef.current = controller;
       setSearching(true);
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=np&limit=6&addressdetails=1`,
-          { headers: { "Accept-Language": "en" } }
+          { headers: { "Accept-Language": "en" }, signal: controller.signal }
         );
         const data = await res.json();
         setSearchResults(data);
         setShowResults(data.length > 0);
-      } catch {
+      } catch (error) {
+        if (error?.name === "AbortError") return;
         setSearchResults([]);
       } finally {
-        setSearching(false);
+        if (!controller.signal.aborted) setSearching(false);
       }
     }, 400);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      searchControllerRef.current?.abort();
+    };
   }, []);
 
   const handleSelectResult = (result) => {

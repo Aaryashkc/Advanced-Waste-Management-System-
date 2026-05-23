@@ -5,6 +5,7 @@ import { getSocket } from "../../utils/socket";
 import useAuthStore from "../../stores/useAuthStore";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import api from "../../utils/api";
+import { isAbortError } from "../../utils/requests";
 
 const NAV_ITEMS = [
   { to: "/driver-dashboard", label: "Home", Icon: Home },
@@ -22,16 +23,21 @@ export default function DriverNavbar() {
 
   const isTaskPage = location.pathname.includes("/task-route") || location.pathname.includes("/task-flow");
 
-  const fetchUnread = useCallback(async () => {
+  const fetchUnread = useCallback(async (signal) => {
     if (!token) return;
     try {
-      const res = await api.get("/notifications/unread-count");
+      const res = await api.get("/notifications/unread-count", { signal });
       setUnreadCount(res.data.count || 0);
-    } catch (_) {}
+    } catch (error) {
+      if (!isAbortError(error)) console.error("Failed to fetch unread notifications:", error);
+    }
   }, [token]);
 
   useEffect(() => {
-    const initialFetchTimer = setTimeout(fetchUnread, 0);
+    if (!token) return undefined;
+
+    const controller = new AbortController();
+    fetchUnread(controller.signal);
 
     const socket = getSocket();
     const onNew = () => setUnreadCount((prev) => prev + 1);
@@ -45,16 +51,13 @@ export default function DriverNavbar() {
     socket.on("notification:counts", onCounts);
     socket.on("schedule:confirmed", onSchedule);
 
-    const interval = setInterval(fetchUnread, 60000);
-
     return () => {
+      controller.abort();
       socket.off("notification:new", onNew);
       socket.off("notification:counts", onCounts);
       socket.off("schedule:confirmed", onSchedule);
-      clearTimeout(initialFetchTimer);
-      clearInterval(interval);
     };
-  }, [fetchUnread]);
+  }, [fetchUnread, token]);
 
   if (isTaskPage) return null;
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import api from '../utils/api';
 import useAuthStore from './useAuthStore';
+import { isAbortError } from '../utils/requests';
 
 const useDriverStore = create((set, get) => ({
   drivers: [],
@@ -10,7 +11,8 @@ const useDriverStore = create((set, get) => ({
   lastParams: { page: 1, limit: 10 },
 
   fetchDrivers: async (params = {}) => {
-    const nextParams = { ...get().lastParams, ...params, limit: params.limit || 10 };
+    const { signal, ...queryParams } = params;
+    const nextParams = { ...get().lastParams, ...queryParams, limit: params.limit || 10 };
     set({ isLoading: true, error: null });
     try {
       const user = useAuthStore.getState().user;
@@ -18,7 +20,9 @@ const useDriverStore = create((set, get) => ({
       const query = new URLSearchParams();
       if (nextParams.page) query.set("page", nextParams.page);
       if (nextParams.limit) query.set("limit", nextParams.limit);
-      const res = await api.get(`${url}?${query.toString()}`);
+      const res = await api.get(`${url}?${query.toString()}`, {
+        signal,
+      });
       set({
         drivers: res.data.data,
         pagination: res.data.pagination || null,
@@ -26,6 +30,7 @@ const useDriverStore = create((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
+      if (isAbortError(error)) return;
       set({ error: error.response?.data?.message || 'Failed to fetch drivers', isLoading: false });
     }
   },

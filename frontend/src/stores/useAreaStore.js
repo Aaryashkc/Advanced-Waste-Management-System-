@@ -41,12 +41,22 @@ const useAreaStore = create((set, get) => ({
     }
   },
 
-  updateArea: async (id, data) => {
+  updateArea: async (id, data, options = {}) => {
+    let previousAreas = null;
+    if (options.optimistic) {
+      previousAreas = get().areas;
+      set((state) => ({
+        areas: state.areas.map((area) =>
+          area._id === id ? { ...area, ...data } : area
+        ),
+      }));
+    }
     try {
       await api.put(`/areas/${id}`, data);
       await get().fetchAreas();
       return { success: true };
     } catch (error) {
+      if (previousAreas) set({ areas: previousAreas });
       return { success: false, error: error.response?.data?.message || "Failed to update area" };
     }
   },

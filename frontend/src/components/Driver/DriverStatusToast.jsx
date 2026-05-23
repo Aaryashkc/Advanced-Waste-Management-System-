@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getSocket } from "../../utils/socket";
 import useAuthStore from "../../stores/useAuthStore";
 import api from "../../utils/api";
+import { isAbortError } from "../../utils/requests";
 
 const STATUS_DISPLAY = {
   EN_ROUTE: { label: "En Route", color: "bg-blue-500" },
@@ -25,16 +26,18 @@ export default function DriverStatusToast() {
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "driver") return;
 
+    const controller = new AbortController();
     const fetchActiveTask = async () => {
       try {
         setLoading(true);
-        const res = await api.get("/pickups/active");
+        const res = await api.get("/pickups/active", { signal: controller.signal });
         if (res.data.pickup) {
           setActivePickup(res.data.pickup);
         } else {
           setActivePickup(null);
         }
       } catch (err) {
+        if (isAbortError(err)) return;
         // 404 means no active pickup
         if (err.response?.status !== 404) {
           console.error("Failed to fetch active task", err);
@@ -46,6 +49,7 @@ export default function DriverStatusToast() {
     };
 
     fetchActiveTask();
+    return () => controller.abort();
   }, [user, isAuthenticated, location.pathname]);
 
   // Listen for real-time status updates
