@@ -34,11 +34,20 @@ function normalizeOrigin(origin) {
   return origin?.trim().replace(/\/+$/, "");
 }
 
-function getAllowedOrigins() {
-  return (process.env.FRONTEND_URL || "http://localhost:5173")
+function parseOrigins(value = "") {
+  return value
     .split(",")
     .map(normalizeOrigin)
     .filter(Boolean);
+}
+
+function getAllowedOrigins() {
+  const origins = [
+    ...parseOrigins(process.env.FRONTEND_URL || "http://localhost:5173"),
+    ...parseOrigins(process.env.CORS_ALLOWED_ORIGINS),
+  ];
+
+  return [...new Set(origins)];
 }
 
 export function createApp() {
@@ -56,7 +65,7 @@ export function createApp() {
             normalizedOrigin: normalizeOrigin(origin),
             allowedOrigins,
           });
-          return callback(new Error("Not allowed by CORS"));
+          return callback(null, false);
         }
       : true,
     credentials: true,
