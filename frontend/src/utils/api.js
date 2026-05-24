@@ -76,16 +76,19 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    reportFrontendError(error, {
-      source: 'api-response',
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      durationMs: error.config?.metadata?.startedAt
-        ? Math.round(performance.now() - error.config.metadata.startedAt)
-        : undefined,
-      responseMessage: error.response?.data?.message,
-    });
+    const isOtpAuthFlow = ['/auth/request-otp', '/auth/verify-otp'].includes(error.config?.url);
+    if (!isOtpAuthFlow) {
+      reportFrontendError(error, {
+        source: 'api-response',
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        durationMs: error.config?.metadata?.startedAt
+          ? Math.round(performance.now() - error.config.metadata.startedAt)
+          : undefined,
+        responseMessage: error.response?.data?.message,
+      });
+    }
     
     if (error.response?.status === 401) {
       // Token expired or invalid - clear storage
