@@ -13,6 +13,16 @@ function maskContact(value = "") {
   return `${name.slice(0, 2)}***@${domain}`;
 }
 
+async function dispatchOTP({ email, phone, otpCode }) {
+  if (email) {
+    await sendOTPEmail(email, otpCode);
+    return "email";
+  }
+
+  await sendOTPSMS(phone, otpCode);
+  return "sms";
+}
+
 export const register = async (req, res) => {
   try {
     const { name, email, password, phone, address } = req.body;
@@ -205,23 +215,9 @@ export const requestOTP = async (req, res) => {
     const hashedOTP = hashOTP(otpCode);
     const expiresAt = getOTPExpiration();
 
-    // Update user's OTP data
-    user.loginOtp = {
-      hash: hashedOTP,
-      expiresAt: expiresAt,
-      attempts: 0,
-      lastSentAt: new Date()
-    };
-
-    await user.save();
-
     // Send OTP via email or SMS
     try {
-      if (email) {
-        await sendOTPEmail(email, otpCode);
-      } else if (phone) {
-        await sendOTPSMS(phone, otpCode);
-      }
+      await dispatchOTP({ email, phone, otpCode });
       logger.info("OTP dispatched", {
         userId: user._id,
         channel: email ? "email" : "sms",
@@ -241,6 +237,15 @@ export const requestOTP = async (req, res) => {
         });
       }
     }
+
+    user.loginOtp = {
+      hash: hashedOTP,
+      expiresAt,
+      attempts: 0,
+      lastSentAt: new Date()
+    };
+
+    await user.save();
 
     res.status(200).json({
       message: process.env.NODE_ENV === "development"

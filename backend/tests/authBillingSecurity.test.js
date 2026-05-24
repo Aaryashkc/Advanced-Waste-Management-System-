@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import test from "node:test";
 
-import { register } from "../controllers/auth.controller.js";
+import { register, requestOTP } from "../controllers/auth.controller.js";
 import { payBill } from "../controllers/billing.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
@@ -77,6 +77,59 @@ test("public registration ignores client-supplied privileged role", async () => 
 
   assert.equal(response.statusCode, 201);
   assert.equal(savedUser.role, "customer_admin");
+});
+
+test("production OTP request leaves existing OTP untouched when email delivery fails", async () => {
+  const envSnapshot = {
+    NODE_ENV: process.env.NODE_ENV,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_PASS: process.env.EMAIL_PASS,
+  };
+  process.env.NODE_ENV = "production";
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASS;
+  delete process.env.EMAIL_USER;
+  delete process.env.EMAIL_PASS;
+
+  const previousLoginOtp = {
+    hash: "previous-hash",
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    attempts: 2,
+    lastSentAt: new Date(Date.now() - 2 * 60 * 1000),
+  };
+  const user = {
+    _id: oid("64b000000000000000000104"),
+    email: "customer@example.com",
+    loginOtp: { ...previousLoginOtp },
+    saveCalls: 0,
+    async save() {
+      this.saveCalls += 1;
+      return this;
+    },
+  };
+
+  stub(User, "findOne", async () => user);
+
+  const response = res();
+  try {
+    await requestOTP({ body: { email: "customer@example.com" } }, response);
+  } finally {
+    for (const [key, value] of Object.entries(envSnapshot)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual(user.loginOtp, previousLoginOtp);
+  assert.equal(user.saveCalls, 0);
 });
 
 test("auth middleware excludes password hash, OTP, and two-factor secret fields", async () => {

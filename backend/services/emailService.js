@@ -89,7 +89,7 @@ export const sendOTPEmail = async (email, otpCode) => {
       response: error.response,
       message: error.message,
     });
-    throw new Error('Failed to send OTP email');
+    throw new Error(`Failed to send OTP email: ${error.message}`);
   }
 };
 
