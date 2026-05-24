@@ -30,12 +30,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../.env"), quiet: true });
 
+function normalizeOrigin(origin) {
+  return origin?.trim().replace(/\/+$/, "");
+}
+
+function getAllowedOrigins() {
+  return (process.env.FRONTEND_URL || "http://localhost:5173")
+    .split(",")
+    .map(normalizeOrigin)
+    .filter(Boolean);
+}
+
 export function createApp() {
   const app = express();
+  const allowedOrigins = getAllowedOrigins();
 
   const corsOptions = {
     origin: process.env.NODE_ENV === "production"
-      ? (process.env.FRONTEND_URL || "http://localhost:5173")
+      ? (origin, callback) => {
+          if (!origin || allowedOrigins.includes(normalizeOrigin(origin))) {
+            return callback(null, true);
+          }
+          return callback(new Error("Not allowed by CORS"));
+        }
       : true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

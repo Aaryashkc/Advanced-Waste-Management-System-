@@ -1,14 +1,35 @@
 import nodemailer from 'nodemailer';
 
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 10000);
+
+function getMailConfig() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
+  const user = process.env.SMTP_USER || process.env.EMAIL_USER;
+  const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+  const from = process.env.FROM_EMAIL || user;
+
+  if (!host || !user || !pass) {
+    throw new Error('SMTP_HOST, SMTP_USER, and SMTP_PASS are required to send OTP email');
+  }
+
+  return { host, port, user, pass, from };
+}
+
 // Create a transporter object using SMTP transport
 const createTransporter = () => {
+  const { host, port, user, pass } = getMailConfig();
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false, // true for 465, false for other ports like 587
+    host,
+    port,
+    secure: port === 465,
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
+      user,
+      pass
     }
   });
 };
@@ -21,10 +42,11 @@ const createTransporter = () => {
  */
 export const sendOTPEmail = async (email, otpCode) => {
   try {
+    const { from } = getMailConfig();
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: `"Safabin Nepal" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
+      from: `"Safabin Nepal" <${from}>`,
       to: email,
       subject: 'Your OTP Code - Safabin Nepal',
       html: `
