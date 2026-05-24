@@ -4,6 +4,14 @@ import bcrypt from "bcryptjs";
 import { generateOTP, hashOTP, verifyOTP as verifyOTPHash, isOTPExpired, getOTPExpiration, canResendOTP, isAttemptLimitExceeded } from "../utils/otp.utils.js";
 import { sendOTPEmail, sendOTPSMS } from "../services/emailService.js";
 import { ROLES } from "../utils/roles.js";
+import { logger, reportError } from "../utils/observability.js";
+
+function maskContact(value = "") {
+  if (!value) return undefined;
+  const [name, domain] = String(value).split("@");
+  if (!domain) return `${String(value).slice(0, 2)}***`;
+  return `${name.slice(0, 2)}***@${domain}`;
+}
 
 export const register = async (req, res) => {
   try {
@@ -60,8 +68,17 @@ export const register = async (req, res) => {
       } else if (phone) {
         await sendOTPSMS(phone, otpCode);
       }
+      logger.info("Registration OTP dispatched", {
+        channel: email ? "email" : "sms",
+        contact: maskContact(email || phone),
+      });
     } catch (sendError) {
-      console.error("Error sending OTP:", sendError);
+      reportError(sendError, {
+        source: "otp",
+        message: "Registration OTP dispatch failed",
+        channel: email ? "email" : "sms",
+        contact: maskContact(email || phone),
+      });
       // We continue even if sending fails, user can request resend
     }
 
@@ -131,6 +148,12 @@ export const login = async (req, res) => {
 export const requestOTP = async (req, res) => {
   try {
     const { email, phone } = req.body;
+    const contact = email || phone;
+
+    logger.info("OTP request received", {
+      channel: email ? "email" : "sms",
+      contact: maskContact(contact),
+    });
 
     if (!email && !phone) {
       return res.status(400).json({ message: "Email or phone is required" });
@@ -154,6 +177,10 @@ export const requestOTP = async (req, res) => {
 
     // If user doesn't exist, return error (Login flow)
     if (!user) {
+      logger.warn("OTP request user not found", {
+        channel: email ? "email" : "sms",
+        contact: maskContact(contact),
+      });
       return res.status(404).json({ message: "User not found. Please sign up first." });
     }
 
@@ -161,6 +188,10 @@ export const requestOTP = async (req, res) => {
     if (user.loginOtp?.lastSentAt) {
       if (!canResendOTP(user.loginOtp.lastSentAt, 60)) {
         const remainingSeconds = Math.ceil(60 - (new Date() - new Date(user.loginOtp.lastSentAt)) / 1000);
+        logger.warn("OTP request rejected by resend cooldown", {
+          userId: user._id,
+          retryAfter: remainingSeconds,
+        });
         return res.status(429).json({
           message: "Please wait before requesting a new OTP",
           retryAfter: remainingSeconds
@@ -190,8 +221,19 @@ export const requestOTP = async (req, res) => {
       } else if (phone) {
         await sendOTPSMS(phone, otpCode);
       }
+      logger.info("OTP dispatched", {
+        userId: user._id,
+        channel: email ? "email" : "sms",
+        contact: maskContact(contact),
+      });
     } catch (sendError) {
-      console.error("Error sending OTP:", sendError);
+      reportError(sendError, {
+        source: "otp",
+        message: "OTP dispatch failed",
+        userId: user._id,
+        channel: email ? "email" : "sms",
+        contact: maskContact(contact),
+      });
       // Don't fail the request if email/SMS fails in dev mode
       // In production, you might want to fail here
     }

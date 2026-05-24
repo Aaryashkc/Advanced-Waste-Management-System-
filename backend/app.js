@@ -23,7 +23,7 @@ import pricingConfigRoutes from "./routes/pricingConfig.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import billingRoutes from "./routes/billing.route.js";
 import { cleanupExpiredUploads } from "./controllers/upload.controller.js";
-import { metrics, reportError, requestObservability } from "./utils/observability.js";
+import { logger, metrics, reportError, requestObservability } from "./utils/observability.js";
 import { apiResponseMiddleware, sendError, sendSuccess } from "./utils/apiResponse.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,6 +51,11 @@ export function createApp() {
           if (!origin || allowedOrigins.includes(normalizeOrigin(origin))) {
             return callback(null, true);
           }
+          logger.warn("CORS origin rejected", {
+            origin,
+            normalizedOrigin: normalizeOrigin(origin),
+            allowedOrigins,
+          });
           return callback(new Error("Not allowed by CORS"));
         }
       : true,
