@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, CalendarDays, Recycle } from 'lucide-react';
 import { authAPI } from '../../utils/api';
@@ -14,6 +14,7 @@ function CustomerLoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
+  const requestInFlightRef = useRef(false);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -24,10 +25,12 @@ function CustomerLoginPage() {
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleLogin = async () => {
+    if (requestInFlightRef.current || isLoading) return;
     setError('');
     if (!email.trim()) { setError('Please enter your email address'); return; }
     if (!validateEmail(email)) { setError('Please enter a valid email address'); return; }
 
+    requestInFlightRef.current = true;
     setIsLoading(true);
     try {
       await authAPI.requestOTP(email);
@@ -36,6 +39,7 @@ function CustomerLoginPage() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send verification code. Please try again.');
     } finally {
+      requestInFlightRef.current = false;
       setIsLoading(false);
     }
   };
@@ -137,6 +141,7 @@ function CustomerLoginPage() {
 
             {/* Submit */}
             <button
+              type="button"
               onClick={handleLogin}
               disabled={isLoading}
               className="w-full h-13 bg-primary text-white font-semibold text-base rounded-xl

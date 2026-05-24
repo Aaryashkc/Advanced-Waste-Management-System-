@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, CalendarDays, Sprout, Recycle } from 'lucide-react';
 import useAuthStore from '../../stores/useAuthStore';
@@ -14,6 +14,7 @@ function CustomerSignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
   const [locationStatus, setLocationStatus] = useState('idle'); // idle | loading | success | denied | unavailable | error
+  const requestInFlightRef = useRef(false);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -78,8 +79,10 @@ function CustomerSignUpPage() {
   };
 
   const handleSubmit = async () => {
+    if (requestInFlightRef.current || isLoading) return;
     if (!validateForm()) return;
 
+    requestInFlightRef.current = true;
     setIsLoading(true);
     try {
       const result = await signup({
@@ -102,6 +105,7 @@ function CustomerSignUpPage() {
     } catch (err) {
       setErrors({ submit: err.response?.data?.message || 'Sign up failed. Please try again.' });
     } finally {
+      requestInFlightRef.current = false;
       setIsLoading(false);
     }
   };
@@ -311,6 +315,7 @@ function CustomerSignUpPage() {
 
             {/* Submit */}
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={isLoading}
               className="w-full h-13 bg-primary text-white font-semibold text-base rounded-xl

@@ -21,6 +21,7 @@ export const otpRequestRateLimiter = rateLimit({
   windowMs: FIFTEEN_MINUTES,
   max: Number(process.env.OTP_REQUEST_RATE_LIMIT_MAX || 5),
   keyGenerator: contactOrIpKey,
+  skipFailedRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many OTP requests. Please wait before trying again." },

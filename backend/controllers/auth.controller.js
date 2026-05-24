@@ -234,12 +234,17 @@ export const requestOTP = async (req, res) => {
         channel: email ? "email" : "sms",
         contact: maskContact(contact),
       });
-      // Don't fail the request if email/SMS fails in dev mode
-      // In production, you might want to fail here
+      if (process.env.NODE_ENV !== "development") {
+        return res.status(502).json({
+          message: `Failed to send OTP ${email ? "email" : "SMS"}. Please try again later.`,
+        });
+      }
     }
 
     res.status(200).json({
-      message: "OTP sent successfully",
+      message: process.env.NODE_ENV === "development"
+        ? "OTP generated. Email/SMS delivery may be unavailable in development."
+        : "OTP sent successfully",
       // In production, don't send OTP in response. Only for development/testing
       ...(process.env.NODE_ENV === 'development' && { otp: otpCode })
     });

@@ -15,6 +15,7 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
   const [resendTimer, setResendTimer] = useState(60);
   const [resendSuccess, setResendSuccess] = useState(false);
   const inputRefs = useRef([]);
+  const resendInFlightRef = useRef(false);
 
   // Focus first input on open
   useEffect(() => {
@@ -104,7 +105,8 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
   }, []);
 
   const handleResend = async () => {
-    if (!canResend) return;
+    if (!canResend || resendInFlightRef.current) return;
+    resendInFlightRef.current = true;
     setCanResend(false);
     setResendTimer(60);
     setError('');
@@ -116,6 +118,8 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend code.');
       setCanResend(true);
+    } finally {
+      resendInFlightRef.current = false;
     }
   };
 
@@ -192,9 +196,10 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
         {isLoading && <TruckLoader />}
 
         {/* Verify button */}
-        <button
-          onClick={handleVerify}
-          disabled={isLoading || otp.join('').length !== 6}
+          <button
+            type="button"
+            onClick={handleVerify}
+            disabled={isLoading || otp.join('').length !== 6}
           className="w-full h-12 bg-primary text-accent font-['Inter',sans-serif] font-medium text-base rounded-xl
             hover:bg-[#2a3f41] active:scale-[0.98] transition-all
             disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
@@ -208,6 +213,7 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
           Didn't receive the code?{' '}
           {canResend ? (
             <button
+              type="button"
               onClick={handleResend}
               className="font-medium text-primary hover:text-[#296200] underline underline-offset-2 transition-colors"
             >
