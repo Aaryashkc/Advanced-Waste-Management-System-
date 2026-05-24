@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 
 const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 10000);
+const SMTP_FAMILY = Number(process.env.SMTP_FAMILY || 4);
 
 function getMailConfig() {
   const host = process.env.SMTP_HOST;
@@ -24,6 +25,8 @@ const createTransporter = () => {
     host,
     port,
     secure: port === 465,
+    requireTLS: port === 587,
+    family: SMTP_FAMILY,
     connectionTimeout: SMTP_TIMEOUT_MS,
     greetingTimeout: SMTP_TIMEOUT_MS,
     socketTimeout: SMTP_TIMEOUT_MS,
@@ -79,7 +82,13 @@ export const sendOTPEmail = async (email, otpCode) => {
     console.log(`[EMAIL SERVICE] OTP sent successfully to ${email}`);
     return true;
   } catch (error) {
-    console.error('[EMAIL SERVICE] Error sending OTP email:', error);
+    console.error('[EMAIL SERVICE] Error sending OTP email:', {
+      code: error.code,
+      command: error.command,
+      responseCode: error.responseCode,
+      response: error.response,
+      message: error.message,
+    });
     throw new Error('Failed to send OTP email');
   }
 };
