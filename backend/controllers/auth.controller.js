@@ -192,8 +192,9 @@ export const requestOTP = async (req, res) => {
           userId: user._id,
           retryAfter: remainingSeconds,
         });
-        return res.status(429).json({
-          message: "Please wait before requesting a new OTP",
+        return res.status(200).json({
+          message: "A verification code was already sent. Please check your email.",
+          alreadySent: true,
           retryAfter: remainingSeconds
         });
       }
