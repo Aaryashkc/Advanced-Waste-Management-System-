@@ -1,7 +1,4 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  'http://localhost:5001/api';
+import { API_BASE_URL } from './apiConfig.js';
 
 const ERROR_ENDPOINT = `${API_BASE_URL.replace(/\/$/, '')}/errors/frontend`;
 

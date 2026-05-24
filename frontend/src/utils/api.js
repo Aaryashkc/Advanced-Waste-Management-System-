@@ -1,13 +1,8 @@
 import axios from 'axios';
 import { reportFrontendError } from './errorReporting.js';
+import { API_BASE_URL, API_ORIGIN, ML_API_BASE_URL } from './apiConfig.js';
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  'http://localhost:5001/api';
-
-export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
-export const ML_API_BASE_URL = import.meta.env.VITE_ML_API_BASE_URL || API_BASE_URL;
+export { API_BASE_URL, API_ORIGIN, ML_API_BASE_URL };
 
 // Create axios instance
 const api = axios.create({
