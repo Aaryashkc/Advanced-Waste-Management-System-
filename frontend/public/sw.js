@@ -1,4 +1,4 @@
-const CACHE_NAME = 'safabin-shell-v1';
+const CACHE_NAME = 'safabin-shell-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/safabin-icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -23,6 +23,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   if (request.method !== 'GET') return;
+  if (new URL(request.url).pathname.startsWith('/assets/')) return;
 
   event.respondWith(
     fetch(request)
