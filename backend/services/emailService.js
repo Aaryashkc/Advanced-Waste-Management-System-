@@ -2,30 +2,30 @@ import nodemailer from 'nodemailer';
 
 const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 10000);
 const SMTP_FAMILY = Number(process.env.SMTP_FAMILY || 4);
+const SMTP_HOST = 'smtp.one.com';
+const SMTP_PORT = 587;
 
 function getMailConfig() {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
   const from = process.env.FROM_EMAIL || user;
 
-  if (!host || !user || !pass) {
-    throw new Error('SMTP_HOST, SMTP_USER, and SMTP_PASS are required to send OTP email');
+  if (!user || !pass) {
+    throw new Error('SMTP_USER and SMTP_PASS are required to send OTP email');
   }
 
-  return { host, port, user, pass, from };
+  return { user, pass, from };
 }
 
 // Create a transporter object using SMTP transport
 const createTransporter = () => {
-  const { host, port, user, pass } = getMailConfig();
+  const { user, pass } = getMailConfig();
 
   return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    requireTLS: port === 587,
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: false,
+    requireTLS: true,
     family: SMTP_FAMILY,
     connectionTimeout: SMTP_TIMEOUT_MS,
     greetingTimeout: SMTP_TIMEOUT_MS,
