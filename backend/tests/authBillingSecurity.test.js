@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import nodemailer from "nodemailer";
 import test from "node:test";
 
 import { register, requestOTP } from "../controllers/auth.controller.js";
 import { payBill } from "../controllers/billing.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
+import { sendOTPEmail } from "../services/emailService.js";
 import Billing from "../models/Billing.model.js";
 import User from "../models/User.model.js";
 
@@ -82,6 +84,8 @@ test("public registration ignores client-supplied privileged role", async () => 
 test("production OTP request leaves existing OTP untouched when email delivery fails", async () => {
   const envSnapshot = {
     NODE_ENV: process.env.NODE_ENV,
+    BREVO_API_KEY: process.env.BREVO_API_KEY,
+    BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
     SMTP_HOST: process.env.SMTP_HOST,
     SMTP_USER: process.env.SMTP_USER,
     SMTP_PASS: process.env.SMTP_PASS,
@@ -89,6 +93,8 @@ test("production OTP request leaves existing OTP untouched when email delivery f
     EMAIL_PASS: process.env.EMAIL_PASS,
   };
   process.env.NODE_ENV = "production";
+  delete process.env.BREVO_API_KEY;
+  delete process.env.BREVO_SENDER_EMAIL;
   delete process.env.SMTP_HOST;
   delete process.env.SMTP_USER;
   delete process.env.SMTP_PASS;
@@ -130,6 +136,102 @@ test("production OTP request leaves existing OTP untouched when email delivery f
   assert.equal(response.statusCode, 502);
   assert.deepEqual(user.loginOtp, previousLoginOtp);
   assert.equal(user.saveCalls, 0);
+});
+
+test("OTP email is sent through the Brevo transactional email API", async () => {
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME;
+  const originalFetch = globalThis.fetch;
+  let request;
+
+  process.env.BREVO_API_KEY = "test-brevo-key";
+  process.env.BREVO_SENDER_EMAIL = "verified-sender@gmail.com";
+  process.env.BREVO_SENDER_NAME = "Safabin Test";
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return {
+      ok: true,
+      async json() {
+        return { messageId: "test-message-id" };
+      },
+    };
+  };
+
+  try {
+    const sent = await sendOTPEmail("customer@example.com", "123456");
+    assert.equal(sent, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (apiKey === undefined) delete process.env.BREVO_API_KEY;
+    else process.env.BREVO_API_KEY = apiKey;
+    if (senderEmail === undefined) delete process.env.BREVO_SENDER_EMAIL;
+    else process.env.BREVO_SENDER_EMAIL = senderEmail;
+    if (senderName === undefined) delete process.env.BREVO_SENDER_NAME;
+    else process.env.BREVO_SENDER_NAME = senderName;
+  }
+
+  assert.equal(request.url, "https://api.brevo.com/v3/smtp/email");
+  assert.equal(request.options.headers["api-key"], "test-brevo-key");
+  const payload = JSON.parse(request.options.body);
+  assert.deepEqual(payload.sender, {
+    name: "Safabin Test",
+    email: "verified-sender@gmail.com",
+  });
+  assert.deepEqual(payload.to, [{ email: "customer@example.com" }]);
+  assert.match(payload.htmlContent, /123456/);
+});
+
+test("OTP email falls back to SMTP when Brevo is not configured", async () => {
+  const envSnapshot = {
+    BREVO_API_KEY: process.env.BREVO_API_KEY,
+    BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+    FROM_EMAIL: process.env.FROM_EMAIL,
+    SMTP_TIMEOUT_MS: process.env.SMTP_TIMEOUT_MS,
+    SMTP_FAMILY: process.env.SMTP_FAMILY,
+  };
+  let transportOptions;
+  let message;
+
+  delete process.env.BREVO_API_KEY;
+  delete process.env.BREVO_SENDER_EMAIL;
+  process.env.SMTP_HOST = "smtp.example.com";
+  process.env.SMTP_PORT = "587";
+  process.env.SMTP_USER = "dev@example.com";
+  process.env.SMTP_PASS = "smtp-password";
+  process.env.FROM_EMAIL = "dev@example.com";
+  process.env.SMTP_TIMEOUT_MS = "4321";
+  process.env.SMTP_FAMILY = "6";
+  stub(nodemailer, "createTransport", (options) => {
+    transportOptions = options;
+    return {
+      async sendMail(mailOptions) {
+        message = mailOptions;
+      },
+    };
+  });
+
+  try {
+    const sent = await sendOTPEmail("customer@example.com", "654321");
+    assert.equal(sent, true);
+  } finally {
+    for (const [key, value] of Object.entries(envSnapshot)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+
+  assert.equal(transportOptions.host, "smtp.example.com");
+  assert.equal(transportOptions.port, 587);
+  assert.equal(transportOptions.auth.user, "dev@example.com");
+  assert.equal(transportOptions.connectionTimeout, 4321);
+  assert.equal(transportOptions.family, 6);
+  assert.equal(message.to, "customer@example.com");
+  assert.match(message.html, /654321/);
 });
 
 test("auth middleware excludes password hash, OTP, and two-factor secret fields", async () => {

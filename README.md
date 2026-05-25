@@ -256,7 +256,7 @@ Frontend `package.json` scripts:
 - Cloudinary account for image uploads
 - Optional: eSewa merchant/sandbox credentials
 - Optional: OpenRouteService API key
-- Optional: SMTP account for real OTP email
+- Optional: SMTP mailbox for local OTP email and/or Brevo account with a verified sender for hosted OTP email
 
 ### Install Node Dependencies
 
@@ -382,7 +382,7 @@ These packages are declared in the root `package.json` and are used mainly by th
 | `mongoose` | MongoDB object modeling library. Defines schemas, models, indexes, queries, and document updates. |
 | `multer` | Handles multipart form uploads. In this project it receives waste image files before streaming them to Cloudinary. |
 | `node-cron` | Runs scheduled background jobs such as upload cleanup, pickup expiry, ML schedule generation, and monthly billing. |
-| `nodemailer` | Sends OTP and notification emails through SMTP. |
+| `nodemailer` | Sends OTP emails through SMTP when using the local development mail configuration. |
 | `nodemon` | Development server watcher. Restarts the backend when files change. |
 | `socket.io` | Realtime backend server for pickup dispatch, status updates, admin notifications, and driver/customer rooms. |
 | `streamifier` | Converts upload buffers into readable streams, which is useful for streaming Multer memory uploads into Cloudinary. |
@@ -492,13 +492,18 @@ CRON_SECRET=your-cron-secret
 METRICS_SECRET=your-metrics-secret
 
 # OTP email
+# Local development: SMTP is used when Brevo values are empty
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
-FROM_EMAIL=noreply@safabin.com
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
+FROM_EMAIL=your-email@gmail.com
+
+# Production/Render: Brevo API is used when these values are configured
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=
+BREVO_SENDER_NAME=Safabin Nepal
+BREVO_TIMEOUT_MS=10000
 
 # Routes
 ORS_API_KEY=your-openrouteservice-key
@@ -549,13 +554,15 @@ Notes:
 | `CLOUDINARY_API_SECRET` | Yes for uploads | Cloudinary API secret. |
 | `CRON_SECRET` | Recommended | Protects manual cron cleanup endpoint when set. |
 | `METRICS_SECRET` | Optional | Protects the metrics endpoint when set. |
-| `SMTP_HOST` | Yes for email | SMTP server hostname. |
-| `SMTP_PORT` | Yes for email | SMTP server port, commonly `587`. |
-| `SMTP_USER` | Yes for email | SMTP username. |
-| `SMTP_PASS` | Yes for email | SMTP password or app password. |
-| `FROM_EMAIL` | Yes for email | Sender address shown on OTP/support emails. |
-| `EMAIL_USER` | Legacy/optional | Older email helper credential key. Prefer SMTP keys where possible. |
-| `EMAIL_PASS` | Legacy/optional | Older email helper password key. Prefer SMTP keys where possible. |
+| `SMTP_HOST` | Yes for local SMTP email | Development SMTP server hostname. Ignored when Brevo values are configured. |
+| `SMTP_PORT` | No | Development SMTP port. Defaults to `587`. |
+| `SMTP_USER` | Yes for local SMTP email | Development SMTP username. |
+| `SMTP_PASS` | Yes for local SMTP email | Development SMTP password or app password. |
+| `FROM_EMAIL` | No | SMTP sender address. Defaults to `SMTP_USER`. |
+| `BREVO_API_KEY` | Yes for hosted email | Brevo transactional email API key. When configured with `BREVO_SENDER_EMAIL`, Brevo is used instead of SMTP. |
+| `BREVO_SENDER_EMAIL` | Yes for hosted email | Email address verified as a sender in Brevo, including a verified Gmail address for testing. |
+| `BREVO_SENDER_NAME` | No | Sender name shown on OTP emails. Defaults to `Safabin Nepal`. |
+| `BREVO_TIMEOUT_MS` | No | Timeout for Brevo API email requests. Defaults to `10000`. |
 | `ORS_API_KEY` | Optional | OpenRouteService key for road distance routing. Without it, pickup estimate can fall back to haversine distance. |
 | `ESEWA_PRODUCT_CODE` | Yes for eSewa | eSewa merchant/product code. |
 | `ESEWA_SECRET_KEY` | Yes for eSewa | Secret used to sign and verify eSewa payloads. |
@@ -638,7 +645,7 @@ Use the project as three related apps that run together:
 Recommended development flow:
 
 1. Pull the latest code and install dependencies with `npm install` at the root and inside `frontend/`.
-2. Copy `.env.example` to `.env`, then update MongoDB, port, Cloudinary, eSewa, SMTP, and ML values for your machine.
+2. Copy `.env.example` to `.env`, then update MongoDB, port, Cloudinary, eSewa, email-provider, and ML values for your machine.
 3. Run backend, frontend, and ML service in separate terminals.
 4. Make backend API changes together with focused tests under `backend/tests/` or the related `backend/domains/**/tests/` folder when present.
 5. Make frontend changes through stores and API helpers instead of calling `fetch` directly from page components.
@@ -857,7 +864,7 @@ What it does:
 node --test
 ```
 
-The backend tests are intentionally lightweight and mostly stub external dependencies. They do not need a real MongoDB, Cloudinary account, eSewa account, SMTP server, OpenRouteService key, or ML service for the covered cases.
+The backend tests are intentionally lightweight and mostly stub external dependencies. They do not need a real MongoDB, Cloudinary account, eSewa account, SMTP mailbox, Brevo API key, OpenRouteService key, or ML service for the covered cases.
 
 #### Frontend job
 
@@ -2496,7 +2503,7 @@ Use these carefully against the intended MongoDB database.
 - Use a strong `JWT_SECRET`.
 - Set `NODE_ENV=production`.
 - Restrict CORS with `FRONTEND_URL`.
-- Use real SMTP or SMS provider.
+- Use a real transactional email or SMS provider.
 - Use production eSewa credentials/base URL.
 - Set `BACKEND_URL` to public backend URL for callbacks.
 - Set Cloudinary credentials.
