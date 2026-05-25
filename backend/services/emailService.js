@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 
 const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 10000);
 const SMTP_FAMILY = Number(process.env.SMTP_FAMILY || 4);
-const SMTP_HOST = 'smtp.one.com';
+const SMTP_HOST = 'send.one.com';
 const SMTP_PORT = 587;
 
 function getMailConfig() {
