@@ -39,3 +39,8 @@ env/
 CUSTOMER_PICKUP_FIX_LIST.txt
 PRODUCTION_GRADE_PROJECT_REVIEW.txt
 OPTIMIZATION_RECOMMENDATIONS.txt
+ALGORITHMS_USED_IN_APP.md
+
+# Local database seed scripts`nscripts/
+scripts/seed.js
+scripts/seedAreas.js
