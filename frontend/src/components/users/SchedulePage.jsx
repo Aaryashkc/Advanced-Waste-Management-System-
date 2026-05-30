@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
 import TruckLoader from "../shared/TruckLoader";
 import ScheduleBg from "../../assets/schedule_truck.jpg";
@@ -144,63 +144,70 @@ function areaType(item) {
 
 /* ── Compact row for the list view ── */
 
-function ScheduleRow({ item, isSelected, onClick, index }) {
+function ScheduleRow({ item, index }) {
   const action = ACTION_CONFIG[item.action] || ACTION_CONFIG.skip;
   const typeConf = TYPE_CONFIG[areaType(item)] || TYPE_CONFIG.residential;
   const TypeIcon = typeConf.icon;
   const level = WASTE_LEVEL(item.predictedWasteKg || 0);
-  const isSkipped = item.action === "skip";
 
   return (
     <FadeIn delay={index * 40}>
-      <button
-        onClick={onClick}
-        className={`group w-full text-left px-5 py-4 flex items-center gap-4 rounded-2xl border transition-all duration-300 mb-2 ${
-          isSelected
-            ? "bg-white/15 border-white/25 shadow-lg shadow-white/5"
-            : isSkipped
-              ? "opacity-50 hover:opacity-80 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/15"
-              : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-white/5"
-        }`}
-      >
-        {/* Status dot */}
-        <span
-          className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${action.color} shadow-lg`}
-        />
+      <article className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 transition-all duration-300 sm:px-5">
+        <div className="flex items-start gap-3">
+          <div
+            className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center ${typeConf.bg} border border-white/10`}
+          >
+            <TypeIcon className={`w-5 h-5 ${typeConf.color}`} />
+          </div>
 
-        {/* Area type icon */}
-        <div
-          className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center ${typeConf.bg} border border-white/10`}
-        >
-          <TypeIcon className={`w-5 h-5 ${typeConf.color}`} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white font-['Outfit',sans-serif]">
+                  {areaName(item)}
+                </p>
+                <p className="mt-0.5 text-xs capitalize text-white/40 font-['Outfit',sans-serif]">
+                  {areaType(item)}
+                </p>
+              </div>
+
+              <span
+                className={`flex-shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${action.bg} ${action.text} ${action.border}`}
+              >
+                {action.label}
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                <p className="text-white/35">Waste</p>
+                <p className="mt-0.5 font-semibold text-white">
+                  {(item.predictedWasteKg || 0).toLocaleString()} <span className="text-white/35">kg</span>
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                <p className="text-white/35">Level</p>
+                <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-white">
+                  <span className={`w-1.5 h-1.5 rounded-full ${level.dot}`} />
+                  {level.label}
+                </p>
+              </div>
+              <div className="col-span-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 sm:col-span-1">
+                <p className="text-white/35">Vehicle</p>
+                <p className="mt-0.5 truncate font-semibold text-white">
+                  {item.assignedTrucks?.[0]?.licensePlate || "Not assigned"}
+                </p>
+              </div>
+            </div>
+
+            {item.recommendation && (
+              <p className="mt-3 text-xs leading-relaxed text-white/45">
+                {item.recommendation}
+              </p>
+            )}
+          </div>
         </div>
-
-        {/* Main info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate font-['Outfit',sans-serif]">
-            {areaName(item)}
-          </p>
-          <p className="text-xs text-white/40 mt-0.5 font-['Outfit',sans-serif] capitalize">
-            {areaType(item)}
-          </p>
-        </div>
-
-        {/* Waste amount */}
-        <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-          <span className={`w-1.5 h-1.5 rounded-full ${level.dot}`} />
-          <span className="text-sm font-semibold text-white tabular-nums">
-            {item.predictedWasteKg?.toLocaleString()}
-          </span>
-          <span className="text-xs text-white/35">kg</span>
-        </div>
-
-        {/* Action badge */}
-        <span
-          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg flex-shrink-0 border ${action.bg} ${action.text} ${action.border}`}
-        >
-          {action.label}
-        </span>
-      </button>
+      </article>
     </FadeIn>
   );
 }
@@ -345,7 +352,6 @@ function SchedulePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedItem, setSelectedItem] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const { publicSchedule, loading, error, fetchPublicSchedule } =
@@ -356,15 +362,6 @@ function SchedulePage() {
   }, [fetchPublicSchedule]);
 
   const schedule = publicSchedule;
-
-  // Close panel on Escape
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") setSelectedItem(null);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
 
   const allAreas = useMemo(
     () => resolveAreas(schedule, publicSchedule),
@@ -417,12 +414,6 @@ function SchedulePage() {
   ).length;
   const skippedCount = allAreas.filter((d) => d.action === "skip").length;
   const totalAreas = allAreas.length;
-
-  const handleSelectItem = useCallback((item) => {
-    setSelectedItem((prev) =>
-      areaName(prev) === areaName(item) ? null : item,
-    );
-  }, []);
 
   const handleSearchChange = (nextQuery) => {
     setSearchQuery(nextQuery);
@@ -774,13 +765,11 @@ function SchedulePage() {
         {/* ── Main content: List + Detail panel ── */}
         <section className="px-6 md:px-16 lg:px-24 pb-20">
           <div
-            className="max-w-7xl mx-auto flex gap-6"
+            className="max-w-5xl mx-auto"
             style={{ minHeight: "calc(100vh - 500px)" }}
           >
             {/* List */}
-            <div
-              className={`flex-1 min-w-0 ${selectedItem ? "hidden lg:block" : ""}`}
-            >
+            <div className="min-w-0">
               {/* Results count */}
               <div className="py-3 text-xs text-white/40 font-medium">
                 {filteredAreas.length === totalAreas
@@ -815,11 +804,6 @@ function SchedulePage() {
                       key={areaName(item)}
                       item={item}
                       index={index}
-                      isSelected={
-                        selectedItem &&
-                        areaName(selectedItem) === areaName(item)
-                      }
-                      onClick={() => handleSelectItem(item)}
                     />
                   ))}
                   {filteredAreas.length > 10 && (
@@ -848,22 +832,6 @@ function SchedulePage() {
                 </div>
               )}
             </div>
-
-            {/* Desktop detail panel */}
-            {selectedItem && (
-              <div className="hidden lg:block w-[380px] flex-shrink-0 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-                <DetailPanel
-                  item={selectedItem}
-                  onClose={() => setSelectedItem(null)}
-                />
-              </div>
-            )}
-
-            {/* Mobile detail modal */}
-            <MobileDetailModal
-              item={selectedItem}
-              onClose={() => setSelectedItem(null)}
-            />
           </div>
         </section>
       </div>

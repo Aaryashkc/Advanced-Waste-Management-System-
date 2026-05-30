@@ -277,27 +277,27 @@ export default function BillingOverview() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-primary tracking-tight">Billing Management</h2>
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-primary tracking-tight sm:text-2xl">Billing Management</h2>
           <p className="text-sm text-primary/50 mt-1">
             {isSuperAdmin
               ? "Review calendar-month bills across the platform, manage fees, and track accumulated dues."
               : "Review calendar-month bills and accumulated dues for your organization."}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 sm:gap-3">
           <button
             onClick={handleGenerateBills}
             disabled={generatingBills}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition disabled:opacity-50"
           >
             <Receipt size={16} />
             {generatingBills ? "Backfilling..." : "Backfill Monthly Bills"}
           </button>
           <button
             onClick={() => setShowConfig(!showConfig)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
               showConfig
                 ? "bg-primary text-white"
                 : "bg-primary/10 text-primary hover:bg-primary/15"
@@ -419,47 +419,47 @@ export default function BillingOverview() {
       )}
 
       {/* ── Role Tabs: Customer Bills, Admin Bills, Cash Confirmations ── */}
-      <div className="grid grid-cols-1 gap-1 bg-white rounded-2xl border border-primary/10 p-1.5 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-1 bg-white rounded-2xl border border-primary/10 p-1.5">
         <button
           onClick={() => {
             switchRoleTab("customer_admin");
           }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+          className={`min-w-0 flex items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-semibold transition-all sm:gap-2 sm:text-sm ${
             roleTab === "customer_admin"
               ? "bg-primary text-white shadow-md"
               : "text-primary/50 hover:text-primary/70 hover:bg-primary/5"
           }`}
         >
-          <Users size={16} />
-          Customer Bills
+          <Users size={15} className="shrink-0" />
+          <span className="truncate"><span className="sm:hidden">Customer</span><span className="hidden sm:inline">Customer Bills</span></span>
         </button>
         <button
           onClick={() => {
             switchRoleTab("admin");
           }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+          className={`min-w-0 flex items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-semibold transition-all sm:gap-2 sm:text-sm ${
             roleTab === "admin"
               ? "bg-primary text-white shadow-md"
               : "text-primary/50 hover:text-primary/70 hover:bg-primary/5"
           }`}
         >
-          <UserCog size={16} />
-          Admin Bills
+          <UserCog size={15} className="shrink-0" />
+          <span className="truncate"><span className="sm:hidden">Admin</span><span className="hidden sm:inline">Admin Bills</span></span>
         </button>
         <button
           onClick={() => {
             switchRoleTab("confirm");
           }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+          className={`min-w-0 flex items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-semibold transition-all sm:gap-2 sm:text-sm ${
             roleTab === "confirm"
               ? "bg-primary text-white shadow-md"
               : "text-primary/50 hover:text-primary/70 hover:bg-primary/5"
           }`}
         >
-          <CheckCircle2 size={16} />
-          Confirm Payment
+          <CheckCircle2 size={15} className="shrink-0" />
+          <span className="truncate"><span className="sm:hidden">Confirm</span><span className="hidden sm:inline">Confirm Payment</span></span>
           {(summary.cashPending || 0) > 0 && roleTab !== "confirm" && (
-            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+            <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 sm:px-2">
               {summary.cashPending}
             </span>
           )}
@@ -467,7 +467,7 @@ export default function BillingOverview() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-7">
         <StatCard icon={Receipt} label={`${roleLabel} Bills`} value={summary.totalBills || 0} color="text-primary" bg="bg-primary/8" />
         <StatCard icon={CheckCircle2} label="Paid" value={summary.paid || 0} color="text-green-600" bg="bg-green-100" />
         <StatCard icon={Clock} label="Unpaid" value={summary.unpaid || 0} color="text-amber-600" bg="bg-amber-100" />
@@ -478,15 +478,15 @@ export default function BillingOverview() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl border border-primary/10 p-5">
-        <div className="flex flex-wrap items-end gap-4">
-          <div>
+      <div className="bg-white rounded-2xl border border-primary/10 p-4 sm:p-5">
+        <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap sm:gap-4">
+          <div className="min-w-0">
             <label className="text-xs font-medium text-primary/50 uppercase tracking-wider block mb-1">Status</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               disabled={roleTab === "confirm"}
-              className="px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-auto"
             >
               <option value="">All</option>
               <option value="UNPAID">Unpaid</option>
@@ -497,12 +497,12 @@ export default function BillingOverview() {
             </select>
           </div>
           {isSuperAdmin && (
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-medium text-primary/50 uppercase tracking-wider block mb-1">Organization</label>
               <select
                 value={filters.orgId}
                 onChange={(e) => setFilters({ ...filters, orgId: e.target.value })}
-                className="px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-auto"
               >
                 <option value="">All organizations</option>
                 {organizations.map((org) => (
@@ -511,12 +511,12 @@ export default function BillingOverview() {
               </select>
             </div>
           )}
-          <div>
+          <div className="min-w-0">
             <label className="text-xs font-medium text-primary/50 uppercase tracking-wider block mb-1">Month</label>
             <select
               value={filters.month}
               onChange={(e) => setFilters({ ...filters, month: e.target.value })}
-              className="px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-auto"
             >
               <option value="">All</option>
               {Array.from({ length: 12 }, (_, i) => (
@@ -526,12 +526,12 @@ export default function BillingOverview() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="text-xs font-medium text-primary/50 uppercase tracking-wider block mb-1">Year</label>
             <select
               value={filters.year}
               onChange={(e) => setFilters({ ...filters, year: e.target.value })}
-              className="px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full px-3 py-2 rounded-lg border border-primary/15 text-sm text-primary bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-auto"
             >
               <option value="">All</option>
               {Array.from({ length: 5 }, (_, i) => currentYear - 2 + i).map((y) => (
@@ -541,7 +541,7 @@ export default function BillingOverview() {
           </div>
           <button
             onClick={applyFilters}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-semibold hover:bg-primary/15 transition"
+            className="col-span-2 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-semibold hover:bg-primary/15 transition sm:col-span-1"
           >
             <Search size={16} />
             Filter
@@ -579,7 +579,7 @@ export default function BillingOverview() {
 
                 return (
                   <div key={accountId}>
-                    <div className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(240px,1fr)_130px_150px_170px_120px] lg:items-center">
+                    <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(240px,1fr)_130px_150px_170px_120px] lg:items-center">
                       <div className="min-w-0">
                         <p className="font-semibold text-primary">{account.customer?.name || "Unknown account"}</p>
                         <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-primary/45">
@@ -609,7 +609,7 @@ export default function BillingOverview() {
                       </div>
                       <button
                         onClick={() => toggleAccountDetails(accountId)}
-                        className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary/8 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/12 transition"
+                        className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary/8 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/12 transition sm:w-auto"
                       >
                         Details
                         {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -617,14 +617,72 @@ export default function BillingOverview() {
                     </div>
 
                     {isOpen && (
-                      <div className="border-t border-primary/8 bg-primary/[0.025] px-5 py-4">
+                      <div className="border-t border-primary/8 bg-primary/[0.025] px-4 py-4 sm:px-5">
                         {isLoadingDetails ? (
                           <div className="flex items-center gap-2 py-5 text-sm font-medium text-primary/45">
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
                             Loading bill history
                           </div>
                         ) : details?.bills?.length ? (
-                          <div className="overflow-x-auto rounded-xl border border-primary/10 bg-white">
+                          <>
+                          <div className="space-y-3 sm:hidden">
+                            {details.bills.map((bill) => {
+                              const detailBadge = STATUS_BADGE[bill.status] || STATUS_BADGE.UNPAID;
+                              return (
+                                <div key={bill._id} className="rounded-xl border border-primary/10 bg-white p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-xs font-semibold uppercase text-primary/35">Period</p>
+                                      <p className="mt-1 font-bold text-primary">{formatPeriod(bill.billingMonth, bill.billingYear)}</p>
+                                    </div>
+                                    <span className={`inline-flex shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${detailBadge.bg} ${detailBadge.text} border ${detailBadge.border}`}>
+                                      {bill.status}
+                                    </span>
+                                  </div>
+                                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                      <p className="text-[10px] font-semibold uppercase text-primary/35">Amount</p>
+                                      <p className="font-bold text-primary">NPR {bill.amount.toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] font-semibold uppercase text-primary/35">Due</p>
+                                      <p className="font-medium text-primary/60">{new Date(bill.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <p className="text-[10px] font-semibold uppercase text-primary/35">Paid</p>
+                                      <p className="font-medium text-primary/60">
+                                        {bill.paidAt ? new Date(bill.paidAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-"}
+                                        {bill.paymentMethod && <span className="ml-1 text-xs text-primary/30">({bill.paymentMethod})</span>}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {(bill.status === "CASH_PENDING" || bill.status === "UNPAID" || bill.status === "OVERDUE") && (
+                                    <div className="mt-4">
+                                      {bill.status === "CASH_PENDING" ? (
+                                        <button
+                                          onClick={() => handleConfirmCash(bill._id)}
+                                          disabled={confirmingId === bill._id}
+                                          className="inline-flex w-full items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200/60 hover:bg-blue-100 transition disabled:opacity-50"
+                                        >
+                                          <CheckCircle2 size={12} />
+                                          {confirmingId === bill._id ? "Confirming..." : "Confirm Payment"}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleWaive(bill._id)}
+                                          className="inline-flex w-full items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200/60 hover:bg-violet-100 transition"
+                                        >
+                                          <Ban size={12} />
+                                          Waive Bill
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="hidden overflow-x-auto rounded-xl border border-primary/10 bg-white sm:block">
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="bg-primary/5 border-b border-primary/10">
@@ -679,6 +737,7 @@ export default function BillingOverview() {
                               </tbody>
                             </table>
                           </div>
+                          </>
                         ) : (
                           <p className="py-5 text-sm text-primary/40">No billing history found for this account.</p>
                         )}
