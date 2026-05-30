@@ -84,7 +84,7 @@ const Topbar = ({ onMenuToggle }) => {
         <div className="flex items-center gap-3">
           {hasBillingAlert && (
             <button
-              onClick={() => navigate("/billing")}
+              onClick={() => navigate("/admin-dashboard/my-billing")}
               className={`hidden sm:inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
                 overdueBills.length > 0
                   ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
@@ -103,7 +103,7 @@ const Topbar = ({ onMenuToggle }) => {
 
           {hasBillingAlert && (
             <button
-              onClick={() => navigate("/billing")}
+              onClick={() => navigate("/admin-dashboard/my-billing")}
               className={`relative p-2 rounded-lg transition-colors sm:hidden ${
                 overdueBills.length > 0
                   ? "bg-red-50 text-red-700 hover:bg-red-100"

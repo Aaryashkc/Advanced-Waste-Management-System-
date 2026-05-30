@@ -33,6 +33,7 @@ const DriverMLAssignments = lazy(() => import("../components/ml/DriverMLAssignme
 const Vehicles = lazy(() => import("../pages/Vehicles"));
 const Drivers = lazy(() => import("../pages/Drivers"));
 const Organizations = lazy(() => import("../pages/Organizations"));
+const OrganizationBankManagement = lazy(() => import("../pages/OrganizationBankManagement"));
 const OrgDetail = lazy(() => import("../pages/OrgDetail"));
 const DriverDetail = lazy(() => import("../pages/DriverDetail"));
 const Admins = lazy(() => import("../pages/Admins"));
@@ -72,14 +73,12 @@ const AdminRedirect = () => {
 };
 
 const DashboardBillingRoute = () => {
-  const { user } = useAuthStore();
-  if (user?.role === "super_admin") return <BillingOverview />;
-  return <AdminBilling />;
+  return <BillingOverview />;
 };
 
 const CustomerBillingRoute = () => {
   const { user } = useAuthStore();
-  if (user?.role === "admin") return <Navigate to="/admin-dashboard/billing" replace />;
+  if (user?.role === "admin") return <Navigate to="/admin-dashboard/my-billing" replace />;
   return (
     <ProtectedRoute allowedRoles={['customer_admin']}>
       <BillingPage />
@@ -254,6 +253,11 @@ const AppRoutes = () => {
               <OrgDetail />
             </ProtectedRoute>
           } />
+          <Route path="organization-banks" element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <OrganizationBankManagement />
+            </ProtectedRoute>
+          } />
           <Route path="my-organization" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <OrgDetail myOrganization />
@@ -270,9 +274,14 @@ const AppRoutes = () => {
           <Route path="history" element={<History />} />
           <Route path="pricing" element={<PricingConfig />} />
           <Route path="billing" element={<DashboardBillingRoute />} />
+          <Route path="my-billing" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminBilling />
+            </ProtectedRoute>
+          } />
           <Route path="contact" element={<AdminContact />} />
           <Route path="users" element={
-            <ProtectedRoute allowedRoles={['super_admin']}>
+            <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
               <Users />
             </ProtectedRoute>
           } />

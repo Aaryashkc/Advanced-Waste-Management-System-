@@ -3,6 +3,7 @@ import Billing from "../models/Billing.model.js";
 import BillingConfig from "../models/BillingConfig.model.js";
 import User from "../models/User.model.js";
 import Area from "../models/Area.model.js";
+import { backfillUnassignedUsersForOrg } from "../services/userOrgResolver.js";
 import {
   buildEsewaBillingPayload,
   decodeAndVerifyCallback,
@@ -18,6 +19,8 @@ const DEFAULT_ADMIN_FEE = 1000;
 const OVERVIEW_BACKFILL_TTL_MS = 60 * 1000;
 const overviewBackfillCache = new Map();
 const OPEN_BILL_STATUSES = ["UNPAID", "OVERDUE", "CASH_PENDING"];
+const BILL_STATUSES = [...OPEN_BILL_STATUSES, "PAID", "WAIVED"];
+const BILLABLE_ROLES = ["customer_admin", "admin"];
 
 function periodLabel(month, year) {
   const d = new Date(year, month - 1);
@@ -259,22 +262,22 @@ async function buildAdminBillingFilter(req, { forceStatus, includeStatus = true 
       throw error;
     }
 
-    const orgObjectId = new mongoose.Types.ObjectId(req.user.orgId);
-    const orgUserIds = await User.find({ orgId: req.user.orgId, role: { $in: ["customer_admin", "admin"] } })
+    const orgUserIds = await User.find({ orgId: req.user.orgId, role: "customer_admin" })
       .select("_id")
       .lean();
 
-    filter.$or = [
-      { orgId: orgObjectId },
-      { customerId: { $in: orgUserIds.map((u) => u._id) } },
-    ];
+    filter.customerId = { $in: orgUserIds.map((u) => u._id) };
   }
 
   const requestedStatus = forceStatus || (includeStatus ? status : null);
-  if (requestedStatus) filter.status = requestedStatus;
-  if (month) filter.billingMonth = parseInt(month);
-  if (year) filter.billingYear = parseInt(year);
-  if (billedRole) filter.billedRole = billedRole;
+  if (requestedStatus && BILL_STATUSES.includes(requestedStatus)) filter.status = requestedStatus;
+  if (month && Number.isInteger(Number(month))) filter.billingMonth = parseInt(month, 10);
+  if (year && Number.isInteger(Number(year))) filter.billingYear = parseInt(year, 10);
+  if (isSuperAdmin) {
+    if (billedRole && BILLABLE_ROLES.includes(billedRole)) filter.billedRole = billedRole;
+  } else {
+    filter.billedRole = "customer_admin";
+  }
 
   return filter;
 }
@@ -563,6 +566,12 @@ export const getBillingOverview = async (req, res) => {
   try {
     const pagination = getPagination(req.query, { defaultLimit: 10 });
     const { page, limit } = pagination;
+    if (req.user.role === "admin") {
+      await backfillUnassignedUsersForOrg(req.user.orgId);
+      await ensureOverviewBillsFresh(req.user.orgId);
+    } else {
+      await ensureOverviewBillsFresh(req.query.orgId || null);
+    }
     const filter = await buildAdminBillingFilter(req);
 
     await markOverdueBills(filter);
@@ -596,7 +605,7 @@ export const getBillingOverview = async (req, res) => {
       totalRevenue: 0, totalOutstanding: 0,
     };
 
-    const [monthlyRevenue, roleRevenue] = await Promise.all([
+    const [monthlyRevenue, roleRevenue, paymentMethodRevenueRows] = await Promise.all([
       Billing.aggregate([
         { $match: { ...filter, status: "PAID" } },
         {
@@ -652,7 +661,34 @@ export const getBillingOverview = async (req, res) => {
           },
         },
       ]),
+      Billing.aggregate([
+        { $match: { ...filter, status: "PAID" } },
+        {
+          $group: {
+            _id: "$paymentMethod",
+            revenue: { $sum: "$amount" },
+            paidBills: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            method: "$_id",
+            revenue: { $round: ["$revenue", 0] },
+            paidBills: 1,
+          },
+        },
+      ]),
     ]);
+    const paymentMethodRevenue = paymentMethodRevenueRows.reduce(
+      (acc, row) => {
+        const method = row.method === "esewa" ? "online" : "cash";
+        acc[method] += row.revenue || 0;
+        return acc;
+      },
+      { cash: 0, online: 0 }
+    );
+    paymentMethodRevenue.total = paymentMethodRevenue.cash + paymentMethodRevenue.online;
 
     // Defaulters — remove any status filter and force open billing statuses.
     const accountResult = await Billing.aggregate([
@@ -725,6 +761,7 @@ export const getBillingOverview = async (req, res) => {
         ...summary,
         monthlyRevenue,
         roleRevenue,
+        paymentMethodRevenue,
       },
       defaulters: [],
       pagination: {
@@ -753,7 +790,15 @@ export const getBillingAccountDetails = async (req, res) => {
     }
 
     const filter = await buildAdminBillingFilter(req, { includeStatus: false });
-    filter.customerId = new mongoose.Types.ObjectId(customerId);
+    const customerObjectId = new mongoose.Types.ObjectId(customerId);
+    if (req.user.role === "admin") {
+      const scopedCustomerIds = filter.customerId?.$in || [];
+      const isScopedCustomer = scopedCustomerIds.some((id) => String(id) === String(customerObjectId));
+      if (!isScopedCustomer) {
+        return res.status(403).json({ message: "You can only view billing details for users in your organization" });
+      }
+    }
+    filter.customerId = customerObjectId;
 
     await markOverdueBills(filter);
 
@@ -820,14 +865,14 @@ export const waiveBill = async (req, res) => {
       if (!req.user.orgId) {
         return res.status(403).json({ message: "No organization assigned to your account" });
       }
-      // Allow waiving if bill belongs to org OR if the billed user belongs to admin's org
-      const billBelongsToOrg = bill.orgId && String(bill.orgId) === String(req.user.orgId);
-      let userBelongsToOrg = false;
-      if (!billBelongsToOrg) {
-        const billedUser = await User.findById(bill.customerId).select("orgId").lean();
-        userBelongsToOrg = billedUser && String(billedUser.orgId) === String(req.user.orgId);
+      if (bill.billedRole === "admin") {
+        return res.status(403).json({ message: "Only super admins can manage admin bills" });
       }
-      if (!billBelongsToOrg && !userBelongsToOrg) {
+      const billedUser = await User.findById(bill.customerId).select("orgId role").lean();
+      const userBelongsToOrg =
+        billedUser?.role === "customer_admin" &&
+        String(billedUser.orgId || "") === String(req.user.orgId);
+      if (!userBelongsToOrg) {
         return res.status(403).json({ message: "You can only manage bills in your organization" });
       }
     }
@@ -865,14 +910,15 @@ export const confirmCashPayment = async (req, res) => {
       if (!req.user.orgId) {
         return res.status(403).json({ message: "No organization assigned to your account" });
       }
-
-      const billBelongsToOrg = bill.orgId && String(bill.orgId) === String(req.user.orgId);
-      let userBelongsToOrg = false;
-      if (!billBelongsToOrg) {
-        const billedUser = await User.findById(bill.customerId).select("orgId").lean();
-        userBelongsToOrg = billedUser && String(billedUser.orgId) === String(req.user.orgId);
+      if (bill.billedRole === "admin") {
+        return res.status(403).json({ message: "Only super admins can confirm admin bill payments" });
       }
-      if (!billBelongsToOrg && !userBelongsToOrg) {
+
+      const billedUser = await User.findById(bill.customerId).select("orgId role").lean();
+      const userBelongsToOrg =
+        billedUser?.role === "customer_admin" &&
+        String(billedUser.orgId || "") === String(req.user.orgId);
+      if (!userBelongsToOrg) {
         return res.status(403).json({ message: "You can only confirm cash payments in your organization" });
       }
     }

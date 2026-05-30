@@ -5,6 +5,7 @@ import { generateOTP, hashOTP, verifyOTP as verifyOTPHash, isOTPExpired, getOTPE
 import { sendOTPEmail, sendOTPSMS } from "../services/emailService.js";
 import { ROLES } from "../utils/roles.js";
 import { logger, reportError } from "../utils/observability.js";
+import { resolveOrgIdForUserLocation } from "../services/userOrgResolver.js";
 
 function maskContact(value = "") {
   if (!value) return undefined;
@@ -25,7 +26,7 @@ async function dispatchOTP({ email, phone, otpCode }) {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, phone, address } = req.body;
+    const { name, email, password, phone, address, location } = req.body;
 
     if (!name || !email || !phone) {
       return res.status(400).json({ message: "Name, email, and phone are required" });
@@ -54,12 +55,16 @@ export const register = async (req, res) => {
     const hashedOTP = hashOTP(otpCode);
     const expiresAt = getOTPExpiration();
 
+    const resolvedOrgId = await resolveOrgIdForUserLocation({ address, location });
+
     const user = new User({
       name,
       email: email.toLowerCase(),
       passwordHash: hashedPassword,
       phone,
       address,
+      orgId: resolvedOrgId,
+      location: location || undefined,
       role: ROLES.CUSTOMER_ADMIN,
       loginOtp: {
         hash: hashedOTP,

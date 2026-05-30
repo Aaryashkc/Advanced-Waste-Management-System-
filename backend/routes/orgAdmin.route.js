@@ -25,6 +25,7 @@ import {
 } from "../controllers/orgAdmin.controller.js";
 import { getAllDrivers } from "../controllers/driver.controller.js";
 import { getDriverDetail } from "../controllers/superAdmin.controller.js";
+import { getAllUsers, getUserById, updateUser } from "../controllers/userManagement.controller.js";
 
 const router = express.Router();
 
@@ -61,6 +62,11 @@ router.get("/deletion-requests", getMyDeletionRequests);
 
 // Admin Analytics
 router.get("/analytics", getAdminAnalytics);
+
+// User management (org-scoped for organization admins)
+router.get("/users", getAllUsers);
+router.get("/users/:userId", getUserById);
+router.put("/users/:userId", updateUser);
 
 export default router;
 

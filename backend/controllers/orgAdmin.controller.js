@@ -933,6 +933,7 @@ export const getAdminAnalytics = async (req, res) => {
         statusDistribution: pickupAnalytics.statusDistribution,
         categoryDistribution: pickupAnalytics.categoryDistribution,
         levelDistribution: pickupAnalytics.levelDistribution,
+        paymentMethodRevenue: pickupAnalytics.paymentMethodRevenue,
         dailyTrend: pickupAnalytics.dailyTrend,
         monthlyRevenue: pickupAnalytics.monthlyRevenue,
         hourlyDistribution: pickupAnalytics.hourlyDistribution,

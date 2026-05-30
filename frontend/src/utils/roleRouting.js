@@ -15,6 +15,7 @@ export const ROLE_ROUTES = {
   super_admin: [
     { path: '/admin-dashboard', label: 'Dashboard' },
     { path: '/admin-dashboard/organizations', label: 'Organizations' },
+    { path: '/admin-dashboard/organization-banks', label: 'Organization Bank Management' },
     { path: '/admin-dashboard/vehicles', label: 'Vehicles' },
     { path: '/admin-dashboard/drivers', label: 'Drivers' },
     { path: '/admin-dashboard/reports', label: 'Reports' },
@@ -22,9 +23,11 @@ export const ROLE_ROUTES = {
   admin: [
     { path: '/admin-dashboard', label: 'Dashboard' },
     { path: '/admin-dashboard/my-organization', label: 'My Organization' },
+    { path: '/admin-dashboard/users', label: 'Users' },
+    { path: '/admin-dashboard/billing', label: 'Billing Management' },
+    { path: '/admin-dashboard/my-billing', label: 'My Billing' },
     { path: '/admin-dashboard/vehicles', label: 'Vehicles' },
     { path: '/admin-dashboard/drivers', label: 'Drivers' },
-    { path: '/admin-dashboard/billing', label: 'My Billing' },
     { path: '/admin-dashboard/contact', label: 'Contact' },
   ],
   customer_admin: [

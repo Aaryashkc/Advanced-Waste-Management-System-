@@ -1,7 +1,7 @@
 import React from "react";
 import { CircleHelp } from "lucide-react";
 
-const StatsCard = ({ title, value, label, icon, iconBg, valueColor, hint }) => {
+const StatsCard = ({ title, value, label, icon, iconBg, valueColor, hint, action }) => {
   return (
     <div className="dash-interactive-card group bg-[var(--dash-card)] rounded-2xl border p-5 shadow-sm shadow-primary/5">
       <div className="flex items-start gap-4">
@@ -32,6 +32,15 @@ const StatsCard = ({ title, value, label, icon, iconBg, valueColor, hint }) => {
             {value}
           </h3>
           {label && <p className="mt-1 text-xs text-primary/50">{label}</p>}
+          {action && (
+            <button
+              type="button"
+              onClick={action}
+              className="mt-3 inline-flex min-h-8 items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-primary/10 transition hover:bg-primary/90"
+            >
+              View Details
+            </button>
+          )}
         </div>
       </div>
     </div>

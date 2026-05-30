@@ -143,6 +143,7 @@ export async function buildPickupAnalytics(match) {
     levelAgg,
     dailyTrend,
     monthlyRevenueAgg,
+    paymentMethodRevenueAgg,
     hourlyAgg,
     topDriversAgg,
   ] = await Promise.all([
@@ -214,6 +215,17 @@ export async function buildPickupAnalytics(match) {
     ]),
 
     PickupRequest.aggregate([
+      { $match: { ...match, status: "COMPLETED", paymentStatus: "PAID" } },
+      {
+        $group: {
+          _id: "$paymentMethod",
+          revenue: { $sum: { $ifNull: ["$estimatedPrice", 0] } },
+          completed: { $sum: 1 },
+        },
+      },
+    ]),
+
+    PickupRequest.aggregate([
       { $match: match },
       { $group: { _id: { $hour: "$createdAt" }, count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
@@ -264,6 +276,14 @@ export async function buildPickupAnalytics(match) {
   const completionRate = summary.total > 0
     ? Math.round((summary.completed / summary.total) * 100)
     : 0;
+  const paymentRevenue = paymentMethodRevenueAgg.reduce(
+    (acc, row) => {
+      const method = row._id === "esewa" ? "online" : "cash";
+      acc[method] += Math.round(row.revenue || 0);
+      return acc;
+    },
+    { cash: 0, online: 0 }
+  );
 
   return {
     summary: {
@@ -276,6 +296,11 @@ export async function buildPickupAnalytics(match) {
       totalRevenue: Math.round(summary.totalRevenue || 0),
       avgResponseMs: Math.round(summary.avgResponseMs || 0),
       avgTaskDurationMs: Math.round(summary.avgTaskDurationMs || 0),
+    },
+    paymentMethodRevenue: {
+      cash: paymentRevenue.cash,
+      online: paymentRevenue.online,
+      total: paymentRevenue.cash + paymentRevenue.online,
     },
     statusDistribution: statusAgg.map((s) => ({ status: s._id, count: s.count })),
     categoryDistribution: categoryAgg.map((c) => ({ category: c._id, count: c.count })),

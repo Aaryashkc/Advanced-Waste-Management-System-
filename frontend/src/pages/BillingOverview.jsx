@@ -79,8 +79,9 @@ export default function BillingOverview() {
     const params = { ...extra };
     if (roleTab === "confirm") {
       params.status = "CASH_PENDING";
+      if (!isSuperAdmin) params.billedRole = "customer_admin";
     } else {
-      params.billedRole = roleTab;
+      params.billedRole = isSuperAdmin ? roleTab : "customer_admin";
       if (filters.status) params.status = filters.status;
     }
     if (filters.month) params.month = filters.month;
@@ -93,8 +94,9 @@ export default function BillingOverview() {
     const params = { ...extra };
     if (nextRole === "confirm") {
       params.status = "CASH_PENDING";
+      if (!isSuperAdmin) params.billedRole = "customer_admin";
     } else {
-      params.billedRole = nextRole;
+      params.billedRole = isSuperAdmin ? nextRole : "customer_admin";
       if (filters.status) params.status = filters.status;
     }
     if (filters.month) params.month = filters.month;
@@ -105,12 +107,18 @@ export default function BillingOverview() {
 
   const accountDetailsParams = useCallback(() => {
     const params = {};
-    if (roleTab !== "confirm") params.billedRole = roleTab;
+    if (roleTab === "confirm") {
+      params.status = "CASH_PENDING";
+      if (!isSuperAdmin) params.billedRole = "customer_admin";
+    } else {
+      params.billedRole = isSuperAdmin ? roleTab : "customer_admin";
+      if (filters.status) params.status = filters.status;
+    }
     if (filters.month) params.month = filters.month;
     if (filters.year) params.year = filters.year;
     if (isSuperAdmin && filters.orgId) params.orgId = filters.orgId;
     return params;
-  }, [filters.month, filters.orgId, filters.year, isSuperAdmin, roleTab]);
+  }, [filters.month, filters.orgId, filters.status, filters.year, isSuperAdmin, roleTab]);
 
   // Load data on mount + when roleTab changes
   useEffect(() => {
@@ -126,6 +134,7 @@ export default function BillingOverview() {
   }, [fetchBillingOverview]);
 
   const switchRoleTab = (nextRole) => {
+    if (!isSuperAdmin && nextRole === "admin") return;
     if (roleTab === nextRole) return;
     setRoleTab(nextRole);
     setExpandedAccountId(null);
@@ -173,6 +182,7 @@ export default function BillingOverview() {
   }, [selectedFees.customerFee, selectedFees.adminFee]);
 
   const applyFilters = () => {
+    setExpandedAccountId(null);
     fetchBillingOverview(currentOverviewParams());
   };
 
@@ -206,9 +216,7 @@ export default function BillingOverview() {
       return;
     }
     setExpandedAccountId(id);
-    if (!accountDetails[id]) {
-      await fetchBillingAccountDetails(id, accountDetailsParams());
-    }
+    await fetchBillingAccountDetails(id, accountDetailsParams());
   };
 
   const handleGenerateBills = async () => {
@@ -419,7 +427,7 @@ export default function BillingOverview() {
       )}
 
       {/* ── Role Tabs: Customer Bills, Admin Bills, Cash Confirmations ── */}
-      <div className="grid grid-cols-3 gap-1 bg-white rounded-2xl border border-primary/10 p-1.5">
+      <div className={`${isSuperAdmin ? "grid-cols-3" : "grid-cols-2"} grid gap-1 bg-white rounded-2xl border border-primary/10 p-1.5`}>
         <button
           onClick={() => {
             switchRoleTab("customer_admin");
@@ -433,19 +441,21 @@ export default function BillingOverview() {
           <Users size={15} className="shrink-0" />
           <span className="truncate"><span className="sm:hidden">Customer</span><span className="hidden sm:inline">Customer Bills</span></span>
         </button>
-        <button
-          onClick={() => {
-            switchRoleTab("admin");
-          }}
-          className={`min-w-0 flex items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-semibold transition-all sm:gap-2 sm:text-sm ${
-            roleTab === "admin"
-              ? "bg-primary text-white shadow-md"
-              : "text-primary/50 hover:text-primary/70 hover:bg-primary/5"
-          }`}
-        >
-          <UserCog size={15} className="shrink-0" />
-          <span className="truncate"><span className="sm:hidden">Admin</span><span className="hidden sm:inline">Admin Bills</span></span>
-        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => {
+              switchRoleTab("admin");
+            }}
+            className={`min-w-0 flex items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-xs font-semibold transition-all sm:gap-2 sm:text-sm ${
+              roleTab === "admin"
+                ? "bg-primary text-white shadow-md"
+                : "text-primary/50 hover:text-primary/70 hover:bg-primary/5"
+            }`}
+          >
+            <UserCog size={15} className="shrink-0" />
+            <span className="truncate"><span className="sm:hidden">Admin</span><span className="hidden sm:inline">Admin Bills</span></span>
+          </button>
+        )}
         <button
           onClick={() => {
             switchRoleTab("confirm");

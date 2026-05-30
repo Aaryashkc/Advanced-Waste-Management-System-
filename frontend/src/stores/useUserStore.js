@@ -19,7 +19,8 @@ const useUserStore = create((set, get) => ({
       if (params.page) query.set("page", params.page);
       query.set("limit", params.limit || 10);
 
-      const res = await api.get(`/super-admin/users?${query.toString()}`, {
+      const basePath = params.scope === "org" ? "/org-admin/users" : "/super-admin/users";
+      const res = await api.get(`${basePath}?${query.toString()}`, {
         signal: params.signal,
       });
       set({
@@ -48,7 +49,8 @@ const useUserStore = create((set, get) => ({
       }));
     }
     try {
-      const res = await api.put(`/super-admin/users/${userId}`, data);
+      const basePath = options.scope === "org" ? "/org-admin/users" : "/super-admin/users";
+      const res = await api.put(`${basePath}/${userId}`, data);
       if (res.data.success) {
         // Update user in local state
         set((state) => ({

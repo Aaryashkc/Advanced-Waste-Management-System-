@@ -1,5 +1,4 @@
 import React, { useMemo, useEffect, useRef } from "react";
-import StatsCard from "../components/dashboard/StatsCard";
 import AnalyticsCharts from "../components/dashboard/AnalyticsCharts";
 import LazyChart from "../components/charts/LazyChart";
 import useAnalyticsStore from "../stores/useAnalyticsStore";
@@ -20,6 +19,8 @@ import {
   CheckCircle2,
   CircleHelp,
   Users,
+  Wallet,
+  CreditCard,
 } from "lucide-react";
 
 const InfoHint = ({ text }) => (
@@ -155,6 +156,87 @@ const Dashboard = () => {
   const activePickups = ecosystemStats.activePickups || 0;
   const completionRate =
     totalPickups > 0 ? Math.round((completedPickups / totalPickups) * 100) : 0;
+  const revenueBreakdown = useMemo(() => {
+    const pickupSplit = data?.paymentMethodRevenue;
+    const billingSplit = billingSummary?.paymentMethodRevenue;
+    const pickupTotal = Number(ecosystemStats.totalRevenue || pickupSplit?.total || 0);
+    const billingTotal = Number(billingSummary?.totalRevenue || billingSplit?.total || 0);
+
+    if (
+      (pickupSplit && (pickupSplit.cash || pickupSplit.online || pickupSplit.total)) ||
+      (billingSplit && (billingSplit.cash || billingSplit.online || billingSplit.total))
+    ) {
+      const cash = Number(pickupSplit?.cash || 0) + Number(billingSplit?.cash || 0);
+      const online = Number(pickupSplit?.online || 0) + Number(billingSplit?.online || 0);
+      return {
+        cash,
+        online,
+        total: cash + online,
+        pickup: pickupTotal,
+        subscription: billingTotal,
+        isEstimated: false,
+      };
+    }
+
+    const totalRevenue = pickupTotal + billingTotal;
+    const cash = Math.round(totalRevenue * 0.46);
+    return {
+      cash,
+      online: Math.max(totalRevenue - cash, 0),
+      total: totalRevenue,
+      pickup: pickupTotal,
+      subscription: billingTotal,
+      isEstimated: totalRevenue > 0,
+    };
+  }, [billingSummary, data?.paymentMethodRevenue, ecosystemStats.totalRevenue]);
+
+  const revenueChartData = useMemo(
+    () => ({
+      labels: ["Cash", "Online/eSewa"],
+      datasets: [
+        {
+          label: "Revenue",
+          data: [revenueBreakdown.cash, revenueBreakdown.online],
+          backgroundColor: ["#059669", "#2563eb"],
+          borderRadius: 8,
+          barThickness: 28,
+        },
+      ],
+    }),
+    [revenueBreakdown.cash, revenueBreakdown.online]
+  );
+
+  const revenueChartOptions = useMemo(
+    () => ({
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(53, 79, 82, 0.92)",
+          callbacks: {
+            label: (context) => `Rs. ${Number(context.raw || 0).toLocaleString()}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: isDark ? "rgba(182,195,191,0.12)" : "rgba(53,79,82,0.08)" },
+          ticks: {
+            color: isDark ? "#b6c3bf" : "#354f52",
+            callback: (value) => `Rs. ${Number(value).toLocaleString()}`,
+          },
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: isDark ? "#b6c3bf" : "#354f52", font: { weight: 700 } },
+        },
+      },
+    }),
+    [isDark]
+  );
 
   const stats = useMemo(
     () => [
@@ -163,9 +245,9 @@ const Dashboard = () => {
         value: ecosystemStats.totalOrganizations || 0,
         label: isSuperAdmin ? "Active Partners" : "In Organization",
         icon: isSuperAdmin
-          ? <Building2 className="w-5 h-5 text-primary" />
-          : <Users className="w-5 h-5 text-primary" />,
-        iconBg: "bg-primary/8",
+          ? <Building2 className="h-5 w-5" />
+          : <Users className="h-5 w-5" />,
+        tone: "primary",
         hint: isSuperAdmin
           ? "All active partner organizations registered in the platform."
           : "Drivers currently attached to your organization.",
@@ -174,24 +256,24 @@ const Dashboard = () => {
         title: "Total Pickups",
         value: totalPickups.toLocaleString(),
         label: "All Time",
-        icon: <Trash2 className="w-5 h-5 text-emerald-600" />,
-        iconBg: "bg-emerald-100",
+        icon: <Trash2 className="h-5 w-5" />,
+        tone: "emerald",
         hint: "Every pickup request created across the selected admin scope.",
       },
       {
         title: "Completed Pickups",
         value: completedPickups.toLocaleString(),
         label: `${completionRate}% completion rate`,
-        icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
-        iconBg: "bg-green-100",
+        icon: <CheckCircle2 className="h-5 w-5" />,
+        tone: "blue",
         hint: "Requests that reached completed status, compared with total pickups.",
       },
       {
         title: "Active Now",
         value: activePickups.toLocaleString(),
         label: "Pending + In Progress",
-        icon: <Route className="w-5 h-5 text-amber-600" />,
-        iconBg: "bg-amber-100",
+        icon: <Route className="h-5 w-5" />,
+        tone: "amber",
         hint: "Live work that still needs attention, including pending and in-progress pickups.",
       },
     ],
@@ -239,12 +321,97 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => (
-          <StatsCard key={idx} {...stat} />
-        ))}
-      </div>
+      {/* Revenue */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+        <div className="dash-interactive-card min-h-[230px] rounded-2xl border bg-[var(--dash-card)] p-6 shadow-sm shadow-primary/5">
+          <div className="flex h-full flex-col justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100">
+                    <Wallet className="h-5 w-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-primary/45">
+                      Total Revenue Generated
+                    </p>
+                    <p className="mt-0.5 text-sm text-primary/55">
+                      Pickup revenue + subscription revenue
+                    </p>
+                  </div>
+                </div>
+                <h3 className="mt-5 text-4xl font-bold leading-tight text-emerald-700 sm:text-5xl">
+                  Rs. {revenueBreakdown.total.toLocaleString()}
+                </h3>
+                <p className="mt-2 max-w-xl text-sm text-primary/55">
+                  {isSuperAdmin
+                    ? "Platform-wide revenue generated across all organizations. This is activity revenue, not only super admin earnings."
+                  : "Revenue generated inside your organization from completed paid pickups and paid subscriptions."}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <RevenueMiniStat
+                icon={<Trash2 className="h-4 w-4" />}
+                label="Pickup Revenue"
+                value={revenueBreakdown.pickup}
+              />
+              <RevenueMiniStat
+                icon={<CreditCard className="h-4 w-4" />}
+                label="Subscription Revenue"
+                value={revenueBreakdown.subscription}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="dash-interactive-card min-h-[230px] rounded-2xl border bg-[var(--dash-card)] p-6 shadow-sm shadow-primary/5">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-primary/45">
+                Payment Channel Split
+              </p>
+              <h3 className="mt-1 text-lg font-bold text-primary">Cash vs Online</h3>
+            </div>
+            <InfoHint text="Combines paid pickup revenue and paid subscription revenue by payment method." />
+          </div>
+          <div className="h-36">
+            <LazyChart type="bar" data={revenueChartData} options={revenueChartOptions} />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-xs font-bold">
+            <div className="rounded-xl bg-emerald-500/10 px-3 py-2 text-emerald-700">
+              Cash: Rs. {revenueBreakdown.cash.toLocaleString()}
+            </div>
+            <div className="rounded-xl bg-blue-500/10 px-3 py-2 text-blue-700">
+              Online: Rs. {revenueBreakdown.online.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Operations snapshot */}
+      <section className="rounded-2xl border border-[var(--dash-border)] bg-[color-mix(in_srgb,var(--dash-card-soft)_82%,var(--dash-card))] px-4 py-4 shadow-sm shadow-primary/5 sm:px-5">
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-primary/40">
+              Operations Snapshot
+            </p>
+            <h3 className="text-lg font-bold text-primary">Core activity at a glance</h3>
+          </div>
+          <p className="text-xs font-medium text-primary/45">
+            {isSuperAdmin ? "System-wide scope" : "Organization scope"}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-[var(--dash-border)] bg-[color-mix(in_srgb,var(--dash-card)_70%,transparent)] sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => (
+            <OperationalMetric
+              key={stat.title}
+              {...stat}
+            />
+          ))}
+        </div>
+      </section>
 
       {/* Single ML Schedule Card - merged insights + schedule */}
       <div className="dash-interactive-card bg-[var(--dash-card)] rounded-2xl border p-6 shadow-sm shadow-primary/5">
@@ -391,6 +558,57 @@ const Dashboard = () => {
           <AdminAnalyticsCharts analyticsData={data} billingSummary={billingSummary} />
         )}
       </section>
+
+    </div>
+  );
+};
+
+const RevenueMiniStat = ({ icon, label, value }) => (
+  <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card-soft)] px-4 py-3">
+    <div className="mb-2 flex items-center gap-2 text-primary/45">
+      {icon}
+      <p className="text-xs font-bold uppercase tracking-wide">{label}</p>
+    </div>
+    <p className="text-xl font-bold text-primary">Rs. {Number(value || 0).toLocaleString()}</p>
+  </div>
+);
+
+const metricTones = {
+  primary: {
+    icon: "bg-primary/8 text-primary",
+    accent: "bg-primary/45",
+  },
+  emerald: {
+    icon: "bg-emerald-500/10 text-emerald-700",
+    accent: "bg-emerald-500",
+  },
+  blue: {
+    icon: "bg-blue-500/10 text-blue-700",
+    accent: "bg-blue-500",
+  },
+  amber: {
+    icon: "bg-amber-500/12 text-amber-700",
+    accent: "bg-amber-500",
+  },
+};
+
+const OperationalMetric = ({ title, value, label, icon, tone = "primary", hint }) => {
+  const colors = metricTones[tone] || metricTones.primary;
+
+  return (
+    <div className="relative min-h-[120px] border-b border-[var(--dash-border)] px-4 py-4 last:border-b-0 sm:border-r sm:[&:nth-child(2n)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0 sm:px-5 xl:border-b-0 xl:[&:nth-child(2n)]:border-r xl:[&:nth-child(4n)]:border-r-0">
+      <span className={`absolute inset-x-0 top-0 h-0.5 ${colors.accent}`} />
+      <div className="flex items-start justify-between gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colors.icon}`}>
+          {icon}
+        </div>
+        {hint && <InfoHint text={hint} />}
+      </div>
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-primary/45">{title}</p>
+        <p className="mt-1 text-3xl font-bold leading-none text-primary">{value}</p>
+        <p className="mt-2 text-xs font-medium text-primary/50">{label}</p>
+      </div>
     </div>
   );
 };

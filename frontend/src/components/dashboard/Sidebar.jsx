@@ -18,6 +18,8 @@ import {
   FileText,
   DollarSign,
   Receipt,
+  CreditCard,
+  Landmark,
   Mail,
   X,
   Moon,
@@ -31,28 +33,62 @@ const Sidebar = ({ mobileOpen, onClose }) => {
   const { totalUnread } = useAdminNotificationCounts();
   const isDark = theme === "dark";
 
-  const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
-    ...(isSuperAdmin
-      ? [{ name: "Organizations", icon: Building2, path: "/admin-dashboard/organizations" }]
-      : [{ name: "My Organization", icon: Building2, path: "/admin-dashboard/my-organization" }]),
-    { name: "Trucks", icon: Truck, path: "/admin-dashboard/vehicles" },
-    { name: "Drivers", icon: Users, path: "/admin-dashboard/drivers" },
-    { name: "Admins", icon: UserCog, path: "/admin-dashboard/admins" },
-    { name: "Areas", icon: MapPin, path: "/admin-dashboard/areas" },
-    { name: "ML Schedule", icon: BrainCircuit, path: "/admin-dashboard/ml-schedule" },
-    { name: "Pricing", icon: DollarSign, path: "/admin-dashboard/pricing" },
-    { name: "History", icon: ClipboardList, path: "/admin-dashboard/history" },
-    { name: "Notifications", icon: Bell, path: "/admin-dashboard/notifications" },
-    { name: isSuperAdmin ? "Billing Management" : "My Billing", icon: Receipt, path: "/admin-dashboard/billing" },
-    { name: "Contact", icon: Mail, path: "/admin-dashboard/contact" },
-    ...(isSuperAdmin
-      ? [
-          { name: "Users", icon: UsersRound, path: "/admin-dashboard/users" },
-          { name: "Pickup Stats", icon: BarChart3, path: "/admin-dashboard/pickup-stats" },
-          { name: "Reports", icon: FileText, path: "/admin-dashboard/reports" },
-        ]
-      : []),
+  const navSections = [
+    {
+      label: "Overview",
+      items: [{ name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" }],
+    },
+    {
+      label: "Revenue",
+      items: [
+        { name: "Billing Management", icon: Receipt, path: "/admin-dashboard/billing" },
+        ...(!isSuperAdmin
+          ? [{ name: "My Billing", icon: CreditCard, path: "/admin-dashboard/my-billing" }]
+          : []),
+        { name: "Pricing", icon: DollarSign, path: "/admin-dashboard/pricing" },
+        ...(isSuperAdmin
+          ? [{ name: "Bank Management", icon: Landmark, path: "/admin-dashboard/organization-banks" }]
+          : []),
+      ],
+    },
+    {
+      label: "Operations",
+      items: [
+        ...(isSuperAdmin
+          ? [{ name: "Organizations", icon: Building2, path: "/admin-dashboard/organizations" }]
+          : [{ name: "My Organization", icon: Building2, path: "/admin-dashboard/my-organization" }]),
+        { name: "Areas", icon: MapPin, path: "/admin-dashboard/areas" },
+        { name: "ML Schedule", icon: BrainCircuit, path: "/admin-dashboard/ml-schedule" },
+        { name: "Trucks", icon: Truck, path: "/admin-dashboard/vehicles" },
+        { name: "Drivers", icon: Users, path: "/admin-dashboard/drivers" },
+      ],
+    },
+    {
+      label: "People",
+      items: [
+        { name: "Users", icon: UsersRound, path: "/admin-dashboard/users" },
+        { name: "Admins", icon: UserCog, path: "/admin-dashboard/admins" },
+      ],
+    },
+    {
+      label: "Insights",
+      items: [
+        ...(isSuperAdmin
+          ? [
+              { name: "Pickup Stats", icon: BarChart3, path: "/admin-dashboard/pickup-stats" },
+              { name: "Reports", icon: FileText, path: "/admin-dashboard/reports" },
+            ]
+          : []),
+        { name: "History", icon: ClipboardList, path: "/admin-dashboard/history" },
+      ],
+    },
+    {
+      label: "Communication",
+      items: [
+        { name: "Notifications", icon: Bell, path: "/admin-dashboard/notifications" },
+        { name: "Contact", icon: Mail, path: "/admin-dashboard/contact" },
+      ],
+    },
   ];
 
   const navContent = (
@@ -74,33 +110,42 @@ const Sidebar = ({ mobileOpen, onClose }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-5 overflow-y-auto">
-        <ul className="space-y-0.5">
-          {menuItems.map((item) => (
-            <li key={item.name}>
-              <NavLink
-                to={item.path}
-                end={item.path === "/admin-dashboard"}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `group flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary/8 text-primary"
-                      : "text-primary/60 hover:bg-primary/5 hover:text-primary"
-                  }`
-                }
-              >
-                <item.icon className="w-4.5 h-4.5 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                {item.path === "/admin-dashboard/notifications" && totalUnread > 0 && (
-                  <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-red-500/20">
-                    {totalUnread > 99 ? "99+" : totalUnread}
-                  </span>
-                )}
-              </NavLink>
-            </li>
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="space-y-5">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <p className="mb-1.5 px-4 text-[10px] font-bold uppercase tracking-wide text-primary/35">
+                {section.label}
+              </p>
+              <ul className="space-y-0.5">
+                {section.items.map((item) => (
+                  <li key={item.name}>
+                    <NavLink
+                      to={item.path}
+                      end={item.path === "/admin-dashboard"}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `group flex min-h-10 items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                          isActive
+                            ? "bg-primary/[0.09] text-primary shadow-sm shadow-primary/5"
+                            : "text-primary/[0.58] hover:bg-primary/5 hover:text-primary"
+                        }`
+                      }
+                    >
+                      <item.icon className="h-4.5 w-4.5 shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                      {item.path === "/admin-dashboard/notifications" && totalUnread > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-red-500/20">
+                          {totalUnread > 99 ? "99+" : totalUnread}
+                        </span>
+                      )}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </nav>
 
       {/* Theme toggle */}
@@ -144,13 +189,6 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         </button>
       </div>
 
-      {/* System Status */}
-      <div className="p-4 border-t border-primary/10">
-        <div className="flex items-center gap-2 px-2">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-xs font-medium text-primary/50">System Online</span>
-        </div>
-      </div>
     </div>
   );
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import useUserStore from "../stores/useUserStore";
+import useAuthStore from "../stores/useAuthStore";
 import {
   Users as UsersIcon,
   Search,
@@ -49,6 +50,10 @@ const ROLE_LABELS = {
 
 const Users = () => {
   const { users, stats, pagination, isLoading, error, fetchUsers, updateUser } = useUserStore();
+  const currentUser = useAuthStore((s) => s.user);
+  const isOrgAdmin = currentUser?.role === "admin";
+  const apiScope = isOrgAdmin ? "org" : "super";
+  const availableRoles = isOrgAdmin ? ROLES.filter((r) => r.value !== "super_admin") : ROLES;
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -80,9 +85,10 @@ const Users = () => {
       page,
       limit: 10,
       signal: controller.signal,
+      scope: apiScope,
     });
     return () => controller.abort();
-  }, [debouncedSearch, roleFilter, statusFilter, page, fetchUsers]);
+  }, [apiScope, debouncedSearch, roleFilter, statusFilter, page, fetchUsers]);
 
   const openEdit = (u) => {
     setEditUser(u);
@@ -105,7 +111,11 @@ const Users = () => {
       return;
     }
     setSubmitting(true);
-    const result = await updateUser(editUser.id, editForm);
+    const orgAdminPayload = Object.fromEntries(
+      Object.entries(editForm).filter(([key]) => key !== "role")
+    );
+    const payload = isOrgAdmin ? orgAdminPayload : editForm;
+    const result = await updateUser(editUser.id, payload, { scope: apiScope });
     setSubmitting(false);
     if (result.success) {
       setEditUser(null);
@@ -115,9 +125,9 @@ const Users = () => {
   };
 
   const toggleActive = async (u) => {
-    const result = await updateUser(u.id, { isActive: !u.isActive }, { optimistic: true });
+    const result = await updateUser(u.id, { isActive: !u.isActive }, { optimistic: true, scope: apiScope });
     if (result.success) {
-      fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10 });
+      fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10, scope: apiScope });
     } else {
       setFormError(result.error);
     }
@@ -129,7 +139,9 @@ const Users = () => {
       <div>
         <h1 className="text-2xl font-bold text-primary">User Management</h1>
         <p className="text-sm text-primary/50 mt-1">
-          View and manage all registered users across the platform
+          {isOrgAdmin
+            ? "View and manage users assigned to your organization"
+            : "View and manage all registered users across the platform"}
         </p>
       </div>
 
@@ -194,7 +206,7 @@ const Users = () => {
             onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
             className="px-3 py-2.5 rounded-xl border border-primary/12 bg-white text-sm text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            {ROLES.map((r) => (
+            {availableRoles.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
@@ -215,7 +227,7 @@ const Users = () => {
       {isLoading ? (
         <TableSkeleton columns={6} rows={8} />
       ) : error ? (
-        <AdminErrorState message={error} onRetry={() => fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10 })} />
+        <AdminErrorState message={error} onRetry={() => fetchUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page, limit: 10, scope: apiScope })} />
       ) : (
         <div className="bg-white rounded-2xl border border-primary/10 overflow-hidden">
           <div className="overflow-x-auto">
@@ -435,11 +447,6 @@ const Users = () => {
                   <span className={`w-1.5 h-1.5 rounded-full ${viewUser.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
                   {viewUser.isActive ? "Active" : "Inactive"}
                 </span>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  viewUser.emailVerified ? "bg-emerald-100 text-emerald-700" : "bg-yellow-100 text-yellow-700"
-                }`}>
-                  {viewUser.emailVerified ? "Email Verified" : "Email Unverified"}
-                </span>
               </div>
             </div>
 
@@ -516,13 +523,14 @@ const Users = () => {
                 <select
                   value={editForm.role}
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                  disabled={editUser.role === "super_admin"}
+                  disabled={isOrgAdmin || editUser.role === "super_admin"}
                   className="w-full px-4 py-2.5 rounded-xl border border-primary/12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm disabled:opacity-50"
                 >
-                  <option value="customer_admin">Customer</option>
-                  <option value="driver">Driver</option>
-                  <option value="admin">Admin</option>
-                  <option value="super_admin">Super Admin</option>
+                  {availableRoles
+                    .filter((r) => r.value)
+                    .map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
                 </select>
               </div>
               <div className="flex items-center gap-3">
