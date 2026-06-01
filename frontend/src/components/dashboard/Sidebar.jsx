@@ -127,7 +127,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                       className={({ isActive }) =>
                         `group flex min-h-10 items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
                           isActive
-                            ? "bg-primary/[0.09] text-primary shadow-sm shadow-primary/5"
+                            ? "bg-primary/9 text-primary shadow-sm shadow-primary/5"
                             : "text-primary/[0.58] hover:bg-primary/5 hover:text-primary"
                         }`
                       }
@@ -153,7 +153,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         <button
           type="button"
           onClick={toggleTheme}
-          className="flex w-full items-center justify-between gap-3 rounded-xl border border-primary/10 bg-primary/[0.04] px-3 py-2.5 text-left transition-colors hover:bg-primary/[0.07]"
+          className="flex w-full items-center justify-between gap-3 rounded-xl border border-primary/10 bg-primary/4 px-3 py-2.5 text-left transition-colors hover:bg-primary/[0.07]"
           aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           aria-pressed={isDark}
         >
@@ -181,7 +181,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
             aria-hidden
           >
             <span
-              className={`inline-block h-6 w-6 rounded-full bg-[var(--dash-shell)] shadow-sm ring-1 ring-primary/10 transition-transform duration-200 ease-out ${
+              className={`inline-block h-6 w-6 rounded-full bg-(--dash-shell) shadow-sm ring-1 ring-primary/10 transition-transform duration-200 ease-out ${
                 isDark ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -205,7 +205,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
 
       {/* Mobile sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 w-64 bg-[var(--dash-shell)] border-r border-primary/10 z-50 transform transition-transform duration-200 md:hidden ${
+        className={`fixed inset-y-0 left-0 w-64 bg-(--dash-shell) border-r border-primary/10 z-50 transform transition-transform duration-200 md:hidden ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -213,7 +213,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-[var(--dash-shell)] border-r border-primary/10 z-30">
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-(--dash-shell) border-r border-primary/10 z-30">
         {navContent}
       </aside>
     </>

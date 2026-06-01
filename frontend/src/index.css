@@ -69,6 +69,22 @@
   --app-slate-700: #334155;
   --app-slate-800: #1e293b;
   --app-slate-900: #0f172a;
+
+  --app-red-base: var(--app-danger);
+  --app-orange-base: var(--app-orange);
+  --app-amber-base: var(--app-warning);
+  --app-yellow-base: var(--app-yellow);
+  --app-green-base: var(--app-success-strong);
+  --app-emerald-base: var(--app-success);
+  --app-teal-base: var(--app-teal);
+  --app-cyan-base: var(--app-cyan);
+  --app-sky-base: var(--app-sky);
+  --app-blue-base: var(--app-info);
+  --app-indigo-base: var(--app-indigo);
+  --app-violet-base: var(--app-violet);
+  --app-purple-base: var(--app-purple);
+  --app-pink-base: var(--app-pink);
+  --app-rose-base: #f43f5e;
 }
 
 @theme {
@@ -99,6 +115,149 @@
   --color-slate-700: var(--app-slate-700);
   --color-slate-800: var(--app-slate-800);
   --color-slate-900: var(--app-slate-900);
+
+  --color-red-50: color-mix(in srgb, var(--app-red-base) 10%, var(--app-white));
+  --color-red-100: color-mix(in srgb, var(--app-red-base) 18%, var(--app-white));
+  --color-red-200: color-mix(in srgb, var(--app-red-base) 30%, var(--app-white));
+  --color-red-300: color-mix(in srgb, var(--app-red-base) 48%, var(--app-white));
+  --color-red-400: color-mix(in srgb, var(--app-red-base) 78%, var(--app-white));
+  --color-red-500: var(--app-red-base);
+  --color-red-600: color-mix(in srgb, var(--app-red-base) 88%, var(--app-black));
+  --color-red-700: color-mix(in srgb, var(--app-red-base) 76%, var(--app-black));
+  --color-red-800: color-mix(in srgb, var(--app-red-base) 62%, var(--app-black));
+  --color-red-900: color-mix(in srgb, var(--app-red-base) 48%, var(--app-black));
+
+  --color-orange-50: color-mix(in srgb, var(--app-orange-base) 10%, var(--app-white));
+  --color-orange-100: color-mix(in srgb, var(--app-orange-base) 18%, var(--app-white));
+  --color-orange-200: color-mix(in srgb, var(--app-orange-base) 30%, var(--app-white));
+  --color-orange-300: color-mix(in srgb, var(--app-orange-base) 48%, var(--app-white));
+  --color-orange-400: color-mix(in srgb, var(--app-orange-base) 78%, var(--app-white));
+  --color-orange-500: var(--app-orange-base);
+  --color-orange-600: color-mix(in srgb, var(--app-orange-base) 88%, var(--app-black));
+  --color-orange-700: color-mix(in srgb, var(--app-orange-base) 76%, var(--app-black));
+  --color-orange-800: color-mix(in srgb, var(--app-orange-base) 62%, var(--app-black));
+  --color-orange-900: color-mix(in srgb, var(--app-orange-base) 48%, var(--app-black));
+
+  --color-amber-50: color-mix(in srgb, var(--app-amber-base) 10%, var(--app-white));
+  --color-amber-100: color-mix(in srgb, var(--app-amber-base) 18%, var(--app-white));
+  --color-amber-200: color-mix(in srgb, var(--app-amber-base) 30%, var(--app-white));
+  --color-amber-300: color-mix(in srgb, var(--app-amber-base) 48%, var(--app-white));
+  --color-amber-400: color-mix(in srgb, var(--app-amber-base) 78%, var(--app-white));
+  --color-amber-500: var(--app-amber-base);
+  --color-amber-600: color-mix(in srgb, var(--app-amber-base) 88%, var(--app-black));
+  --color-amber-700: color-mix(in srgb, var(--app-amber-base) 76%, var(--app-black));
+  --color-amber-800: color-mix(in srgb, var(--app-amber-base) 62%, var(--app-black));
+  --color-amber-900: color-mix(in srgb, var(--app-amber-base) 48%, var(--app-black));
+
+  --color-yellow-50: color-mix(in srgb, var(--app-yellow-base) 10%, var(--app-white));
+  --color-yellow-100: color-mix(in srgb, var(--app-yellow-base) 18%, var(--app-white));
+  --color-yellow-200: color-mix(in srgb, var(--app-yellow-base) 30%, var(--app-white));
+  --color-yellow-300: color-mix(in srgb, var(--app-yellow-base) 48%, var(--app-white));
+  --color-yellow-400: color-mix(in srgb, var(--app-yellow-base) 78%, var(--app-white));
+  --color-yellow-500: var(--app-yellow-base);
+  --color-yellow-600: color-mix(in srgb, var(--app-yellow-base) 88%, var(--app-black));
+  --color-yellow-700: color-mix(in srgb, var(--app-yellow-base) 76%, var(--app-black));
+  --color-yellow-800: color-mix(in srgb, var(--app-yellow-base) 62%, var(--app-black));
+  --color-yellow-900: color-mix(in srgb, var(--app-yellow-base) 48%, var(--app-black));
+
+  --color-green-50: color-mix(in srgb, var(--app-green-base) 10%, var(--app-white));
+  --color-green-100: color-mix(in srgb, var(--app-green-base) 18%, var(--app-white));
+  --color-green-200: color-mix(in srgb, var(--app-green-base) 30%, var(--app-white));
+  --color-green-300: color-mix(in srgb, var(--app-green-base) 48%, var(--app-white));
+  --color-green-400: color-mix(in srgb, var(--app-green-base) 78%, var(--app-white));
+  --color-green-500: var(--app-green-base);
+  --color-green-600: color-mix(in srgb, var(--app-green-base) 88%, var(--app-black));
+  --color-green-700: color-mix(in srgb, var(--app-green-base) 76%, var(--app-black));
+  --color-green-800: color-mix(in srgb, var(--app-green-base) 62%, var(--app-black));
+  --color-green-900: color-mix(in srgb, var(--app-green-base) 48%, var(--app-black));
+
+  --color-emerald-50: color-mix(in srgb, var(--app-emerald-base) 10%, var(--app-white));
+  --color-emerald-100: color-mix(in srgb, var(--app-emerald-base) 18%, var(--app-white));
+  --color-emerald-200: color-mix(in srgb, var(--app-emerald-base) 30%, var(--app-white));
+  --color-emerald-300: color-mix(in srgb, var(--app-emerald-base) 48%, var(--app-white));
+  --color-emerald-400: color-mix(in srgb, var(--app-emerald-base) 78%, var(--app-white));
+  --color-emerald-500: var(--app-emerald-base);
+  --color-emerald-600: color-mix(in srgb, var(--app-emerald-base) 88%, var(--app-black));
+  --color-emerald-700: color-mix(in srgb, var(--app-emerald-base) 76%, var(--app-black));
+  --color-emerald-800: color-mix(in srgb, var(--app-emerald-base) 62%, var(--app-black));
+  --color-emerald-900: color-mix(in srgb, var(--app-emerald-base) 48%, var(--app-black));
+
+  --color-teal-50: color-mix(in srgb, var(--app-teal-base) 10%, var(--app-white));
+  --color-teal-100: color-mix(in srgb, var(--app-teal-base) 18%, var(--app-white));
+  --color-teal-200: color-mix(in srgb, var(--app-teal-base) 30%, var(--app-white));
+  --color-teal-300: color-mix(in srgb, var(--app-teal-base) 48%, var(--app-white));
+  --color-teal-400: color-mix(in srgb, var(--app-teal-base) 78%, var(--app-white));
+  --color-teal-500: var(--app-teal-base);
+  --color-teal-600: color-mix(in srgb, var(--app-teal-base) 88%, var(--app-black));
+  --color-teal-700: color-mix(in srgb, var(--app-teal-base) 76%, var(--app-black));
+  --color-teal-800: color-mix(in srgb, var(--app-teal-base) 62%, var(--app-black));
+  --color-teal-900: color-mix(in srgb, var(--app-teal-base) 48%, var(--app-black));
+
+  --color-blue-50: color-mix(in srgb, var(--app-blue-base) 10%, var(--app-white));
+  --color-blue-100: color-mix(in srgb, var(--app-blue-base) 18%, var(--app-white));
+  --color-blue-200: color-mix(in srgb, var(--app-blue-base) 30%, var(--app-white));
+  --color-blue-300: color-mix(in srgb, var(--app-blue-base) 48%, var(--app-white));
+  --color-blue-400: color-mix(in srgb, var(--app-blue-base) 78%, var(--app-white));
+  --color-blue-500: var(--app-blue-base);
+  --color-blue-600: color-mix(in srgb, var(--app-blue-base) 88%, var(--app-black));
+  --color-blue-700: color-mix(in srgb, var(--app-blue-base) 76%, var(--app-black));
+  --color-blue-800: color-mix(in srgb, var(--app-blue-base) 62%, var(--app-black));
+  --color-blue-900: color-mix(in srgb, var(--app-blue-base) 48%, var(--app-black));
+
+  --color-indigo-50: color-mix(in srgb, var(--app-indigo-base) 10%, var(--app-white));
+  --color-indigo-100: color-mix(in srgb, var(--app-indigo-base) 18%, var(--app-white));
+  --color-indigo-200: color-mix(in srgb, var(--app-indigo-base) 30%, var(--app-white));
+  --color-indigo-300: color-mix(in srgb, var(--app-indigo-base) 48%, var(--app-white));
+  --color-indigo-400: color-mix(in srgb, var(--app-indigo-base) 78%, var(--app-white));
+  --color-indigo-500: var(--app-indigo-base);
+  --color-indigo-600: color-mix(in srgb, var(--app-indigo-base) 88%, var(--app-black));
+  --color-indigo-700: color-mix(in srgb, var(--app-indigo-base) 76%, var(--app-black));
+  --color-indigo-800: color-mix(in srgb, var(--app-indigo-base) 62%, var(--app-black));
+  --color-indigo-900: color-mix(in srgb, var(--app-indigo-base) 48%, var(--app-black));
+
+  --color-violet-50: color-mix(in srgb, var(--app-violet-base) 10%, var(--app-white));
+  --color-violet-100: color-mix(in srgb, var(--app-violet-base) 18%, var(--app-white));
+  --color-violet-200: color-mix(in srgb, var(--app-violet-base) 30%, var(--app-white));
+  --color-violet-300: color-mix(in srgb, var(--app-violet-base) 48%, var(--app-white));
+  --color-violet-400: color-mix(in srgb, var(--app-violet-base) 78%, var(--app-white));
+  --color-violet-500: var(--app-violet-base);
+  --color-violet-600: color-mix(in srgb, var(--app-violet-base) 88%, var(--app-black));
+  --color-violet-700: color-mix(in srgb, var(--app-violet-base) 76%, var(--app-black));
+  --color-violet-800: color-mix(in srgb, var(--app-violet-base) 62%, var(--app-black));
+  --color-violet-900: color-mix(in srgb, var(--app-violet-base) 48%, var(--app-black));
+
+  --color-purple-50: color-mix(in srgb, var(--app-purple-base) 10%, var(--app-white));
+  --color-purple-100: color-mix(in srgb, var(--app-purple-base) 18%, var(--app-white));
+  --color-purple-200: color-mix(in srgb, var(--app-purple-base) 30%, var(--app-white));
+  --color-purple-300: color-mix(in srgb, var(--app-purple-base) 48%, var(--app-white));
+  --color-purple-400: color-mix(in srgb, var(--app-purple-base) 78%, var(--app-white));
+  --color-purple-500: var(--app-purple-base);
+  --color-purple-600: color-mix(in srgb, var(--app-purple-base) 88%, var(--app-black));
+  --color-purple-700: color-mix(in srgb, var(--app-purple-base) 76%, var(--app-black));
+  --color-purple-800: color-mix(in srgb, var(--app-purple-base) 62%, var(--app-black));
+  --color-purple-900: color-mix(in srgb, var(--app-purple-base) 48%, var(--app-black));
+
+  --color-pink-50: color-mix(in srgb, var(--app-pink-base) 10%, var(--app-white));
+  --color-pink-100: color-mix(in srgb, var(--app-pink-base) 18%, var(--app-white));
+  --color-pink-200: color-mix(in srgb, var(--app-pink-base) 30%, var(--app-white));
+  --color-pink-300: color-mix(in srgb, var(--app-pink-base) 48%, var(--app-white));
+  --color-pink-400: color-mix(in srgb, var(--app-pink-base) 78%, var(--app-white));
+  --color-pink-500: var(--app-pink-base);
+  --color-pink-600: color-mix(in srgb, var(--app-pink-base) 88%, var(--app-black));
+  --color-pink-700: color-mix(in srgb, var(--app-pink-base) 76%, var(--app-black));
+  --color-pink-800: color-mix(in srgb, var(--app-pink-base) 62%, var(--app-black));
+  --color-pink-900: color-mix(in srgb, var(--app-pink-base) 48%, var(--app-black));
+
+  --color-rose-50: color-mix(in srgb, var(--app-rose-base) 10%, var(--app-white));
+  --color-rose-100: color-mix(in srgb, var(--app-rose-base) 18%, var(--app-white));
+  --color-rose-200: color-mix(in srgb, var(--app-rose-base) 30%, var(--app-white));
+  --color-rose-300: color-mix(in srgb, var(--app-rose-base) 48%, var(--app-white));
+  --color-rose-400: color-mix(in srgb, var(--app-rose-base) 78%, var(--app-white));
+  --color-rose-500: var(--app-rose-base);
+  --color-rose-600: color-mix(in srgb, var(--app-rose-base) 88%, var(--app-black));
+  --color-rose-700: color-mix(in srgb, var(--app-rose-base) 76%, var(--app-black));
+  --color-rose-800: color-mix(in srgb, var(--app-rose-base) 62%, var(--app-black));
+  --color-rose-900: color-mix(in srgb, var(--app-rose-base) 48%, var(--app-black));
   --color-primary: var(--app-primary);
   --color-accent: var(--app-surface);
   --color-secondary: var(--app-surface);

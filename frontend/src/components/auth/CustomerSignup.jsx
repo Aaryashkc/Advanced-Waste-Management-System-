@@ -137,7 +137,7 @@ function CustomerSignUpPage() {
       <div className="absolute inset-0 z-0 bg-black/70 backdrop-blur-xs" />
 
       {/* Split card */}
-      <div className="relative z-10 w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[600px] border border-white/10">
+      <div className="relative z-10 w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-150 border border-white/10">
         {/* Left — Welcome panel */}
         <div className="relative md:w-5/12 hidden md:flex flex-col justify-center px-12 py-14 md:py-20 overflow-hidden">
           <div
@@ -146,7 +146,7 @@ function CustomerSignUpPage() {
               backgroundImage: `url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=800&q=80')`,
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-brand-primary-deep/85" />
+          <div className="absolute inset-0 bg-linear-to-br from-primary/90 to-brand-primary-deep/85" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">

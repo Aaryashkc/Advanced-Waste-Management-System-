@@ -131,7 +131,7 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
       <div className="absolute inset-0 bg-black/40" aria-hidden="true" />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 animate-[modalIn_200ms_ease-out]">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 animate-modalIn">
         {/* Close button */}
         {!isLoading && (
           <button
