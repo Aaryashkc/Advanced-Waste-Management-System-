@@ -84,6 +84,7 @@
   --app-violet-base: var(--app-violet);
   --app-purple-base: var(--app-purple);
   --app-pink-base: var(--app-pink);
+  --app-fuchsia-base: #d946ef;
   --app-rose-base: #f43f5e;
 }
 
@@ -193,6 +194,28 @@
   --color-teal-800: color-mix(in srgb, var(--app-teal-base) 62%, var(--app-black));
   --color-teal-900: color-mix(in srgb, var(--app-teal-base) 48%, var(--app-black));
 
+  --color-cyan-50: color-mix(in srgb, var(--app-cyan-base) 10%, var(--app-white));
+  --color-cyan-100: color-mix(in srgb, var(--app-cyan-base) 18%, var(--app-white));
+  --color-cyan-200: color-mix(in srgb, var(--app-cyan-base) 30%, var(--app-white));
+  --color-cyan-300: color-mix(in srgb, var(--app-cyan-base) 48%, var(--app-white));
+  --color-cyan-400: color-mix(in srgb, var(--app-cyan-base) 78%, var(--app-white));
+  --color-cyan-500: var(--app-cyan-base);
+  --color-cyan-600: color-mix(in srgb, var(--app-cyan-base) 88%, var(--app-black));
+  --color-cyan-700: color-mix(in srgb, var(--app-cyan-base) 76%, var(--app-black));
+  --color-cyan-800: color-mix(in srgb, var(--app-cyan-base) 62%, var(--app-black));
+  --color-cyan-900: color-mix(in srgb, var(--app-cyan-base) 48%, var(--app-black));
+
+  --color-sky-50: color-mix(in srgb, var(--app-sky-base) 10%, var(--app-white));
+  --color-sky-100: color-mix(in srgb, var(--app-sky-base) 18%, var(--app-white));
+  --color-sky-200: color-mix(in srgb, var(--app-sky-base) 30%, var(--app-white));
+  --color-sky-300: color-mix(in srgb, var(--app-sky-base) 48%, var(--app-white));
+  --color-sky-400: color-mix(in srgb, var(--app-sky-base) 78%, var(--app-white));
+  --color-sky-500: var(--app-sky-base);
+  --color-sky-600: color-mix(in srgb, var(--app-sky-base) 88%, var(--app-black));
+  --color-sky-700: color-mix(in srgb, var(--app-sky-base) 76%, var(--app-black));
+  --color-sky-800: color-mix(in srgb, var(--app-sky-base) 62%, var(--app-black));
+  --color-sky-900: color-mix(in srgb, var(--app-sky-base) 48%, var(--app-black));
+
   --color-blue-50: color-mix(in srgb, var(--app-blue-base) 10%, var(--app-white));
   --color-blue-100: color-mix(in srgb, var(--app-blue-base) 18%, var(--app-white));
   --color-blue-200: color-mix(in srgb, var(--app-blue-base) 30%, var(--app-white));
@@ -236,6 +259,28 @@
   --color-purple-700: color-mix(in srgb, var(--app-purple-base) 76%, var(--app-black));
   --color-purple-800: color-mix(in srgb, var(--app-purple-base) 62%, var(--app-black));
   --color-purple-900: color-mix(in srgb, var(--app-purple-base) 48%, var(--app-black));
+
+  --color-fuchsia-50: color-mix(in srgb, var(--app-fuchsia-base) 10%, var(--app-white));
+  --color-fuchsia-100: color-mix(in srgb, var(--app-fuchsia-base) 18%, var(--app-white));
+  --color-fuchsia-200: color-mix(in srgb, var(--app-fuchsia-base) 30%, var(--app-white));
+  --color-fuchsia-300: color-mix(in srgb, var(--app-fuchsia-base) 48%, var(--app-white));
+  --color-fuchsia-400: color-mix(in srgb, var(--app-fuchsia-base) 78%, var(--app-white));
+  --color-fuchsia-500: var(--app-fuchsia-base);
+  --color-fuchsia-600: color-mix(in srgb, var(--app-fuchsia-base) 88%, var(--app-black));
+  --color-fuchsia-700: color-mix(in srgb, var(--app-fuchsia-base) 76%, var(--app-black));
+  --color-fuchsia-800: color-mix(in srgb, var(--app-fuchsia-base) 62%, var(--app-black));
+  --color-fuchsia-900: color-mix(in srgb, var(--app-fuchsia-base) 48%, var(--app-black));
+
+  --color-lime-50: color-mix(in srgb, var(--app-lime) 10%, var(--app-white));
+  --color-lime-100: color-mix(in srgb, var(--app-lime) 18%, var(--app-white));
+  --color-lime-200: color-mix(in srgb, var(--app-lime) 30%, var(--app-white));
+  --color-lime-300: color-mix(in srgb, var(--app-lime) 48%, var(--app-white));
+  --color-lime-400: color-mix(in srgb, var(--app-lime) 78%, var(--app-white));
+  --color-lime-500: var(--app-lime);
+  --color-lime-600: color-mix(in srgb, var(--app-lime) 88%, var(--app-black));
+  --color-lime-700: color-mix(in srgb, var(--app-lime) 76%, var(--app-black));
+  --color-lime-800: color-mix(in srgb, var(--app-lime) 62%, var(--app-black));
+  --color-lime-900: color-mix(in srgb, var(--app-lime) 48%, var(--app-black));
 
   --color-pink-50: color-mix(in srgb, var(--app-pink-base) 10%, var(--app-white));
   --color-pink-100: color-mix(in srgb, var(--app-pink-base) 18%, var(--app-white));
