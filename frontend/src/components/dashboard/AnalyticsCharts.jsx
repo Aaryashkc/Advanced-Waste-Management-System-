@@ -86,7 +86,7 @@ function InfoHint({ text }) {
   return (
     <span className="group/help relative inline-flex">
       <CircleHelp className="h-4 w-4 text-primary/35 transition-colors hover:text-primary/65" aria-hidden />
-      <span className="pointer-events-none absolute right-0 top-6 z-30 w-56 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-card)] px-3 py-2 text-xs font-medium leading-relaxed text-primary/75 opacity-0 shadow-xl shadow-black/10 transition-opacity group-hover/help:opacity-100">
+      <span className="pointer-events-none absolute right-0 top-6 z-30 w-56 rounded-lg border border-(--dash-border) bg-(--dash-card) px-3 py-2 text-xs font-medium leading-relaxed text-primary/75 opacity-0 shadow-xl shadow-black/10 transition-opacity group-hover/help:opacity-100">
         {text}
       </span>
     </span>
@@ -95,7 +95,7 @@ function InfoHint({ text }) {
 
 function ChartCard({ title, subtitle, hint, children, className = "" }) {
   return (
-    <div className={`dash-interactive-card bg-[var(--dash-card)] rounded-2xl border shadow-sm shadow-primary/5 p-6 ${className}`}>
+    <div className={`dash-interactive-card bg-(--dash-card) rounded-2xl border shadow-sm shadow-primary/5 p-6 ${className}`}>
       <div className="mb-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -112,7 +112,7 @@ function ChartCard({ title, subtitle, hint, children, className = "" }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="flex h-full min-h-[200px] items-center justify-center">
+    <div className="flex h-full min-h-50 items-center justify-center">
       <p className="text-sm text-primary/50">{message}</p>
     </div>
   );
@@ -120,7 +120,7 @@ function EmptyState({ message }) {
 
 function KpiCard({ label, value, valueClass = "text-primary", hint }) {
   return (
-    <div className="dash-interactive-card bg-[var(--dash-card)] rounded-2xl border p-4 shadow-sm shadow-primary/5">
+    <div className="dash-interactive-card bg-(--dash-card) rounded-2xl border p-4 shadow-sm shadow-primary/5">
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-semibold text-primary/55 uppercase tracking-wider">{label}</p>
         <InfoHint text={hint} />

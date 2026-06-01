@@ -59,7 +59,7 @@ const Topbar = ({ onMenuToggle }) => {
   };
 
   return (
-    <header className="h-16 bg-[color-mix(in_srgb,var(--dash-shell)_92%,transparent)] backdrop-blur-md border-b border-primary/10 fixed top-0 right-0 left-0 z-40 supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--dash-shell)_88%,transparent)]">
+    <header className="h-16 bg-[color-mix(in_srgb,var(--dash-shell)_92%,transparent)] backdrop-blur-md border-b border-primary/10 fixed top-0 right-0 left-0 z-40 supports-backdrop-filter:bg-[color-mix(in_srgb,var(--dash-shell)_88%,transparent)]">
       <div className="h-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 min-w-0">
           {/* Mobile menu toggle */}
@@ -116,7 +116,7 @@ const Topbar = ({ onMenuToggle }) => {
               ) : (
                 <CreditCard className="h-5 w-5" />
               )}
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-[var(--dash-shell)]">
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-(--dash-shell)">
                 {unpaidBillCount > 9 ? "9+" : unpaidBillCount}
               </span>
             </button>
@@ -131,7 +131,7 @@ const Topbar = ({ onMenuToggle }) => {
             <Bell className="w-5 h-5 text-primary/70" />
             {totalUnread > 0 && (
               <>
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-[var(--dash-shell)]">
+                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-(--dash-shell)">
                   {totalUnread > 99 ? "99+" : totalUnread}
                 </span>
                 {/* Pulse ring for attention */}
