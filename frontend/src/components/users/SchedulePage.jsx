@@ -654,19 +654,19 @@ function SchedulePage() {
                       backgroundPosition: "right 8px center",
                     }}
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">
+                    <option value="all" className="bg-brand-ink-strong text-white">
                       All Status
                     </option>
                     <option
                       value="dispatch"
-                      className="bg-[#1a1a1a] text-white"
+                      className="bg-brand-ink-strong text-white"
                     >
                       Dispatched
                     </option>
-                    <option value="skip" className="bg-[#1a1a1a] text-white">
+                    <option value="skip" className="bg-brand-ink-strong text-white">
                       Skipped
                     </option>
-                    <option value="reduced" className="bg-[#1a1a1a] text-white">
+                    <option value="reduced" className="bg-brand-ink-strong text-white">
                       Reduced
                     </option>
                   </select>
@@ -681,14 +681,14 @@ function SchedulePage() {
                       backgroundPosition: "right 8px center",
                     }}
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">
+                    <option value="all" className="bg-brand-ink-strong text-white">
                       All Types
                     </option>
                     {areaTypes.map((t) => (
                       <option
                         key={t}
                         value={t}
-                        className="bg-[#1a1a1a] text-white"
+                        className="bg-brand-ink-strong text-white"
                       >
                         {t.charAt(0).toUpperCase() + t.slice(1)}
                       </option>
@@ -714,19 +714,19 @@ function SchedulePage() {
                     onChange={(e) => handleActionFilterChange(e.target.value)}
                     className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">
+                    <option value="all" className="bg-brand-ink-strong text-white">
                       All Status
                     </option>
                     <option
                       value="dispatch"
-                      className="bg-[#1a1a1a] text-white"
+                      className="bg-brand-ink-strong text-white"
                     >
                       Dispatched
                     </option>
-                    <option value="skip" className="bg-[#1a1a1a] text-white">
+                    <option value="skip" className="bg-brand-ink-strong text-white">
                       Skipped
                     </option>
-                    <option value="reduced" className="bg-[#1a1a1a] text-white">
+                    <option value="reduced" className="bg-brand-ink-strong text-white">
                       Reduced
                     </option>
                   </select>
@@ -735,14 +735,14 @@ function SchedulePage() {
                     onChange={(e) => handleTypeFilterChange(e.target.value)}
                     className="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:outline-none"
                   >
-                    <option value="all" className="bg-[#1a1a1a] text-white">
+                    <option value="all" className="bg-brand-ink-strong text-white">
                       All Types
                     </option>
                     {areaTypes.map((t) => (
                       <option
                         key={t}
                         value={t}
-                        className="bg-[#1a1a1a] text-white"
+                        className="bg-brand-ink-strong text-white"
                       >
                         {t.charAt(0).toUpperCase() + t.slice(1)}
                       </option>

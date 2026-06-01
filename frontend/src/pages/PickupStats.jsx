@@ -4,6 +4,7 @@ import useAuthStore from "../stores/useAuthStore";
 import { useDashboardTheme } from "../hooks/useDashboardTheme";
 import api from "../utils/api";
 import LazyChart from "../components/charts/LazyChart";
+import { alpha, themeColor } from "../utils/themeColors";
 
 const fmt = (ms) => {
   if (!ms) return "--";
@@ -24,8 +25,8 @@ const PickupStats = () => {
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
   const isDark = theme === "dark";
-  const chartText = isDark ? "#dfe9e6" : "#354f52";
-  const chartGrid = isDark ? "rgba(231,239,236,0.14)" : "rgba(0,0,0,0.05)";
+  const chartText = isDark ? themeColor("chartDarkText") : themeColor("primary");
+  const chartGrid = isDark ? alpha(themeColor("chartDarkText"), 0.14) : alpha(themeColor("black"), 0.05);
 
   useEffect(() => {
     ChartJS.defaults.color = chartText;
@@ -71,8 +72,8 @@ const PickupStats = () => {
     : baseSections;
 
   // Chart colors
-  const COLORS = ["#10b981", "#3b82f6", "#ef4444", "#f59e0b", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"];
-  const statusColorMap = { COMPLETED: "#10b981", ASSIGNED: "#3b82f6", EN_ROUTE: "#6366f1", ARRIVED: "#8b5cf6", COLLECTING: "#f59e0b", CANCELLED: "#ef4444", EXPIRED: "#9ca3af", PENDING: "#eab308" };
+  const COLORS = [themeColor("success"), themeColor("info"), themeColor("danger"), themeColor("warning"), themeColor("violet"), themeColor("cyan"), themeColor("pink"), themeColor("lime")];
+  const statusColorMap = { COMPLETED: themeColor("success"), ASSIGNED: themeColor("info"), EN_ROUTE: themeColor("indigo"), ARRIVED: themeColor("violet"), COLLECTING: themeColor("warning"), CANCELLED: themeColor("danger"), EXPIRED: themeColor("muted"), PENDING: themeColor("yellow") };
 
   return (
     <div className="space-y-6">
@@ -128,7 +129,7 @@ const PickupStats = () => {
                     labels: statusDistribution.map((s) => s.status),
                     datasets: [{
                       data: statusDistribution.map((s) => s.count),
-                      backgroundColor: statusDistribution.map((s) => statusColorMap[s.status] || "#9ca3af"),
+                      backgroundColor: statusDistribution.map((s) => statusColorMap[s.status] || themeColor("muted")),
                       borderWidth: 0,
                     }],
                   }}
@@ -146,7 +147,7 @@ const PickupStats = () => {
                     labels: categoryDistribution.map((c) => c.category || "Unknown"),
                     datasets: [{
                       data: categoryDistribution.map((c) => c.count),
-                      backgroundColor: ["#10b981", "#ef4444", "#8b5cf6", "#f59e0b"],
+                      backgroundColor: [themeColor("success"), themeColor("danger"), themeColor("violet"), themeColor("warning")],
                       borderWidth: 0,
                     }],
                   }}
@@ -191,7 +192,7 @@ const PickupStats = () => {
                     datasets: [{
                       label: "Pickups",
                       data: Array.from({ length: 24 }, (_, i) => hourlyDistribution.find((d) => d.hour === i)?.count || 0),
-                      backgroundColor: "#3b82f6",
+                      backgroundColor: themeColor("info"),
                       borderRadius: 4,
                     }],
                   }}
@@ -227,8 +228,8 @@ const PickupStats = () => {
                       {
                         label: "Created",
                         data: pickupTrend.map((d) => d.created),
-                        borderColor: "#3b82f6",
-                        backgroundColor: "rgba(59,130,246,0.08)",
+                        borderColor: themeColor("info"),
+                        backgroundColor: alpha(themeColor("info"), 0.08),
                         fill: true,
                         tension: 0.3,
                         pointRadius: 3,
@@ -236,8 +237,8 @@ const PickupStats = () => {
                       {
                         label: "Completed",
                         data: pickupTrend.map((d) => d.completed),
-                        borderColor: "#10b981",
-                        backgroundColor: "rgba(16,185,129,0.08)",
+                        borderColor: themeColor("success"),
+                        backgroundColor: alpha(themeColor("success"), 0.08),
                         fill: true,
                         tension: 0.3,
                         pointRadius: 3,
@@ -245,8 +246,8 @@ const PickupStats = () => {
                       {
                         label: "Cancelled",
                         data: pickupTrend.map((d) => d.cancelled),
-                        borderColor: "#ef4444",
-                        backgroundColor: "rgba(239,68,68,0.05)",
+                        borderColor: themeColor("danger"),
+                        backgroundColor: alpha(themeColor("danger"), 0.05),
                         fill: true,
                         tension: 0.3,
                         pointRadius: 2,
@@ -277,8 +278,8 @@ const PickupStats = () => {
                       datasets: [{
                         label: "Avg Response",
                         data: responseTimeTrend.map((r) => Math.round(r.avgResponseMs / 1000)),
-                        borderColor: "#8b5cf6",
-                        backgroundColor: "rgba(139,92,246,0.08)",
+                        borderColor: themeColor("violet"),
+                        backgroundColor: alpha(themeColor("violet"), 0.08),
                         fill: true,
                         tension: 0.3,
                         pointRadius: 3,
@@ -310,8 +311,8 @@ const PickupStats = () => {
                       datasets: [{
                         label: "Avg Duration",
                         data: responseTimeTrend.map((r) => Math.round(r.avgTaskDurationMs / 60000)),
-                        borderColor: "#f59e0b",
-                        backgroundColor: "rgba(245,158,11,0.08)",
+                        borderColor: themeColor("warning"),
+                        backgroundColor: alpha(themeColor("warning"), 0.08),
                         fill: true,
                         tension: 0.3,
                         pointRadius: 3,
@@ -346,7 +347,7 @@ const PickupStats = () => {
                     datasets: [{
                       label: "Completed",
                       data: responseTimeTrend.map((r) => r.count),
-                      backgroundColor: "#10b981",
+                      backgroundColor: themeColor("success"),
                       borderRadius: 6,
                     }],
                   }}
@@ -507,7 +508,7 @@ const PickupStats = () => {
                     datasets: [{
                       label: "Completed",
                       data: topDrivers.map((d) => d.completed),
-                      backgroundColor: "#10b981",
+                      backgroundColor: themeColor("success"),
                       borderRadius: 8,
                     }],
                   }}
@@ -607,13 +608,13 @@ const PickupStats = () => {
                         {
                           label: "Total",
                           data: areaBreakdown.map((d) => d.total),
-                          backgroundColor: "rgba(59,130,246,0.7)",
+                          backgroundColor: alpha(themeColor("info"), 0.7),
                           borderRadius: 6,
                         },
                         {
                           label: "Completed",
                           data: areaBreakdown.map((d) => d.completed),
-                          backgroundColor: "rgba(16,185,129,0.7)",
+                          backgroundColor: alpha(themeColor("success"), 0.7),
                           borderRadius: 6,
                         },
                       ],
@@ -695,13 +696,13 @@ const PickupStats = () => {
                         {
                           label: "Total",
                           data: orgBreakdown.map((o) => o.total),
-                          backgroundColor: "rgba(99,102,241,0.7)",
+                          backgroundColor: alpha(themeColor("indigo"), 0.7),
                           borderRadius: 6,
                         },
                         {
                           label: "Completed",
                           data: orgBreakdown.map((o) => o.completed),
-                          backgroundColor: "rgba(16,185,129,0.7)",
+                          backgroundColor: alpha(themeColor("success"), 0.7),
                           borderRadius: 6,
                         },
                       ],

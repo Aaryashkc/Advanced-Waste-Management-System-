@@ -152,7 +152,7 @@ function OTPVerificationPage() {
   };
 
   return (
-    <div className="bg-[#f5f1e8] min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="bg-accent min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="w-full max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           
@@ -161,10 +161,10 @@ function OTPVerificationPage() {
             {/* Welcome Heading */}
             <h1 className="font-['Outfit',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-primary mb-4">
               <span className="block leading-tight mb-2">
-                Hello <span className="text-[#296200]">User</span>
+                Hello <span className="text-primary">User</span>
               </span>
               <span className="block leading-tight">
-                Welcome <span className="text-[#296200]">Back</span>
+                Welcome <span className="text-primary">Back</span>
               </span>
             </h1>
 
@@ -206,17 +206,17 @@ function OTPVerificationPage() {
             <button
               onClick={handleVerify}
               disabled={isLoading || otp.join('').length !== 6}
-              className="bg-primary flex gap-3 h-12 sm:h-14 items-center justify-center px-8 sm:px-10 rounded-2xl hover:bg-[#2a3f41] transition-all active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md"
+              className="bg-primary flex gap-3 h-12 sm:h-14 items-center justify-center px-8 sm:px-10 rounded-2xl hover:bg-brand-primary-hover transition-all active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md"
               aria-label="Verify OTP and log in"
             >
-              <span className="font-['Inter',sans-serif] font-medium text-[#f5f1e8] text-lg sm:text-xl">
+              <span className="font-['Inter',sans-serif] font-medium text-accent text-lg sm:text-xl">
                 {isLoading ? 'Verifying...' : 'Log In'}
               </span>
               {!isLoading && (
                 <svg className="rotate-90 w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 22 22" aria-hidden="true">
                   <path 
                     d="M11 16.5V5.5M11 5.5L5.5 11M11 5.5L16.5 11" 
-                    stroke="#F5F1E8" 
+                    stroke="var(--app-surface)" 
                     strokeLinecap="round" 
                     strokeLinejoin="round" 
                     strokeWidth="1.5" 
@@ -227,17 +227,17 @@ function OTPVerificationPage() {
 
             {/* Resend Code */}
             <div className="mt-6 text-center">
-              <p className="font-['Poppins',sans-serif] text-sm sm:text-base text-[rgba(0,0,0,0.87)]">
+              <p className="font-['Poppins',sans-serif] text-sm sm:text-base text-black/85">
                 Didn't receive the code?{' '}
                 {canResend ? (
                   <button 
                     onClick={handleResend}
-                    className="font-['Poppins',sans-serif] font-semibold text-[#007300] hover:text-[#005500] underline focus:outline-none focus:ring-2 focus:ring-[#007300] rounded-sm"
+                    className="font-['Poppins',sans-serif] font-semibold text-primary hover:text-brand-primary-hover underline focus:outline-none focus:ring-2 focus:ring-primary rounded-sm"
                   >
                     Resend Code
                   </button>
                 ) : (
-                  <span className="font-['Poppins',sans-serif] font-semibold text-[#757575]">
+                  <span className="font-['Poppins',sans-serif] font-semibold text-primary/55">
                     Resend in {resendTimer}s
                   </span>
                 )}
@@ -260,7 +260,7 @@ function OTPVerificationPage() {
               />
               <div 
                 aria-hidden="true" 
-                className="absolute inset-0 border-[#84a98c] border-8 sm:border-12 lg:border-16 rounded-2xl pointer-events-none" 
+                className="absolute inset-0 border-primary/40 border-8 sm:border-12 lg:border-16 rounded-2xl pointer-events-none" 
               />
             </div>
           </div>

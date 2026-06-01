@@ -20,7 +20,7 @@ const Unauthorized = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f5f1e8] flex items-center justify-center px-4">
+        <div className="min-h-screen bg-accent flex items-center justify-center px-4">
             <div className="max-w-md w-full text-center">
                 {/* Icon */}
                 <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
@@ -46,7 +46,7 @@ const Unauthorized = () => {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button
                         onClick={handleGoBack}
-                        className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-[#2a3f41] transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-brand-primary-hover transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     >
                         {isAuthenticated ? 'Go to Dashboard' : 'Go to Login'}
                     </button>

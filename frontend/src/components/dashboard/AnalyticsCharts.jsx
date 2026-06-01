@@ -2,31 +2,32 @@ import React, { useMemo } from "react";
 import { useDashboardTheme } from "../../hooks/useDashboardTheme";
 import { CircleHelp } from "lucide-react";
 import LazyChart from "../charts/LazyChart";
+import { alpha, themeColor } from "../../utils/themeColors";
 
 /* ── Color palettes (match the rest of the app) ── */
 
 const STATUS_COLORS = {
-  PENDING: "#f59e0b",
-  ASSIGNED: "#3b82f6",
-  EN_ROUTE: "#6366f1",
-  ARRIVED: "#8b5cf6",
-  COLLECTING: "#06b6d4",
-  COMPLETED: "#22c55e",
-  CANCELLED: "#ef4444",
-  EXPIRED: "#9ca3af",
-  REJECTED: "#dc2626",
+  PENDING: themeColor("warning"),
+  ASSIGNED: themeColor("info"),
+  EN_ROUTE: themeColor("indigo"),
+  ARRIVED: themeColor("violet"),
+  COLLECTING: themeColor("cyan"),
+  COMPLETED: themeColor("successStrong"),
+  CANCELLED: themeColor("danger"),
+  EXPIRED: themeColor("muted"),
+  REJECTED: themeColor("dangerStrong"),
 };
 
 const CATEGORY_COLORS = {
-  recyclable: "#22c55e",
-  "non-recyclable": "#f59e0b",
-  both: "#6366f1",
+  recyclable: themeColor("successStrong"),
+  "non-recyclable": themeColor("warning"),
+  both: themeColor("indigo"),
 };
 
 const LEVEL_COLORS = {
-  easy: "#22c55e",
-  medium: "#f59e0b",
-  hard: "#ef4444",
+  easy: themeColor("successStrong"),
+  medium: themeColor("warning"),
+  hard: themeColor("danger"),
 };
 
 const EMPTY_ARRAY = [];
@@ -41,14 +42,14 @@ const baseOptions = {
     legend: {
       position: "bottom",
       labels: {
-        color: "#2d3748",
+        color: themeColor("chartText"),
         font: { family: "'Inter', sans-serif", size: 12, weight: "500" },
         usePointStyle: true,
         padding: 16,
       },
     },
     tooltip: {
-      backgroundColor: "rgba(25, 42, 28, 0.92)",
+      backgroundColor: alpha(themeColor("inkStrong"), 0.92),
       titleFont: { family: "'Inter', sans-serif", size: 13 },
       bodyFont: { family: "'Inter', sans-serif", size: 12 },
       padding: 10,
@@ -62,12 +63,12 @@ const cartesianOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { font: { family: "'Inter', sans-serif" }, color: "#4a5568" },
+      ticks: { font: { family: "'Inter', sans-serif" }, color: themeColor("chartMuted") },
     },
     y: {
       border: { dash: [4, 4] },
-      grid: { color: "#e2e8f0" },
-      ticks: { font: { family: "'Inter', sans-serif" }, color: "#4a5568" },
+      grid: { color: themeColor("chartGrid") },
+      ticks: { font: { family: "'Inter', sans-serif" }, color: themeColor("chartMuted") },
       beginAtZero: true,
     },
   },
@@ -172,9 +173,9 @@ function formatBillingRole(role) {
 function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = "super_admin" }) {
   const { theme } = useDashboardTheme();
   const isDark = theme === "dark";
-  const chartText = isDark ? "#dfe9e6" : "#2d3748";
-  const chartMuted = isDark ? "#b6c3bf" : "#4a5568";
-  const chartGrid = isDark ? "rgba(231,239,236,0.12)" : "#e2e8f0";
+  const chartText = isDark ? themeColor("chartDarkText") : themeColor("chartText");
+  const chartMuted = isDark ? themeColor("chartDarkMuted") : themeColor("chartMuted");
+  const chartGrid = isDark ? alpha(themeColor("chartDarkText"), 0.12) : themeColor("chartGrid");
 
   const {
     statusDistribution = EMPTY_ARRAY,
@@ -207,8 +208,8 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Created",
         data: dailyTrend.map((d) => d.created),
-        borderColor: "#3b82f6",
-        backgroundColor: "rgba(59,130,246,0.12)",
+        borderColor: themeColor("info"),
+        backgroundColor: alpha(themeColor("info"), 0.12),
         fill: true,
         tension: 0.4,
         pointRadius: 3,
@@ -216,8 +217,8 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Completed",
         data: dailyTrend.map((d) => d.completed),
-        borderColor: "#22c55e",
-        backgroundColor: "rgba(34,197,94,0.12)",
+        borderColor: themeColor("successStrong"),
+        backgroundColor: alpha(themeColor("successStrong"), 0.12),
         fill: true,
         tension: 0.4,
         pointRadius: 3,
@@ -225,8 +226,8 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Cancelled",
         data: dailyTrend.map((d) => d.cancelled),
-        borderColor: "#ef4444",
-        backgroundColor: "rgba(239,68,68,0.10)",
+        borderColor: themeColor("danger"),
+        backgroundColor: alpha(themeColor("danger"), 0.1),
         fill: true,
         tension: 0.4,
         pointRadius: 3,
@@ -240,7 +241,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
     datasets: [
       {
         data: statusDistribution.map((s) => s.count),
-        backgroundColor: statusDistribution.map((s) => STATUS_COLORS[s.status] || "#9ca3af"),
+        backgroundColor: statusDistribution.map((s) => STATUS_COLORS[s.status] || themeColor("muted")),
         borderWidth: 0,
         hoverOffset: 6,
       },
@@ -255,7 +256,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
     datasets: [
       {
         data: categoryDistribution.map((c) => c.count),
-        backgroundColor: categoryDistribution.map((c) => CATEGORY_COLORS[c.category] || "#9ca3af"),
+        backgroundColor: categoryDistribution.map((c) => CATEGORY_COLORS[c.category] || themeColor("muted")),
         borderWidth: 0,
         hoverOffset: 6,
       },
@@ -270,7 +271,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
     datasets: [
       {
         data: levelDistribution.map((l) => l.count),
-        backgroundColor: levelDistribution.map((l) => LEVEL_COLORS[l.level] || "#9ca3af"),
+        backgroundColor: levelDistribution.map((l) => LEVEL_COLORS[l.level] || themeColor("muted")),
         borderWidth: 0,
         hoverOffset: 6,
       },
@@ -287,7 +288,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         {
           label: "Pickups",
           data: byHour,
-          backgroundColor: "#354f52",
+          backgroundColor: themeColor("primary"),
           borderRadius: 4,
         },
       ],
@@ -301,13 +302,13 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Total Pickups",
         data: breakdown.map((b) => b.total),
-        backgroundColor: "#3b82f6",
+        backgroundColor: themeColor("info"),
         borderRadius: 6,
       },
       {
         label: "Completed",
         data: breakdown.map((b) => b.completed),
-        backgroundColor: "#22c55e",
+        backgroundColor: themeColor("successStrong"),
         borderRadius: 6,
       },
     ],
@@ -319,7 +320,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Revenue",
         data: orgBreakdown.map((org) => org.revenue || 0),
-        backgroundColor: "#10b981",
+        backgroundColor: themeColor("success"),
         borderRadius: 6,
       },
     ],
@@ -331,8 +332,8 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Revenue",
         data: monthlyRevenue.map((row) => row.revenue || 0),
-        borderColor: "#10b981",
-        backgroundColor: "rgba(16,185,129,0.14)",
+        borderColor: themeColor("success"),
+        backgroundColor: alpha(themeColor("success"), 0.14),
         fill: true,
         tension: 0.35,
         pointRadius: 3,
@@ -356,8 +357,8 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         {
           label: "Pickup Revenue",
           data: monthKeys.map((month) => pickupByMonth.get(month) || 0),
-          borderColor: "#10b981",
-          backgroundColor: "rgba(16,185,129,0.12)",
+          borderColor: themeColor("success"),
+          backgroundColor: alpha(themeColor("success"), 0.12),
           fill: true,
           tension: 0.35,
           pointRadius: 3,
@@ -365,8 +366,8 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
         {
           label: "Monthly Bills",
           data: monthKeys.map((month) => billByMonth.get(month) || 0),
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59,130,246,0.10)",
+          borderColor: themeColor("info"),
+          backgroundColor: alpha(themeColor("info"), 0.1),
           fill: true,
           tension: 0.35,
           pointRadius: 3,
@@ -381,7 +382,7 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Monthly Bill Revenue",
         data: billRoleRevenue.map((row) => row.revenue || 0),
-        backgroundColor: ["#3b82f6", "#8b5cf6", "#9ca3af"],
+        backgroundColor: [themeColor("info"), themeColor("violet"), themeColor("muted")],
         borderRadius: 6,
       },
     ],
@@ -532,13 +533,13 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Assigned",
         data: scheduleTrend.map((d) => d.assigned || 0),
-        backgroundColor: "#3b82f6",
+        backgroundColor: themeColor("info"),
         borderRadius: 6,
       },
       {
         label: "Completed",
         data: scheduleTrend.map((d) => d.completed || 0),
-        backgroundColor: "#22c55e",
+        backgroundColor: themeColor("successStrong"),
         borderRadius: 6,
       },
     ],
@@ -550,13 +551,13 @@ function AnalyticsCharts({ analyticsData, billingSummary = EMPTY_OBJECT, mode = 
       {
         label: "Assigned",
         data: scheduledAreas.map((a) => a.assigned || 0),
-        backgroundColor: "#3b82f6",
+        backgroundColor: themeColor("info"),
         borderRadius: 6,
       },
       {
         label: "Completed",
         data: scheduledAreas.map((a) => a.completed || 0),
-        backgroundColor: "#22c55e",
+        backgroundColor: themeColor("successStrong"),
         borderRadius: 6,
       },
     ],

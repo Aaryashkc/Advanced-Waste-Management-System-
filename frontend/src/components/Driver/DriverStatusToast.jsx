@@ -98,7 +98,7 @@ export default function DriverStatusToast() {
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
       <div
         onClick={() => navigate(`/task-route/${activePickup.id || activePickup._id}`)}
-        className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-2 border-primary overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform"
+        className="bg-white rounded-2xl shadow-xl border-2 border-primary overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform"
         style={{ animation: "slideUpToast 0.4s ease-out" }}
       >
         <div className="px-4 py-3 bg-accent/10 flex items-center justify-between">

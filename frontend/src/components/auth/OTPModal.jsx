@@ -187,7 +187,7 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
 
         {/* Resend success */}
         {resendSuccess && !error && (
-          <p className="text-[#296200] text-sm text-center mb-4 font-['Poppins',sans-serif]">
+          <p className="text-primary text-sm text-center mb-4 font-['Poppins',sans-serif]">
             New code sent successfully
           </p>
         )}
@@ -201,7 +201,7 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
             onClick={handleVerify}
             disabled={isLoading || otp.join('').length !== 6}
           className="w-full h-12 bg-primary text-accent font-['Inter',sans-serif] font-medium text-base rounded-xl
-            hover:bg-[#2a3f41] active:scale-[0.98] transition-all
+            hover:bg-brand-primary-hover active:scale-[0.98] transition-all
             disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
             focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
         >
@@ -215,7 +215,7 @@ export default function OTPModal({ isOpen, onClose, email, onSuccess }) {
             <button
               type="button"
               onClick={handleResend}
-              className="font-medium text-primary hover:text-[#296200] underline underline-offset-2 transition-colors"
+              className="font-medium text-primary hover:text-primary underline underline-offset-2 transition-colors"
             >
               Resend
             </button>

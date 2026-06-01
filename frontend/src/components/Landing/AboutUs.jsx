@@ -6,7 +6,7 @@ export function AboutSection() {
           <div>
             <h2 className="font-['Outfit'] font-bold text-primary text-3xl md:text-4xl mb-6">
               Custom, tech-enabled environmental services{' '}
-              <span className="bg-linear-to-r from-[#57a521] to-[#296200] bg-clip-text" style={{ WebkitTextFillColor: 'transparent' }}>
+              <span className="bg-linear-to-r from-brand-success to-primary bg-clip-text" style={{ WebkitTextFillColor: 'transparent' }}>
                 for your business and Home
               </span>
             </h2>
@@ -20,7 +20,7 @@ export function AboutSection() {
         
         {/* Gradient divider */}
         <div className="mt-12">
-          <div className="h-1.75 w-full bg-linear-to-r from-[#57A521] to-[#296200] rounded-full"></div>
+          <div className="h-1.75 w-full bg-linear-to-r from-brand-success to-primary rounded-full"></div>
         </div>
       </div>
     </section>

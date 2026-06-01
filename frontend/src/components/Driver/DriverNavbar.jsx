@@ -73,7 +73,7 @@ export default function DriverNavbar() {
   if (isTaskPage) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-primary/8 safe-area-bottom shadow-[0_-2px_20px_rgba(0,0,0,0.06)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-primary/8 safe-area-bottom shadow-2xl">
       <div className="max-w-lg mx-auto flex items-center justify-around px-2 py-1.5">
         {NAV_ITEMS.map((item) => {
           const isActive =
@@ -93,13 +93,13 @@ export default function DriverNavbar() {
             >
               {/* Active indicator */}
               {isActive && (
-                <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-[#354f52]" />
+                <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-primary" />
               )}
 
               {/* Icon */}
               <span className={`transition-all duration-200 ${
                 isActive
-                  ? "text-[#354f52] scale-110"
+                  ? "text-primary scale-110"
                   : "text-primary/35 group-hover:text-primary/55"
               }`}>
                 <item.Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
@@ -114,7 +114,7 @@ export default function DriverNavbar() {
 
               {/* Label */}
               <span className={`text-[10px] mt-1 font-semibold tracking-wide transition-colors duration-200 ${
-                isActive ? "text-[#354f52]" : "text-primary/35 group-hover:text-primary/55"
+                isActive ? "text-primary" : "text-primary/35 group-hover:text-primary/55"
               }`}>
                 {item.label}
               </span>

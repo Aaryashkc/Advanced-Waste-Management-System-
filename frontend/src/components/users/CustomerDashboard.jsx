@@ -19,6 +19,7 @@ import useBillingStore from "../../stores/useBillingStore";
 import TruckLoader from "../shared/TruckLoader";
 import { getSocket } from "../../utils/socket";
 import LazyChart from "../charts/LazyChart";
+import { alpha, themeColor } from "../../utils/themeColors";
 
 /* ── Viewport observer (same pattern as OurTeam / SchedulePage) ── */
 
@@ -53,28 +54,28 @@ const DASHBOARD_BG =
   "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1920&auto=format&fit=crop";
 
 const STATUS_COLORS = {
-  PAYMENT_REQUIRED: "#f97316",
-  PENDING: "#f59e0b",
-  ASSIGNED: "#3b82f6",
-  EN_ROUTE: "#6366f1",
-  ARRIVED: "#8b5cf6",
-  COLLECTING: "#06b6d4",
-  COMPLETED: "#22c55e",
-  CANCELLED: "#ef4444",
-  EXPIRED: "#9ca3af",
-  REJECTED: "#dc2626",
+  PAYMENT_REQUIRED: themeColor("orange"),
+  PENDING: themeColor("warning"),
+  ASSIGNED: themeColor("info"),
+  EN_ROUTE: themeColor("indigo"),
+  ARRIVED: themeColor("violet"),
+  COLLECTING: themeColor("cyan"),
+  COMPLETED: themeColor("successStrong"),
+  CANCELLED: themeColor("danger"),
+  EXPIRED: themeColor("muted"),
+  REJECTED: themeColor("dangerStrong"),
 };
 
 const CATEGORY_COLORS = {
-  recyclable: "#22c55e",
-  "non-recyclable": "#f59e0b",
-  both: "#6366f1",
+  recyclable: themeColor("successStrong"),
+  "non-recyclable": themeColor("warning"),
+  both: themeColor("indigo"),
 };
 
 const LEVEL_COLORS = {
-  easy: "#22c55e",
-  medium: "#f59e0b",
-  hard: "#ef4444",
+  easy: themeColor("successStrong"),
+  medium: themeColor("warning"),
+  hard: themeColor("danger"),
 };
 
 /* ── Stat card ── */
@@ -112,7 +113,7 @@ function ChartCard({ title, children, className = "" }) {
 /* ── Recent pickup row ── */
 
 function RecentPickupRow({ pickup, onCancel, onCompletePayment }) {
-  const statusColor = STATUS_COLORS[pickup.status] || "#9ca3af";
+  const statusColor = STATUS_COLORS[pickup.status] || themeColor("muted");
   const [cancelling, setCancelling] = useState(false);
   const pickupId = pickup.id || pickup._id;
   const needsPayment = pickup.status === "PAYMENT_REQUIRED";
@@ -298,7 +299,7 @@ function CustomerDashboard() {
       datasets: [
         {
           data: entries.map(([, v]) => v),
-          backgroundColor: entries.map(([k]) => STATUS_COLORS[k] || "#9ca3af"),
+          backgroundColor: entries.map(([k]) => STATUS_COLORS[k] || themeColor("muted")),
           borderWidth: 0,
           spacing: 3,
         },
@@ -315,7 +316,7 @@ function CustomerDashboard() {
         {
           data: entries.map(([, v]) => v),
           backgroundColor: entries.map(
-            ([k]) => CATEGORY_COLORS[k] || "#9ca3af",
+            ([k]) => CATEGORY_COLORS[k] || themeColor("muted"),
           ),
           borderWidth: 0,
           spacing: 3,
@@ -332,7 +333,7 @@ function CustomerDashboard() {
       datasets: [
         {
           data: entries.map(([, v]) => v),
-          backgroundColor: entries.map(([k]) => LEVEL_COLORS[k] || "#9ca3af"),
+          backgroundColor: entries.map(([k]) => LEVEL_COLORS[k] || themeColor("muted")),
           borderWidth: 0,
           spacing: 3,
         },
@@ -354,32 +355,32 @@ function CustomerDashboard() {
         {
           label: "Created",
           data: stats.monthly.map((m) => m.created),
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59,130,246,0.1)",
+          borderColor: themeColor("info"),
+          backgroundColor: alpha(themeColor("info"), 0.1),
           fill: true,
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: "#3b82f6",
+          pointBackgroundColor: themeColor("info"),
         },
         {
           label: "Completed",
           data: stats.monthly.map((m) => m.completed),
-          borderColor: "#22c55e",
-          backgroundColor: "rgba(34,197,94,0.1)",
+          borderColor: themeColor("successStrong"),
+          backgroundColor: alpha(themeColor("successStrong"), 0.1),
           fill: true,
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: "#22c55e",
+          pointBackgroundColor: themeColor("successStrong"),
         },
         {
           label: "Cancelled",
           data: stats.monthly.map((m) => m.cancelled),
-          borderColor: "#ef4444",
-          backgroundColor: "rgba(239,68,68,0.08)",
+          borderColor: themeColor("danger"),
+          backgroundColor: alpha(themeColor("danger"), 0.08),
           fill: true,
           tension: 0.4,
           pointRadius: 4,
-          pointBackgroundColor: "#ef4444",
+          pointBackgroundColor: themeColor("danger"),
         },
       ],
     };
@@ -397,7 +398,7 @@ function CustomerDashboard() {
           usePointStyle: true,
           pointStyleWidth: 10,
           font: { size: 12, family: "'Outfit', sans-serif" },
-          color: "rgba(255,255,255,0.5)",
+          color: alpha(themeColor("white"), 0.5),
         },
       },
     },
@@ -414,7 +415,7 @@ function CustomerDashboard() {
           usePointStyle: true,
           pointStyleWidth: 10,
           font: { size: 12, family: "'Outfit', sans-serif" },
-          color: "rgba(255,255,255,0.5)",
+          color: alpha(themeColor("white"), 0.5),
         },
       },
     },
@@ -423,7 +424,7 @@ function CustomerDashboard() {
         grid: { display: false },
         ticks: {
           font: { size: 12, family: "'Outfit', sans-serif" },
-          color: "rgba(255,255,255,0.35)",
+          color: alpha(themeColor("white"), 0.35),
         },
       },
       y: {
@@ -431,9 +432,9 @@ function CustomerDashboard() {
         ticks: {
           stepSize: 1,
           font: { size: 12, family: "'Outfit', sans-serif" },
-          color: "rgba(255,255,255,0.35)",
+          color: alpha(themeColor("white"), 0.35),
         },
-        grid: { color: "rgba(255,255,255,0.05)" },
+        grid: { color: alpha(themeColor("white"), 0.05) },
       },
     },
   };
@@ -559,31 +560,31 @@ function CustomerDashboard() {
                 icon: Package,
                 value: stats?.total || 0,
                 label: "Total Requests",
-                accent: "#3b82f6",
+                accent: themeColor("info"),
               },
               {
                 icon: CheckCircle2,
                 value: completed,
                 label: "Completed",
-                accent: "#22c55e",
+                accent: themeColor("successStrong"),
               },
               {
                 icon: Truck,
                 value: active,
                 label: "Active",
-                accent: "#6366f1",
+                accent: themeColor("indigo"),
               },
               {
                 icon: Clock,
                 value: pending,
                 label: "Pending",
-                accent: "#f59e0b",
+                accent: themeColor("warning"),
               },
               {
                 icon: XCircle,
                 value: cancelled,
                 label: "Cancelled",
-                accent: "#ef4444",
+                accent: themeColor("danger"),
               },
             ].map((stat, i) => (
               <FadeIn key={stat.label} delay={300 + i * 80}>

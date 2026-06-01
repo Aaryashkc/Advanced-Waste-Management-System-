@@ -111,7 +111,7 @@ export default function DownloadApp() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f7f5ef] text-primary">
+    <main className="min-h-screen bg-brand-surface-soft text-primary">
       <section
         className="relative min-h-screen overflow-hidden bg-black bg-cover bg-center bg-no-repeat pt-24"
         style={{ backgroundImage: `url(${HERO_IMAGE})` }}
@@ -171,9 +171,9 @@ export default function DownloadApp() {
         </div>
 
         <div className="flex items-center justify-end">
-          <div className="relative h-[560px] w-[290px] rounded-[2.5rem] border-[10px] border-[#1f2e30] bg-[#1f2e30] shadow-2xl">
+          <div className="relative h-[560px] w-[290px] rounded-[2.5rem] border-[10px] border-brand-ink-strong bg-brand-ink-strong shadow-2xl">
             <div className="absolute left-1/2 top-3 h-5 w-24 -translate-x-1/2 rounded-full bg-black/70" />
-            <div className="h-full overflow-hidden rounded-[1.8rem] bg-[#f5f1e8]">
+            <div className="h-full overflow-hidden rounded-[1.8rem] bg-accent">
               <div className="bg-primary px-5 pb-8 pt-12 text-white">
                 <div className="flex items-center justify-between">
                   <p className="text-lg font-black">SafaBin</p>
@@ -231,7 +231,7 @@ export default function DownloadApp() {
                       const ItemIcon = item.icon;
                       return (
                         <div key={item.title} className="grid grid-cols-[auto_1fr] gap-3 rounded-xl border border-primary/10 bg-white p-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f1e8] text-primary">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-primary">
                             <ItemIcon size={18} />
                           </div>
                           <div>

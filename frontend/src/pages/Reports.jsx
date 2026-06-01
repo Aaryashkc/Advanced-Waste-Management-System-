@@ -3,12 +3,13 @@ import useMLScheduleStore from "../stores/useMLScheduleStore";
 import useAuthStore from "../stores/useAuthStore";
 import { BarChart3, AlertTriangle, Truck } from "lucide-react";
 import LazyChart from "../components/charts/LazyChart";
+import { alpha, themeColor } from "../utils/themeColors";
 
 const REASON_COLORS = {
-  "No trucks with assigned drivers available": "#ef4444",
-  "Insufficient truck capacity for this area": "#f97316",
-  "No truck/driver available": "#dc2626",
-  "Skipped by ML model": "#9ca3af",
+  "No trucks with assigned drivers available": themeColor("danger"),
+  "Insufficient truck capacity for this area": themeColor("orange"),
+  "No truck/driver available": themeColor("dangerStrong"),
+  "Skipped by ML model": themeColor("muted"),
 };
 
 const Reports = () => {
@@ -25,21 +26,21 @@ const Reports = () => {
       legend: {
         position: "bottom",
         labels: {
-          color: "#354f52",
+          color: themeColor("primary"),
           font: { family: "'Inter', sans-serif", size: 12, weight: "500" },
           usePointStyle: true, padding: 20,
         },
       },
       tooltip: {
-        backgroundColor: "rgba(53, 79, 82, 0.92)",
+        backgroundColor: alpha(themeColor("primary"), 0.92),
         titleFont: { family: "'Inter', sans-serif", size: 14 },
         bodyFont: { family: "'Inter', sans-serif", size: 13 },
         padding: 12, cornerRadius: 8, displayColors: true,
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { family: "'Inter', sans-serif" }, color: "#354f52" } },
-      y: { border: { dash: [4, 4] }, grid: { color: "#e2e8f0" }, ticks: { font: { family: "'Inter', sans-serif" }, color: "#354f52" }, beginAtZero: true },
+      x: { grid: { display: false }, ticks: { font: { family: "'Inter', sans-serif" }, color: themeColor("primary") } },
+      y: { border: { dash: [4, 4] }, grid: { color: themeColor("chartGrid") }, ticks: { font: { family: "'Inter', sans-serif" }, color: themeColor("primary") }, beginAtZero: true },
     },
   };
 
@@ -81,8 +82,8 @@ const Reports = () => {
     datasets: [{
       label: "Predicted Waste (kg)",
       data: trendValues,
-      borderColor: "#354f52", backgroundColor: "rgba(53, 79, 82, 0.1)",
-      tension: 0.4, fill: true, pointBackgroundColor: "#354f52", pointRadius: 2, pointHoverRadius: 5,
+      borderColor: themeColor("primary"), backgroundColor: alpha(themeColor("primary"), 0.1),
+      tension: 0.4, fill: true, pointBackgroundColor: themeColor("primary"), pointRadius: 2, pointHoverRadius: 5,
     }],
   }), [trendDates, trendValues]);
 
@@ -90,7 +91,7 @@ const Reports = () => {
     labels: areaBreakdown.map((d) => d.area),
     datasets: [{
       label: "Avg Waste (kg)", data: areaBreakdown.map((d) => d.avgWasteKg),
-      backgroundColor: "rgba(53, 79, 82, 0.7)", borderRadius: 6,
+      backgroundColor: alpha(themeColor("primary"), 0.7), borderRadius: 6,
     }],
   }), [areaBreakdown]);
 
@@ -98,7 +99,7 @@ const Reports = () => {
     labels: categoryDist.map((c) => c.category),
     datasets: [{
       data: categoryDist.map((c) => c.count),
-      backgroundColor: categoryDist.map((c) => ({ none: "#9ca3af", low: "#4ade80", medium: "#f59e0b", high: "#f97316", critical: "#ef4444" })[c.category] || "#cbd5e1"),
+      backgroundColor: categoryDist.map((c) => ({ none: themeColor("muted"), low: themeColor("greenSoft"), medium: themeColor("warning"), high: themeColor("orange"), critical: themeColor("danger") })[c.category] || themeColor("chartGrid")),
       hoverOffset: 4,
     }],
   }), [categoryDist]);
@@ -107,7 +108,7 @@ const Reports = () => {
     labels: scheduleStats.map((s) => s.status),
     datasets: [{
       data: scheduleStats.map((s) => s.count),
-      backgroundColor: scheduleStats.map((s) => ({ draft: "#9ca3af", confirmed: "#4ade80", completed: "#3b82f6", cancelled: "#ef4444" })[s.status] || "#cbd5e1"),
+      backgroundColor: scheduleStats.map((s) => ({ draft: themeColor("muted"), confirmed: themeColor("greenSoft"), completed: themeColor("info"), cancelled: themeColor("danger") })[s.status] || themeColor("chartGrid")),
       borderWidth: 0, hoverOffset: 4,
     }],
   }), [scheduleStats]);
@@ -116,7 +117,7 @@ const Reports = () => {
     labels: actionDist.map((a) => a.action),
     datasets: [{
       data: actionDist.map((a) => a.count),
-      backgroundColor: actionDist.map((a) => ({ dispatch: "#354f52", skip: "#ef4444", reduced: "#f59e0b" })[a.action] || "#cbd5e1"),
+      backgroundColor: actionDist.map((a) => ({ dispatch: themeColor("primary"), skip: themeColor("danger"), reduced: themeColor("warning") })[a.action] || themeColor("chartGrid")),
       borderWidth: 0, hoverOffset: 4,
     }],
   }), [actionDist]);
@@ -125,7 +126,7 @@ const Reports = () => {
     labels: reasonBreakdown.map((r) => r.reason.length > 30 ? r.reason.slice(0, 30) + "..." : r.reason),
     datasets: [{
       data: reasonBreakdown.map((r) => r.count),
-      backgroundColor: reasonBreakdown.map((r) => REASON_COLORS[r.reason] || "#6b7280"),
+      backgroundColor: reasonBreakdown.map((r) => REASON_COLORS[r.reason] || themeColor("muted")),
       borderWidth: 0, hoverOffset: 4,
     }],
   }), [reasonBreakdown]);
@@ -136,14 +137,14 @@ const Reports = () => {
       {
         label: "Driverless Trucks",
         data: driverlessTruckStats.map((d) => d.driverlessTrucks),
-        borderColor: "#ef4444", backgroundColor: "rgba(239, 68, 68, 0.15)",
-        tension: 0.4, fill: true, pointBackgroundColor: "#ef4444", pointRadius: 3,
+        borderColor: themeColor("danger"), backgroundColor: alpha(themeColor("danger"), 0.15),
+        tension: 0.4, fill: true, pointBackgroundColor: themeColor("danger"), pointRadius: 3,
       },
       {
         label: "Total Trucks",
         data: driverlessTruckStats.map((d) => d.totalTrucks),
-        borderColor: "#354f52", backgroundColor: "rgba(53, 79, 82, 0.05)",
-        tension: 0.4, fill: false, pointBackgroundColor: "#354f52", pointRadius: 3, borderDash: [5, 5],
+        borderColor: themeColor("primary"), backgroundColor: alpha(themeColor("primary"), 0.05),
+        tension: 0.4, fill: false, pointBackgroundColor: themeColor("primary"), pointRadius: 3, borderDash: [5, 5],
       },
     ],
   }), [driverlessTruckStats]);

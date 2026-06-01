@@ -70,7 +70,7 @@ export default function ContactUs() {
               backgroundImage: `url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=800&q=80')`,
             }}
           />
-          <div className="absolute inset-0 bg-linear-to-br from-primary/90 to-[#2f3e46]/85" />
+          <div className="absolute inset-0 bg-linear-to-br from-primary/90 to-brand-primary-deep/85" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
@@ -211,7 +211,7 @@ export default function ContactUs() {
                   type="submit"
                   disabled={loading}
                   className="w-full h-13 bg-primary text-white font-semibold text-base rounded-xl
-                    hover:bg-[#2a3f41] active:scale-[0.98] transition-all shadow-lg shadow-primary/20
+                    hover:bg-brand-primary-hover active:scale-[0.98] transition-all shadow-lg shadow-primary/20
                     disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
                     focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                 >

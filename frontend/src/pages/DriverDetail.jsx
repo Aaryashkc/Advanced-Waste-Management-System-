@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/useAuthStore";
 import api from "../utils/api";
 import LazyChart from "../components/charts/LazyChart";
+import { alpha, themeColor } from "../utils/themeColors";
 
 const STATUS_COLORS = {
   COMPLETED: "bg-green-100 text-green-700",
@@ -56,7 +57,7 @@ const DriverDetail = () => {
     labels: ["Recyclable", "Non-Recyclable", "Mixed"],
     datasets: [{
       data: [stats.byCategory.recyclable, stats.byCategory.nonRecyclable, stats.byCategory.mixed],
-      backgroundColor: ["#10b981", "#ef4444", "#8b5cf6"],
+      backgroundColor: [themeColor("success"), themeColor("danger"), themeColor("violet")],
       borderWidth: 0,
     }],
   };
@@ -66,7 +67,7 @@ const DriverDetail = () => {
     datasets: [{
       label: "Pickups",
       data: [stats.byLevel.easy, stats.byLevel.medium, stats.byLevel.hard],
-      backgroundColor: ["#3b82f6", "#f59e0b", "#ef4444"],
+      backgroundColor: [themeColor("info"), themeColor("warning"), themeColor("danger")],
       borderRadius: 8,
     }],
   };
@@ -147,7 +148,7 @@ const DriverDetail = () => {
         <div className="bg-white rounded-2xl border border-primary/10 p-6">
           <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-4">Pickups by Difficulty</h3>
           <div className="h-56">
-            <LazyChart type="bar" data={levelData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" } }, x: { grid: { display: false } } } }} />
+            <LazyChart type="bar" data={levelData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: alpha(themeColor("black"), 0.05) } }, x: { grid: { display: false } } } }} />
           </div>
         </div>
       </div>

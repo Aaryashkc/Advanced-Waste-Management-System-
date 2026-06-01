@@ -100,10 +100,10 @@ export default function DriverNotifications() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f3ee] pb-24">
+    <div className="min-h-screen bg-brand-surface-warm pb-24">
       <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#354f52] to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
+      <div className="bg-gradient-to-br from-primary to-brand-primary-hover px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
         <button onClick={() => navigate("/driver-dashboard")} className="flex items-center gap-2 text-white/70 hover:text-white mb-4 transition">
           <ArrowLeft size={18} /> Back
         </button>
@@ -130,7 +130,7 @@ export default function DriverNotifications() {
         {/* Loading */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-sm">
-            <div className="w-10 h-10 border-4 border-primary/15 border-t-[#354f52] rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-primary/15 border-t-primary rounded-full animate-spin" />
             <p className="text-sm text-primary/50 mt-3">Loading alerts...</p>
           </div>
         )}

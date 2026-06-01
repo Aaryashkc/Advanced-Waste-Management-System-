@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import useOrganizationStore from "../stores/useOrganizationStore";
 import useAuthStore from "../stores/useAuthStore";
 import LazyChart from "../components/charts/LazyChart";
+import { alpha, themeColor } from "../utils/themeColors";
 
 const LocationPickerMap = lazy(() => import("../components/shared/LocationPickerMap"));
 
@@ -109,7 +110,7 @@ const OrgDetail = ({ myOrganization = false }) => {
     labels: ["Trucks w/ Driver", "Trucks w/o Driver", "Available Drivers"],
     datasets: [{
       data: [trucksWithDrivers.length, trucksWithoutDrivers.length, stats.availableDrivers || 0],
-      backgroundColor: ["#10b981", "#ef4444", "#3b82f6"],
+      backgroundColor: [themeColor("success"), themeColor("danger"), themeColor("info")],
       borderWidth: 0,
     }],
   };
@@ -119,7 +120,7 @@ const OrgDetail = ({ myOrganization = false }) => {
     datasets: [{
       label: "Capacity (kg)",
       data: trucks.map(t => t.capacity || 0),
-      backgroundColor: trucks.map(t => t.assignedDriver ? "#10b981" : "#ef4444"),
+      backgroundColor: trucks.map(t => t.assignedDriver ? themeColor("success") : themeColor("danger")),
       borderRadius: 8,
     }],
   };
@@ -128,7 +129,7 @@ const OrgDetail = ({ myOrganization = false }) => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false }, title: { display: true, text: "Truck Capacities", font: { size: 14, weight: "bold" } } },
-    scales: { y: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" } }, x: { grid: { display: false } } },
+    scales: { y: { beginAtZero: true, grid: { color: alpha(themeColor("black"), 0.05) } }, x: { grid: { display: false } } },
   };
 
   const doughnutOptions = {
@@ -184,11 +185,11 @@ const OrgDetail = ({ myOrganization = false }) => {
         <div className="space-y-6">
           {/* Stats Row */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <StatCard label="Total Trucks" value={stats.totalTrucks || 0} color="#0ea5e9" />
-            <StatCard label="Trucks Ready" value={stats.trucksWithDrivers || 0} color="#10b981" sub="Has assigned driver" />
-            <StatCard label="No Driver" value={stats.trucksWithoutDrivers || 0} color="#ef4444" sub="Needs attention" />
-            <StatCard label="Total Drivers" value={stats.totalDrivers || 0} color="#8b5cf6" />
-            <StatCard label="Areas" value={stats.totalAreas || 0} color="#f59e0b" />
+            <StatCard label="Total Trucks" value={stats.totalTrucks || 0} color={themeColor("sky")} />
+            <StatCard label="Trucks Ready" value={stats.trucksWithDrivers || 0} color={themeColor("success")} sub="Has assigned driver" />
+            <StatCard label="No Driver" value={stats.trucksWithoutDrivers || 0} color={themeColor("danger")} sub="Needs attention" />
+            <StatCard label="Total Drivers" value={stats.totalDrivers || 0} color={themeColor("violet")} />
+            <StatCard label="Areas" value={stats.totalAreas || 0} color={themeColor("warning")} />
           </div>
 
           {/* Charts */}

@@ -5,36 +5,141 @@
 
 /* Base */
 
+:root {
+  /*
+   * App color tokens.
+   * Change these values to rebrand the whole UI without hunting through JSX.
+   */
+  --app-primary: #354f52;
+  --app-primary-hover: #2d4a4e;
+  --app-primary-dark: #315b5f;
+  --app-primary-deep: #2f3e46;
+  --app-surface: #f5f1e8;
+  --app-surface-warm: #f5f3ee;
+  --app-surface-soft: #f7f5ef;
+  --app-surface-muted: #f8fafc;
+  --app-ink: #202128;
+  --app-ink-strong: #1f2e30;
+  --app-ink-muted: #4a5568;
+  --app-border: rgb(53 79 82 / 0.14);
+  --app-overlay: rgb(0 0 0 / 0.3);
+
+  --app-success: #10b981;
+  --app-success-strong: #22c55e;
+  --app-info: #3b82f6;
+  --app-sky: #0ea5e9;
+  --app-indigo: #6366f1;
+  --app-warning: #f59e0b;
+  --app-orange: #f97316;
+  --app-danger: #ef4444;
+  --app-danger-strong: #dc2626;
+  --app-violet: #8b5cf6;
+  --app-purple: #a855f7;
+  --app-cyan: #06b6d4;
+  --app-teal: #14b8a6;
+  --app-pink: #ec4899;
+  --app-lime: #84cc16;
+  --app-green-soft: #4ade80;
+  --app-yellow: #eab308;
+  --app-muted: #9ca3af;
+  --app-chart-text: #2d3748;
+  --app-chart-muted: #4a5568;
+  --app-chart-dark-text: #dfe9e6;
+  --app-chart-dark-muted: #b6c3bf;
+  --app-chart-grid: #e2e8f0;
+  --app-white: #ffffff;
+  --app-black: #000000;
+  --app-gray-50: #f9fafb;
+  --app-gray-100: #f3f4f6;
+  --app-gray-200: #e5e7eb;
+  --app-gray-300: #d1d5db;
+  --app-gray-400: #9ca3af;
+  --app-gray-500: #6b7280;
+  --app-gray-600: #4b5563;
+  --app-gray-700: #374151;
+  --app-gray-800: #1f2937;
+  --app-gray-900: #111827;
+  --app-slate-50: #f8fafc;
+  --app-slate-100: #f1f5f9;
+  --app-slate-200: #e2e8f0;
+  --app-slate-300: #cbd5e1;
+  --app-slate-400: #94a3b8;
+  --app-slate-500: #64748b;
+  --app-slate-600: #475569;
+  --app-slate-700: #334155;
+  --app-slate-800: #1e293b;
+  --app-slate-900: #0f172a;
+}
+
 @theme {
-  --color-primary: #354f52;
-  --color-accent: #f5f1e8;
-  --color-secondary: #f5f1e8;
-  --color-dark-mode: #202128;
+  /*
+   * Override Tailwind's built-in neutral colors so common utilities like
+   * bg-white/90, text-white, border-gray-200, and text-slate-900 also come
+   * from the app token layer.
+   */
+  --color-white: var(--app-white);
+  --color-black: var(--app-black);
+  --color-gray-50: var(--app-gray-50);
+  --color-gray-100: var(--app-gray-100);
+  --color-gray-200: var(--app-gray-200);
+  --color-gray-300: var(--app-gray-300);
+  --color-gray-400: var(--app-gray-400);
+  --color-gray-500: var(--app-gray-500);
+  --color-gray-600: var(--app-gray-600);
+  --color-gray-700: var(--app-gray-700);
+  --color-gray-800: var(--app-gray-800);
+  --color-gray-900: var(--app-gray-900);
+  --color-slate-50: var(--app-slate-50);
+  --color-slate-100: var(--app-slate-100);
+  --color-slate-200: var(--app-slate-200);
+  --color-slate-300: var(--app-slate-300);
+  --color-slate-400: var(--app-slate-400);
+  --color-slate-500: var(--app-slate-500);
+  --color-slate-600: var(--app-slate-600);
+  --color-slate-700: var(--app-slate-700);
+  --color-slate-800: var(--app-slate-800);
+  --color-slate-900: var(--app-slate-900);
+  --color-primary: var(--app-primary);
+  --color-accent: var(--app-surface);
+  --color-secondary: var(--app-surface);
+  --color-dark-mode: var(--app-ink);
+  --color-brand-primary: var(--app-primary);
+  --color-brand-primary-hover: var(--app-primary-hover);
+  --color-brand-primary-deep: var(--app-primary-deep);
+  --color-brand-surface: var(--app-surface);
+  --color-brand-surface-warm: var(--app-surface-warm);
+  --color-brand-surface-soft: var(--app-surface-soft);
+  --color-brand-ink-strong: var(--app-ink-strong);
+  --color-brand-success: var(--app-success);
+  --color-brand-info: var(--app-info);
+  --color-brand-sky: var(--app-sky);
+  --color-brand-warning: var(--app-warning);
+  --color-brand-orange: var(--app-orange);
+  --color-brand-danger: var(--app-danger);
+  --color-brand-violet: var(--app-violet);
+  --color-brand-purple: var(--app-purple);
+  --color-brand-teal: var(--app-teal);
+  --color-brand-pink: var(--app-pink);
+  --color-brand-lime: var(--app-lime);
   --animate-truckMove: truckMove 2s ease-in-out infinite;
   --animate-modalIn: modalIn 200ms ease-out;
 }
 
 /*
- * Admin dashboard shell — matches @theme palette (primary #354f52, accent #f5f1e8, dark-mode #202128).
+ * Admin dashboard shell — matches the token palette above.
  * Child pages inherit a lighter --color-primary on dark surfaces so text-primary / borders stay readable.
  */
 .admin-dashboard-root {
   color-scheme: light;
   --color-accent: #e2e8f0;
-  --color-secondary: #f8fafc;
+  --color-secondary: var(--app-surface-muted);
   --dash-shell: #ffffff;
-  --dash-page: #f8fafc;
+  --dash-page: var(--app-surface-muted);
   --dash-card: #ffffff;
   --dash-card-soft: #f1f5f9;
-  --dash-border: rgb(53 79 82 / 0.14);
-  --dash-muted: rgb(53 79 82 / 0.62);
-  --dash-overlay: rgb(0 0 0 / 0.3);
-}
-
-.admin-dashboard-root [class*="bg-[#f7f5ef]"],
-.admin-dashboard-root [class*="bg-[#f5f3ee]"],
-.admin-dashboard-root [class*="bg-[#f5f1e8]"] {
-  background-color: var(--dash-card-soft);
+  --dash-border: var(--app-border);
+  --dash-muted: color-mix(in srgb, var(--app-primary) 62%, transparent);
+  --dash-overlay: var(--app-overlay);
 }
 
 .admin-dashboard-root.dark {
@@ -48,7 +153,7 @@
   --dash-overlay: rgb(0 0 0 / 0.68);
   /* Muted sage-tinted foreground for text-primary / border-primary / bg-primary/* on dark UI */
   --color-primary: #edf5f2;
-  --color-accent: #f5f1e8;
+  --color-accent: var(--app-surface);
 }
 
 /* White cards/panels across admin routes — keeps tables and stats readable in dark mode */
@@ -57,7 +162,7 @@
 }
 
 .admin-dashboard-root.dark .bg-primary {
-  background-color: #315b5f;
+  background-color: var(--app-primary-dark);
 }
 
 /* Dark-mode repair layer for older dashboard pages that hard-code light panels. */
@@ -69,10 +174,7 @@
 
 .admin-dashboard-root.dark .bg-gray-50,
 .admin-dashboard-root.dark .bg-gray-100,
-.admin-dashboard-root.dark [class~="bg-gray-50/50"],
-.admin-dashboard-root.dark [class*="bg-[#f7f5ef]"],
-.admin-dashboard-root.dark [class*="bg-[#f5f3ee]"],
-.admin-dashboard-root.dark [class*="bg-[#f5f1e8]"] {
+.admin-dashboard-root.dark [class~="bg-gray-50/50"] {
   background-color: var(--dash-card-soft);
 }
 
@@ -279,28 +381,28 @@
 }
 
 .dash-metric-card[data-tone="green"] {
-  background-color: color-mix(in srgb, #10b981 11%, var(--dash-card));
-  border-color: color-mix(in srgb, #10b981 28%, var(--dash-border));
+  background-color: color-mix(in srgb, var(--app-success) 11%, var(--dash-card));
+  border-color: color-mix(in srgb, var(--app-success) 28%, var(--dash-border));
 }
 
 .dash-metric-card[data-tone="blue"] {
-  background-color: color-mix(in srgb, #3b82f6 10%, var(--dash-card));
-  border-color: color-mix(in srgb, #3b82f6 26%, var(--dash-border));
+  background-color: color-mix(in srgb, var(--app-info) 10%, var(--dash-card));
+  border-color: color-mix(in srgb, var(--app-info) 26%, var(--dash-border));
 }
 
 .dash-metric-card[data-tone="amber"] {
-  background-color: color-mix(in srgb, #f59e0b 11%, var(--dash-card));
-  border-color: color-mix(in srgb, #f59e0b 28%, var(--dash-border));
+  background-color: color-mix(in srgb, var(--app-warning) 11%, var(--dash-card));
+  border-color: color-mix(in srgb, var(--app-warning) 28%, var(--dash-border));
 }
 
 .dash-metric-card[data-tone="red"] {
-  background-color: color-mix(in srgb, #ef4444 10%, var(--dash-card));
-  border-color: color-mix(in srgb, #ef4444 26%, var(--dash-border));
+  background-color: color-mix(in srgb, var(--app-danger) 10%, var(--dash-card));
+  border-color: color-mix(in srgb, var(--app-danger) 26%, var(--dash-border));
 }
 
 .dash-metric-card[data-tone="violet"] {
-  background-color: color-mix(in srgb, #8b5cf6 10%, var(--dash-card));
-  border-color: color-mix(in srgb, #8b5cf6 26%, var(--dash-border));
+  background-color: color-mix(in srgb, var(--app-violet) 10%, var(--dash-card));
+  border-color: color-mix(in srgb, var(--app-violet) 26%, var(--dash-border));
 }
 
 .dash-interactive-card {
@@ -319,7 +421,7 @@
   position: absolute;
   inset: 0 0 auto 0;
   height: 2px;
-  background: color-mix(in srgb, #10b981 72%, var(--color-primary));
+  background: color-mix(in srgb, var(--app-success) 72%, var(--color-primary));
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 180ms ease;
@@ -389,7 +491,7 @@ body {
 .landing-page-shell {
   position: relative;
   overflow: clip;
-  background-color: #f5f1e8;
+  background-color: var(--app-surface);
 }
 
 .lp-reveal {

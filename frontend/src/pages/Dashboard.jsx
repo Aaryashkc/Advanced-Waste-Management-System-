@@ -8,6 +8,7 @@ import AdminAnalyticsCharts from "../components/dashboard/AdminAnalyticsCharts";
 import useBillingStore from "../stores/useBillingStore";
 import { getSocket } from "../utils/socket";
 import { useDashboardTheme } from "../hooks/useDashboardTheme";
+import { alpha, themeColor } from "../utils/themeColors";
 import {
   Building2,
   Trash2,
@@ -104,7 +105,7 @@ const Dashboard = () => {
         {
           label: "Predicted Waste (kg)",
           data: top5Areas.map((d) => d.predictedWasteKg || 0),
-          backgroundColor: "#354f52",
+          backgroundColor: themeColor("primary"),
           borderRadius: 6,
         },
       ],
@@ -119,7 +120,7 @@ const Dashboard = () => {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: "rgba(53, 79, 82, 0.92)",
+        backgroundColor: alpha(themeColor("primary"), 0.92),
         titleFont: { family: "'Poppins', sans-serif", size: 13 },
         bodyFont: { family: "'Poppins', sans-serif", size: 12 },
         padding: 10,
@@ -131,7 +132,7 @@ const Dashboard = () => {
         grid: { display: false },
         ticks: {
           font: { family: "'Poppins', sans-serif", size: 11 },
-          color: isDark ? "#b6c3bf" : "#354f52",
+          color: isDark ? themeColor("chartDarkMuted") : themeColor("primary"),
         },
         beginAtZero: true,
       },
@@ -139,7 +140,7 @@ const Dashboard = () => {
         grid: { display: false },
         ticks: {
           font: { family: "'Poppins', sans-serif", size: 11 },
-          color: isDark ? "#b6c3bf" : "#354f52",
+          color: isDark ? themeColor("chartDarkMuted") : themeColor("primary"),
         },
       },
     },
@@ -197,7 +198,7 @@ const Dashboard = () => {
         {
           label: "Revenue",
           data: [revenueBreakdown.cash, revenueBreakdown.online],
-          backgroundColor: ["#059669", "#2563eb"],
+          backgroundColor: [themeColor("success"), themeColor("info")],
           borderRadius: 8,
           barThickness: 28,
         },
@@ -214,7 +215,7 @@ const Dashboard = () => {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "rgba(53, 79, 82, 0.92)",
+          backgroundColor: alpha(themeColor("primary"), 0.92),
           callbacks: {
             label: (context) => `Rs. ${Number(context.raw || 0).toLocaleString()}`,
           },
@@ -223,15 +224,15 @@ const Dashboard = () => {
       scales: {
         x: {
           beginAtZero: true,
-          grid: { color: isDark ? "rgba(182,195,191,0.12)" : "rgba(53,79,82,0.08)" },
+          grid: { color: isDark ? alpha(themeColor("chartDarkMuted"), 0.12) : alpha(themeColor("primary"), 0.08) },
           ticks: {
-            color: isDark ? "#b6c3bf" : "#354f52",
+            color: isDark ? themeColor("chartDarkMuted") : themeColor("primary"),
             callback: (value) => `Rs. ${Number(value).toLocaleString()}`,
           },
         },
         y: {
           grid: { display: false },
-          ticks: { color: isDark ? "#b6c3bf" : "#354f52", font: { weight: 700 } },
+          ticks: { color: isDark ? themeColor("chartDarkMuted") : themeColor("primary"), font: { weight: 700 } },
         },
       },
     }),

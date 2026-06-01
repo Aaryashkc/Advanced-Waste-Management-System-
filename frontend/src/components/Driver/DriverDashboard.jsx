@@ -103,11 +103,11 @@ export default function DriverDashboard() {
   const firstName = (user?.name || "Driver").split(" ")[0];
 
   return (
-    <div className="min-h-screen bg-[#f5f3ee] pb-24">
+    <div className="min-h-screen bg-brand-surface-warm pb-24">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#354f52] to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
+        <div className="bg-gradient-to-br from-primary to-brand-primary-hover px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/60 text-sm font-medium">{greeting}</p>

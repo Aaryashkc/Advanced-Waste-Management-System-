@@ -69,7 +69,7 @@ export default function TaskRoutePage() {
           </p>
           <button
             onClick={() => navigate("/driver-dashboard")}
-            className="px-6 py-3 rounded-2xl bg-[#213a3d] text-white font-semibold hover:opacity-90 transition"
+            className="px-6 py-3 rounded-2xl bg-brand-ink-strong text-white font-semibold hover:opacity-90 transition"
           >
             Back to Dashboard
           </button>
@@ -158,8 +158,8 @@ export default function TaskRoutePage() {
         {/* Map + Start button */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Map */}
-          <div className="lg:col-span-2 bg-white rounded-3xl border-2 border-[#354f52]/20 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 bg-[#354f52] flex items-center gap-2">
+          <div className="lg:col-span-2 bg-white rounded-3xl border-2 border-primary/20 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 bg-primary flex items-center gap-2">
               <MapPinIcon />
               <span className="text-white text-sm font-extrabold">LIVE NAVIGATION</span>
             </div>
@@ -171,8 +171,8 @@ export default function TaskRoutePage() {
               />
             </Suspense>
             {hasCoords && (
-              <div className="px-5 py-3 border-t border-[#354f52]/15 bg-[#354f52]/5">
-                <p className="text-xs text-[#1f2e30] font-bold">
+              <div className="px-5 py-3 border-t border-primary/15 bg-primary/5">
+                <p className="text-xs text-brand-ink-strong font-bold">
                   📍 {loc.address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`}
                 </p>
               </div>

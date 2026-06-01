@@ -74,10 +74,10 @@ const DriverMLAssignments = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f3ee] pb-24">
+    <div className="min-h-screen bg-brand-surface-warm pb-24">
       <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-linear-to-br from-primary to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
+      <div className="bg-linear-to-br from-primary to-brand-primary-hover px-5 sm:px-8 pt-8 pb-10 sm:rounded-b-3xl">
         <button onClick={() => navigate("/driver-dashboard")} className="flex items-center gap-2 text-white/70 hover:text-white mb-4 transition">
           <ArrowLeft size={18} /> Back
         </button>
@@ -227,7 +227,7 @@ const DriverMLAssignments = () => {
 
                   {/* Stats */}
                   <div className="px-5 pb-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-[#f5f3ee] p-3.5 flex items-center gap-3">
+                    <div className="rounded-xl bg-brand-surface-warm p-3.5 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-primary/8 flex items-center justify-center">
                         <Weight size={16} className="text-primary/50" />
                       </div>
@@ -292,7 +292,7 @@ const DriverMLAssignments = () => {
                               setConfirmArea(a.area);
                             }}
                             disabled={isCompleting}
-                            className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#2d4a4e] active:scale-[0.98] transition-all disabled:opacity-50"
+                            className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-brand-primary-hover active:scale-[0.98] transition-all disabled:opacity-50"
                           >
                             {isCompleting ? (
                               <><Loader2 size={16} className="animate-spin" /> Marking...</>

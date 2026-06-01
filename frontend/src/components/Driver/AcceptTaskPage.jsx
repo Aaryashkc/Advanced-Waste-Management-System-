@@ -129,8 +129,8 @@ export default function AcceptTaskPage() {
   // Loading
   if (isFetching) {
     return (
-      <div className="min-h-screen bg-[#f5f3ee] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3 text-[#354f52]">
+      <div className="min-h-screen bg-brand-surface-warm flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-primary">
           <Loader2 size={28} className="animate-spin" />
           <p className="text-sm font-bold">Loading request...</p>
         </div>
@@ -141,23 +141,23 @@ export default function AcceptTaskPage() {
   // No pickup
   if (!pickup) {
     return (
-      <div className="min-h-screen bg-[#f5f3ee] pb-24">
+      <div className="min-h-screen bg-brand-surface-warm pb-24">
       <div className="max-w-7xl mx-auto">
-        <div className="bg-gradient-to-br from-[#354f52] to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-12 sm:rounded-b-3xl">
+        <div className="bg-gradient-to-br from-primary to-brand-primary-hover px-5 sm:px-8 pt-8 pb-12 sm:rounded-b-3xl">
           <button onClick={() => navigate("/driver-dashboard")} className="flex items-center gap-2 text-white hover:text-white/90 mb-4 transition font-medium">
             <ArrowLeft size={18} /> Back
           </button>
           <h1 className="text-2xl font-extrabold text-white">Pickup Requests</h1>
         </div>
         <div className="px-5 sm:px-8 -mt-6">
-          <div className="bg-white rounded-2xl shadow-md border-2 border-[#354f52]/20 p-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#354f52]/15 flex items-center justify-center mx-auto mb-4">
-              <Package size={28} className="text-[#354f52]" />
+          <div className="bg-white rounded-2xl shadow-md border-2 border-primary/20 p-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center mx-auto mb-4">
+              <Package size={28} className="text-primary" />
             </div>
-            <h3 className="text-base font-bold text-[#1f2e30] mb-1">
+            <h3 className="text-base font-bold text-brand-ink-strong mb-1">
               {error || "No pending requests"}
             </h3>
-            <p className="text-sm text-[#354f52] max-w-xs mx-auto font-medium">
+            <p className="text-sm text-primary max-w-xs mx-auto font-medium">
               Waiting for new requests via real-time connection...
             </p>
           </div>
@@ -183,10 +183,10 @@ export default function AcceptTaskPage() {
   const cat = CATEGORY_STYLES[category] || CATEGORY_STYLES["non-recyclable"];
 
   return (
-    <div className="min-h-screen bg-[#f5f3ee] pb-24">
+    <div className="min-h-screen bg-brand-surface-warm pb-24">
       <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#354f52] to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-12 sm:rounded-b-3xl">
+      <div className="bg-gradient-to-br from-primary to-brand-primary-hover px-5 sm:px-8 pt-8 pb-12 sm:rounded-b-3xl">
         <button onClick={() => navigate("/driver-dashboard")} className="flex items-center gap-2 text-white hover:text-white/90 mb-4 transition font-medium">
           <ArrowLeft size={18} /> Back
         </button>
@@ -238,7 +238,7 @@ export default function AcceptTaskPage() {
 
         {/* Main Card */}
         <div className={`bg-white rounded-2xl shadow-md border-2 overflow-hidden transition-all ${
-          takenByOther ? "border-red-300 opacity-70" : "border-[#354f52]/20"
+          takenByOther ? "border-red-300 opacity-70" : "border-primary/20"
         }`}>
           {/* Details Grid */}
           <div className="p-5 space-y-4">
@@ -261,33 +261,33 @@ export default function AcceptTaskPage() {
             </div>
 
             {/* Location */}
-            <div className="rounded-xl bg-[#354f52]/10 border border-[#354f52]/20 p-4">
+            <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
               <div className="flex items-center gap-2 mb-2">
-                <MapPin size={14} className="text-[#354f52]" />
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#354f52]">Location</p>
+                <MapPin size={14} className="text-primary" />
+                <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Location</p>
               </div>
-              <p className="text-sm font-bold text-[#1f2e30]">
+              <p className="text-sm font-bold text-brand-ink-strong">
                 {location.address || (location.latitude ? `${Number(location.latitude).toFixed(4)}, ${Number(location.longitude).toFixed(4)}` : "--")}
               </p>
             </div>
 
             {/* Status & Time */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-[#354f52]/10 border border-[#354f52]/20 p-4">
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle size={14} className="text-[#354f52]" />
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#354f52]">Status</p>
+                  <CheckCircle size={14} className="text-primary" />
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Status</p>
                 </div>
                 <p className={`text-sm font-extrabold ${takenByOther ? "text-red-700" : "text-emerald-700"} capitalize`}>
                   {takenByOther ? "Taken" : pickup.status}
                 </p>
               </div>
-              <div className="rounded-xl bg-[#354f52]/10 border border-[#354f52]/20 p-4">
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Clock size={14} className="text-[#354f52]" />
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#354f52]">Posted</p>
+                  <Clock size={14} className="text-primary" />
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Posted</p>
                 </div>
-                <p className="text-sm font-extrabold text-[#1f2e30]">
+                <p className="text-sm font-extrabold text-brand-ink-strong">
                   {pickup.createdAt ? new Date(pickup.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--"}
                 </p>
               </div>
@@ -295,9 +295,9 @@ export default function AcceptTaskPage() {
 
             {/* Customer */}
             {pickup.customerName && (
-              <div className="rounded-xl bg-[#354f52]/10 border border-[#354f52]/20 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#354f52] mb-1">Customer</p>
-                <p className="text-sm font-bold text-[#1f2e30]">{pickup.customerName}</p>
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1">Customer</p>
+                <p className="text-sm font-bold text-brand-ink-strong">{pickup.customerName}</p>
               </div>
             )}
           </div>
@@ -327,7 +327,7 @@ export default function AcceptTaskPage() {
             className={`px-6 py-3.5 rounded-2xl font-extrabold text-sm transition-all shadow-sm ${
               isAccepting || isDeclining
                 ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : "bg-white border-2 border-[#354f52] text-[#354f52] hover:bg-[#354f52] hover:text-white active:scale-[0.98]"
+                : "bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white active:scale-[0.98]"
             }`}
           >
             Skip

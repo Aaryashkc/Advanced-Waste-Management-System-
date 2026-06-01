@@ -105,10 +105,10 @@ export default function Profile() {
     : [];
 
   return (
-    <div className="min-h-screen bg-[#f5f3ee] pb-24">
+    <div className="min-h-screen bg-brand-surface-warm pb-24">
       <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#354f52] to-[#2d4a4e] px-5 sm:px-8 pt-8 pb-16 sm:rounded-b-3xl">
+      <div className="bg-gradient-to-br from-primary to-brand-primary-hover px-5 sm:px-8 pt-8 pb-16 sm:rounded-b-3xl">
         <button
           onClick={() => navigate(getDashboardRoute(user.role))}
           className="flex items-center gap-2 text-white/70 hover:text-white mb-6 transition"
@@ -141,7 +141,7 @@ export default function Profile() {
                 onClick={() => setActiveTab(t.key)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   activeTab === t.key
-                    ? "bg-[#354f52] text-white shadow-md"
+                    ? "bg-primary text-white shadow-md"
                     : "text-primary/50 hover:text-primary/70 hover:bg-primary/5"
                 }`}
               >
@@ -208,7 +208,7 @@ export default function Profile() {
                     </div>
                   </div>
                   {org.address && (
-                    <div className="rounded-xl bg-[#f5f3ee] p-3 flex items-center gap-2">
+                    <div className="rounded-xl bg-brand-surface-warm p-3 flex items-center gap-2">
                       <MapPin size={14} className="text-primary/30 shrink-0" />
                       <p className="text-xs text-primary/50">{org.address}</p>
                     </div>
@@ -222,7 +222,7 @@ export default function Profile() {
               {!isDriver && (
                 <button
                   onClick={() => navigate(getDashboardRoute(user.role))}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#354f52] text-white font-semibold rounded-2xl hover:opacity-95 transition active:scale-[0.98] text-sm"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-2xl hover:opacity-95 transition active:scale-[0.98] text-sm"
                 >
                   Go to Dashboard
                 </button>
@@ -325,7 +325,7 @@ export default function Profile() {
                 {/* Truck Details */}
                 <div className="bg-white rounded-2xl shadow-sm border border-primary/8 p-5">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl bg-[#f5f3ee] p-4">
+                    <div className="rounded-xl bg-brand-surface-warm p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Weight size={14} className="text-primary/40" />
                         <p className="text-[10px] text-primary/40 uppercase tracking-wider font-medium">Capacity</p>
@@ -334,7 +334,7 @@ export default function Profile() {
                         {truck.capacity?.toLocaleString()}<span className="text-xs font-normal text-primary/40 ml-0.5">kg</span>
                       </p>
                     </div>
-                    <div className="rounded-xl bg-[#f5f3ee] p-4">
+                    <div className="rounded-xl bg-brand-surface-warm p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Shield size={14} className="text-primary/40" />
                         <p className="text-[10px] text-primary/40 uppercase tracking-wider font-medium">Duty Class</p>
@@ -361,7 +361,7 @@ export default function Profile() {
           <div className="space-y-4">
             {historyLoading && (
               <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-sm">
-                <div className="w-10 h-10 border-4 border-primary/15 border-t-[#354f52] rounded-full animate-spin" />
+                <div className="w-10 h-10 border-4 border-primary/15 border-t-primary rounded-full animate-spin" />
                 <p className="text-sm text-primary/50 mt-3">Loading history...</p>
               </div>
             )}

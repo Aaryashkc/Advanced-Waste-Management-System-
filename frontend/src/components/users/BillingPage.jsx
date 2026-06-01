@@ -15,16 +15,17 @@ import {
 } from "lucide-react";
 import useBillingStore from "../../stores/useBillingStore";
 import useAuthStore from "../../stores/useAuthStore";
+import { themeColor } from "../../utils/themeColors";
 
 const DASHBOARD_BG =
   "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1920&auto=format&fit=crop";
 
 const STATUS_CONFIG = {
-  UNPAID: { color: "#f59e0b", bg: "bg-amber-500/15", border: "border-amber-500/30", label: "Unpaid", icon: Clock },
-  CASH_PENDING: { color: "#3b82f6", bg: "bg-blue-500/15", border: "border-blue-500/30", label: "Cash Pending", icon: Wallet },
-  OVERDUE: { color: "#ef4444", bg: "bg-red-500/15", border: "border-red-500/30", label: "Overdue", icon: AlertTriangle },
-  PAID: { color: "#22c55e", bg: "bg-emerald-500/15", border: "border-emerald-500/30", label: "Paid", icon: CheckCircle2 },
-  WAIVED: { color: "#8b5cf6", bg: "bg-violet-500/15", border: "border-violet-500/30", label: "Waived", icon: Ban },
+  UNPAID: { color: themeColor("warning"), bg: "bg-amber-500/15", border: "border-amber-500/30", label: "Unpaid", icon: Clock },
+  CASH_PENDING: { color: themeColor("info"), bg: "bg-blue-500/15", border: "border-blue-500/30", label: "Cash Pending", icon: Wallet },
+  OVERDUE: { color: themeColor("danger"), bg: "bg-red-500/15", border: "border-red-500/30", label: "Overdue", icon: AlertTriangle },
+  PAID: { color: themeColor("successStrong"), bg: "bg-emerald-500/15", border: "border-emerald-500/30", label: "Paid", icon: CheckCircle2 },
+  WAIVED: { color: themeColor("violet"), bg: "bg-violet-500/15", border: "border-violet-500/30", label: "Waived", icon: Ban },
 };
 
 function formatPeriod(month, year) {
@@ -153,25 +154,25 @@ function BillingPage() {
                 icon={Receipt}
                 label="Total Bills"
                 value={summary.total}
-                accent="#3b82f6"
+                accent={themeColor("info")}
               />
               <SummaryCard
                 icon={CheckCircle2}
                 label="Paid"
                 value={summary.paid}
-                accent="#22c55e"
+                accent={themeColor("successStrong")}
               />
               <SummaryCard
                 icon={Clock}
                 label="Unpaid"
                 value={summary.unpaid}
-                accent="#f59e0b"
+                accent={themeColor("warning")}
               />
               <SummaryCard
                 icon={DollarSign}
                 label="Amount Due"
                 value={`NPR ${(summary.totalDue || 0).toLocaleString()}`}
-                accent="#ef4444"
+                accent={themeColor("danger")}
               />
             </div>
           </section>

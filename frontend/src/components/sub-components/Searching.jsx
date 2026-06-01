@@ -8,6 +8,7 @@ import { getSocket } from "../../utils/socket";
 import usePickupStore from "../../stores/usePickupStore";
 import usePaymentStore from "../../stores/usePaymentStore";
 import SearchingBg from "../../assets/ourteam.webp";
+import { themeColor } from "../../utils/themeColors";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -138,11 +139,11 @@ function MapSearchBar({ onLocationSelect, disabled }) {
           onFocus={() => results.length > 0 && setShowResults(true)}
           disabled={disabled}
           placeholder="Search your pickup location..."
-          className="w-full pl-11 pr-10 py-3 bg-white/95 backdrop-blur-md border border-white/60 rounded-2xl shadow-lg text-sm text-primary placeholder:text-primary/40 focus:outline-none focus:ring-2 focus:ring-[#296200]/40 focus:border-[#296200]/30 disabled:opacity-50 transition-all"
+          className="w-full pl-11 pr-10 py-3 bg-white/95 backdrop-blur-md border border-white/60 rounded-2xl shadow-lg text-sm text-primary placeholder:text-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/30 disabled:opacity-50 transition-all"
         />
         {searching && (
           <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-primary/20 border-t-[#296200] rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
           </div>
         )}
         {query && !searching && (
@@ -165,9 +166,9 @@ function MapSearchBar({ onLocationSelect, disabled }) {
               key={i}
               type="button"
               onClick={() => selectResult(r)}
-              className="w-full px-4 py-3 text-left hover:bg-[#296200]/5 transition-colors border-b border-primary/5 last:border-0 flex items-start gap-3"
+              className="w-full px-4 py-3 text-left hover:bg-primary/5 transition-colors border-b border-primary/5 last:border-0 flex items-start gap-3"
             >
-              <svg className="w-4 h-4 text-[#296200] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 text-primary mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -250,9 +251,9 @@ function PriceCard({ estimate, category, level }) {
         </div>
       </div>
       {/* Total */}
-      <div className="px-5 py-4 bg-[#296200]/5 flex items-center justify-between border-t border-[#296200]/10">
+      <div className="px-5 py-4 bg-primary/5 flex items-center justify-between border-t border-primary/10">
         <span className="text-sm font-bold text-primary">Total Estimated</span>
-        <span className="text-2xl font-extrabold text-[#296200]">NPR {estimate.estimatedPrice}</span>
+        <span className="text-2xl font-extrabold text-primary">NPR {estimate.estimatedPrice}</span>
       </div>
       {/* Route meta */}
       <div className="px-5 py-3 flex flex-wrap items-center gap-4 text-xs text-primary/50 border-t border-primary/5">
@@ -302,7 +303,7 @@ function DriverCard({ driverInfo, assignedAt }) {
 function Btn({ children, onClick, disabled, variant = "primary", className = "" }) {
   const base = "px-6 py-3 rounded-2xl font-semibold text-sm transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
-    primary: "bg-[#296200] text-white shadow-md shadow-[#296200]/20 hover:bg-[#245400]",
+    primary: "bg-primary text-white shadow-md shadow-primary/20 hover:bg-brand-primary-hover",
     outline: "border-2 border-primary/20 text-primary bg-white hover:bg-primary/5",
     danger: "bg-red-500 text-white shadow-md shadow-red-500/20 hover:bg-red-600",
     ghost: "text-primary/60 hover:text-primary hover:bg-primary/5",
@@ -653,7 +654,7 @@ function SearchPage() {
             {flow === "confirm" && !selectedLocation && (
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-999 pointer-events-none">
                 <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-lg border border-primary/8 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#296200]/10 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     {Icons.pin}
                   </div>
                   <p className="text-sm text-primary/70 font-medium">Click on the map or search to set your pickup location</p>
@@ -681,7 +682,7 @@ function SearchPage() {
               )}
 
               {routePositions && showRoute && (
-                <Polyline positions={routePositions} color="#296200" weight={4} opacity={0.85} dashArray="10 6" />
+                <Polyline positions={routePositions} color={themeColor("primary")} weight={4} opacity={0.85} dashArray="10 6" />
               )}
 
               <MapClickHandler onClick={handleMapClick} />
@@ -698,7 +699,7 @@ function SearchPage() {
                   <h2 className="text-xl sm:text-2xl font-bold text-primary">Set Pickup Location</h2>
                   {shortAddress ? (
                     <div className="flex items-start gap-2 mt-2">
-                      <span className="text-[#296200] mt-0.5 shrink-0">{Icons.pin}</span>
+                      <span className="text-primary mt-0.5 shrink-0">{Icons.pin}</span>
                       <p className="text-sm text-primary/70 leading-relaxed">{shortAddress}</p>
                     </div>
                   ) : (
@@ -736,7 +737,7 @@ function SearchPage() {
                   <h2 className="text-xl sm:text-2xl font-bold text-primary">Review Price</h2>
                   {shortAddress && (
                     <div className="flex items-start gap-2 mt-1.5">
-                      <span className="text-[#296200] mt-0.5 shrink-0">{Icons.pin}</span>
+                      <span className="text-primary mt-0.5 shrink-0">{Icons.pin}</span>
                       <p className="text-sm text-primary/60">{shortAddress}</p>
                     </div>
                   )}
@@ -784,9 +785,9 @@ function SearchPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="relative w-10 h-10 shrink-0">
-                    <span className="absolute inset-0 rounded-full bg-[#296200]/20 animate-ping" />
-                    <span className="absolute inset-2 rounded-full bg-[#296200]/40 animate-ping [animation-delay:150ms]" />
-                    <span className="absolute inset-3 rounded-full bg-[#296200]" />
+                    <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+                    <span className="absolute inset-2 rounded-full bg-primary/40 animate-ping [animation-delay:150ms]" />
+                    <span className="absolute inset-3 rounded-full bg-primary" />
                   </div>
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-primary">Searching for drivers...</h2>
@@ -816,7 +817,7 @@ function SearchPage() {
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-primary">Driver Found!</h2>
                     <p className="text-sm text-primary/50">
-                      {driverInfo?.licensePlate && <span className="font-semibold text-[#296200]">{driverInfo.licensePlate}</span>}
+                      {driverInfo?.licensePlate && <span className="font-semibold text-primary">{driverInfo.licensePlate}</span>}
                       {driverInfo?.licensePlate && " \u00B7 "}
                       Truck is on its way
                     </p>
@@ -827,7 +828,7 @@ function SearchPage() {
 
                 {estimate && (
                   <div className="flex flex-wrap items-center gap-3 text-xs">
-                    <span className="px-3 py-1.5 rounded-full bg-[#296200]/8 text-[#296200] font-bold">NPR {estimate.estimatedPrice}</span>
+                    <span className="px-3 py-1.5 rounded-full bg-primary/8 text-primary font-bold">NPR {estimate.estimatedPrice}</span>
                     <span className="px-3 py-1.5 rounded-full bg-primary/5 text-primary/60">{estimate.distanceKm?.toFixed(1)} km</span>
                     <span className="px-3 py-1.5 rounded-full bg-primary/5 text-primary/60">~{Math.ceil(estimate.durationMinutes || 0)} min</span>
                   </div>
@@ -874,7 +875,7 @@ function SearchPage() {
               <span className="w-3 h-3 rounded-full bg-emerald-500" /> Depot
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-6 h-0.5 border-t-2 border-dashed border-[#296200]" /> Route
+              <span className="w-6 h-0.5 border-t-2 border-dashed border-primary" /> Route
             </span>
           </div>
         )}
@@ -890,7 +891,7 @@ function SearchPage() {
                 Choose how you want to pay before we notify drivers.
               </p>
               {estimate?.estimatedPrice && (
-                <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full bg-[#296200]/10 text-[#296200] font-bold text-sm">
+                <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full bg-primary/10 text-primary font-bold text-sm">
                   Total: NPR {estimate.estimatedPrice}
                 </div>
               )}
@@ -900,7 +901,7 @@ function SearchPage() {
               <button
                 onClick={() => handleChoosePayment("cash")}
                 disabled={payLoading}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-primary/10 hover:border-[#296200] hover:bg-[#296200]/5 transition disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-primary/10 hover:border-primary hover:bg-primary/5 transition disabled:opacity-50 disabled:cursor-not-allowed text-left"
               >
                 <div className="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center text-2xl">
                   💵
@@ -914,7 +915,7 @@ function SearchPage() {
               <button
                 onClick={() => handleChoosePayment("esewa")}
                 disabled={payLoading}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-primary/10 hover:border-[#296200] hover:bg-[#296200]/5 transition disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-primary/10 hover:border-primary hover:bg-primary/5 transition disabled:opacity-50 disabled:cursor-not-allowed text-left"
               >
                 <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center font-bold text-green-700">
                   eS

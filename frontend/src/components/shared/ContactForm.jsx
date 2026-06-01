@@ -135,7 +135,7 @@ export default function ContactForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-primary text-white font-semibold py-3 rounded-xl hover:bg-[#2a3f41] transition active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+          className="w-full bg-primary text-white font-semibold py-3 rounded-xl hover:bg-brand-primary-hover transition active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
         >
           {loading ? <TruckLoader /> : 'Send Message'}
         </button>

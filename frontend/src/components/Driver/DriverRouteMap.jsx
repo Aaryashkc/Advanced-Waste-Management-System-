@@ -9,6 +9,7 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import { Maximize2, Minimize2, Navigation, Loader2, AlertCircle } from "lucide-react";
 import api from "../../utils/api";
+import { themeColor } from "../../utils/themeColors";
 
 // Fix default Leaflet marker icon in bundled envs
 delete L.Icon.Default.prototype._getIconUrl;
@@ -20,13 +21,13 @@ L.Icon.Default.mergeOptions({
 
 const driverIcon = L.divIcon({
   className: "",
-  html: `<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 0 0 2px #2563eb;"></div>`,
+  html: `<div style="width:18px;height:18px;border-radius:50%;background:var(--app-info);border:3px solid var(--app-white);box-shadow:0 0 0 2px var(--app-info);"></div>`,
   iconSize: [18, 18],
   iconAnchor: [9, 9],
 });
 const destIcon = L.divIcon({
   className: "",
-  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dc2626;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3);"></div>`,
+  html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--app-danger-strong);border:3px solid var(--app-white);box-shadow:0 2px 6px rgb(0 0 0 / .3);"></div>`,
   iconSize: [22, 22],
   iconAnchor: [11, 22],
 });
@@ -150,24 +151,24 @@ export default function DriverRouteMap({ destination, mode = "inline", onExpand,
           <Marker position={dest} icon={destIcon} />
           {driverPos && <Marker position={driverPos} icon={driverIcon} />}
           {positions && (
-            <Polyline positions={positions} color="#2563eb" weight={5} opacity={0.85} />
+            <Polyline positions={positions} color={themeColor("info")} weight={5} opacity={0.85} />
           )}
         </MapContainer>
       ) : (
-        <div className="h-full flex items-center justify-center bg-gray-100 text-[#354f52] font-medium text-sm">
+        <div className="h-full flex items-center justify-center bg-gray-100 text-primary font-medium text-sm">
           No destination coordinates
         </div>
       )}
 
       {/* Route info overlay */}
       {route && (
-        <div className="absolute top-2 left-2 bg-white/95 backdrop-blur rounded-xl shadow-md border-2 border-[#354f52]/20 px-3 py-2 flex items-center gap-2">
+        <div className="absolute top-2 left-2 bg-white/95 backdrop-blur rounded-xl shadow-md border-2 border-primary/20 px-3 py-2 flex items-center gap-2">
           <Navigation size={14} className="text-blue-700" />
           <div className="leading-tight">
-            <p className="text-xs font-extrabold text-[#1f2e30]">
+            <p className="text-xs font-extrabold text-brand-ink-strong">
               {route.distanceKm?.toFixed(2)} km
             </p>
-            <p className="text-[10px] font-semibold text-[#354f52]">
+            <p className="text-[10px] font-semibold text-primary">
               ~{Math.ceil(route.durationMinutes || 0)} min
               {route.fallback && " • approx"}
             </p>
@@ -177,11 +178,11 @@ export default function DriverRouteMap({ destination, mode = "inline", onExpand,
 
       {/* Status / loading / error */}
       {(routeLoading || error) && (
-        <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur rounded-lg shadow border border-[#354f52]/20 px-2.5 py-1.5 flex items-center gap-1.5">
+        <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur rounded-lg shadow border border-primary/20 px-2.5 py-1.5 flex items-center gap-1.5">
           {routeLoading ? (
             <>
-              <Loader2 size={12} className="animate-spin text-[#354f52]" />
-              <span className="text-[10px] font-bold text-[#354f52]">Updating route…</span>
+              <Loader2 size={12} className="animate-spin text-primary" />
+              <span className="text-[10px] font-bold text-primary">Updating route…</span>
             </>
           ) : (
             <>
@@ -196,7 +197,7 @@ export default function DriverRouteMap({ destination, mode = "inline", onExpand,
       {(onExpand || onCollapse) && (
         <button
           onClick={isFull ? onCollapse : onExpand}
-          className="absolute top-2 right-2 bg-white border-2 border-[#354f52]/30 text-[#354f52] hover:bg-[#354f52] hover:text-white transition rounded-lg p-2 shadow-md"
+          className="absolute top-2 right-2 bg-white border-2 border-primary/30 text-primary hover:bg-primary hover:text-white transition rounded-lg p-2 shadow-md"
           aria-label={isFull ? "Collapse map" : "Expand map"}
         >
           {isFull ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -208,11 +209,11 @@ export default function DriverRouteMap({ destination, mode = "inline", onExpand,
   if (isFull) {
     return (
       <div className="fixed inset-0 z-[1000] bg-black/60 flex flex-col">
-        <div className="bg-[#354f52] text-white px-4 py-3 flex items-center justify-between">
+        <div className="bg-primary text-white px-4 py-3 flex items-center justify-between">
           <p className="font-extrabold">Live Navigation</p>
           <button
             onClick={onCollapse}
-            className="px-3 py-1.5 rounded-lg bg-white text-[#354f52] font-bold text-sm flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg bg-white text-primary font-bold text-sm flex items-center gap-1.5"
           >
             <Minimize2 size={14} /> Close
           </button>

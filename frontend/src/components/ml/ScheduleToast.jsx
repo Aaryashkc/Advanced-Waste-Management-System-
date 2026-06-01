@@ -109,7 +109,7 @@ export default function ScheduleToast() {
   };
 
   const BG = {
-    dispatch: "bg-[#354f52]",
+    dispatch: "bg-primary",
     success: "bg-emerald-500",
     warning: "bg-amber-500",
     info: "bg-blue-500",
@@ -120,7 +120,7 @@ export default function ScheduleToast() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`${BG[toast.type] || BG.info} rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.15)] overflow-hidden pointer-events-auto`}
+          className={`${BG[toast.type] || BG.info} rounded-2xl shadow-xl overflow-hidden pointer-events-auto`}
           style={{ animation: "slideInRight 0.3s ease-out" }}
         >
           <div className="px-4 py-3.5 flex items-start gap-3">

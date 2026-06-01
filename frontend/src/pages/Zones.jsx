@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useZoneStore from '../stores/useZoneStore';
 import useAuthStore from '../stores/useAuthStore';
 import LazyChart from '../components/charts/LazyChart';
+import { alpha, themeColor } from '../utils/themeColors';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -15,22 +16,22 @@ const getDutyType = (capacity) => {
 };
 
 const DUTY_BADGE = {
-  'light duty': { badge: 'bg-blue-100 text-blue-700', strip: '#3b82f6', label: 'Light Duty (<1t)' },
-  'medium duty': { badge: 'bg-amber-100 text-amber-700', strip: '#f59e0b', label: 'Medium Duty (1–5t)' },
-  'heavy duty': { badge: 'bg-red-100 text-red-700', strip: '#ef4444', label: 'Heavy Duty (>5t)' },
+  'light duty': { badge: 'bg-blue-100 text-blue-700', strip: themeColor('info'), label: 'Light Duty (<1t)' },
+  'medium duty': { badge: 'bg-amber-100 text-amber-700', strip: themeColor('warning'), label: 'Medium Duty (1–5t)' },
+  'heavy duty': { badge: 'bg-red-100 text-red-700', strip: themeColor('danger'), label: 'Heavy Duty (>5t)' },
 };
 
 const DAY_COLORS = {
-  Monday: { bg: 'rgba(59,130,246,0.18)', border: '#3b82f6', badge: 'bg-blue-100 text-blue-700' },
-  Tuesday: { bg: 'rgba(168,85,247,0.18)', border: '#a855f7', badge: 'bg-purple-100 text-purple-700' },
-  Wednesday: { bg: 'rgba(34,197,94,0.18)', border: '#22c55e', badge: 'bg-green-100 text-green-700' },
-  Thursday: { bg: 'rgba(245,158,11,0.18)', border: '#f59e0b', badge: 'bg-amber-100 text-amber-700' },
-  Friday: { bg: 'rgba(239,68,68,0.18)', border: '#ef4444', badge: 'bg-red-100 text-red-700' },
-  Saturday: { bg: 'rgba(20,184,166,0.18)', border: '#14b8a6', badge: 'bg-teal-100 text-teal-700' },
-  Sunday: { bg: 'rgba(249,115,22,0.18)', border: '#f97316', badge: 'bg-orange-100 text-orange-700' },
+  Monday: { bg: alpha(themeColor('info'), 0.18), border: themeColor('info'), badge: 'bg-blue-100 text-blue-700' },
+  Tuesday: { bg: alpha(themeColor('purple'), 0.18), border: themeColor('purple'), badge: 'bg-purple-100 text-purple-700' },
+  Wednesday: { bg: alpha(themeColor('successStrong'), 0.18), border: themeColor('successStrong'), badge: 'bg-green-100 text-green-700' },
+  Thursday: { bg: alpha(themeColor('warning'), 0.18), border: themeColor('warning'), badge: 'bg-amber-100 text-amber-700' },
+  Friday: { bg: alpha(themeColor('danger'), 0.18), border: themeColor('danger'), badge: 'bg-red-100 text-red-700' },
+  Saturday: { bg: alpha(themeColor('teal'), 0.18), border: themeColor('teal'), badge: 'bg-teal-100 text-teal-700' },
+  Sunday: { bg: alpha(themeColor('orange'), 0.18), border: themeColor('orange'), badge: 'bg-orange-100 text-orange-700' },
 };
 
-const ORG_PALETTE = ['#3b82f6', '#a855f7', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#f97316', '#ec4899'];
+const ORG_PALETTE = [themeColor('info'), themeColor('purple'), themeColor('successStrong'), themeColor('warning'), themeColor('danger'), themeColor('teal'), themeColor('orange'), themeColor('pink')];
 const EMPTY_ZONE_FORM = { city: '', area: '', truckId: '', day: '', time: '', truckType: '', orgId: '' };
 
 function zoneFormFromEdit(editZone) {
@@ -397,7 +398,7 @@ function ZonesBubbleChart({ zones, organizations, isSuperAdmin }) {
     zones.forEach(z => { if (!byDay[z.day]) byDay[z.day] = []; byDay[z.day].push(z); });
     return {
       datasets: Object.entries(byDay).map(([day, dz]) => {
-        const col = DAY_COLORS[day]?.border || '#3b82f6';
+        const col = DAY_COLORS[day]?.border || themeColor('info');
         return {
           label: day,
           data: dz.map((z, j) => ({ x: j + 1, y: DAYS.indexOf(day) + 1, r: 13, zone: z })),
@@ -410,9 +411,9 @@ function ZonesBubbleChart({ zones, organizations, isSuperAdmin }) {
   const options = {
     responsive: true, maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'bottom', labels: { color: '#192a1c', font: { family: "'Inter',sans-serif", size: 12 }, usePointStyle: true, padding: 16 } },
+      legend: { position: 'bottom', labels: { color: themeColor('inkStrong'), font: { family: "'Inter',sans-serif", size: 12 }, usePointStyle: true, padding: 16 } },
       tooltip: {
-        backgroundColor: 'rgba(25,42,28,0.92)', padding: 12, cornerRadius: 10,
+        backgroundColor: alpha(themeColor('inkStrong'), 0.92), padding: 12, cornerRadius: 10,
         callbacks: {
           title: (items) => { const z = items[0]?.raw?.zone; return z ? `${z.city} — ${z.area}` : ''; },
           label: (item) => { const z = item.raw?.zone; return z ? [`📅 ${z.day}  🕐 ${z.time}`, `🚛 ${z.truckName}`, `👤 ${z.driver}`] : []; },
@@ -421,7 +422,7 @@ function ZonesBubbleChart({ zones, organizations, isSuperAdmin }) {
     },
     scales: {
       x: { display: false },
-      y: { min: 0, max: 8, ticks: { stepSize: 1, callback: v => DAYS[v - 1] || '', font: { family: "'Inter',sans-serif", size: 12 }, color: '#4a5568' }, grid: { color: '#e2e8f0' }, border: { display: false } }
+      y: { min: 0, max: 8, ticks: { stepSize: 1, callback: v => DAYS[v - 1] || '', font: { family: "'Inter',sans-serif", size: 12 }, color: themeColor('chartMuted') }, grid: { color: themeColor('chartGrid') }, border: { display: false } }
     }
   };
 

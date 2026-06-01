@@ -126,7 +126,7 @@ export default function TestAnimationPage() {
   }, []);
 
   return (
-    <div ref={container} className="relative bg-[#0f172a] overflow-x-hidden text-white font-sans min-h-screen">
+    <div ref={container} className="relative bg-slate-900 overflow-x-hidden text-white font-sans min-h-screen">
       
       {/* 
         The Central Character: TrashBin
@@ -134,7 +134,7 @@ export default function TestAnimationPage() {
       */}
       <div 
         ref={trashBinRef}
-        className="fixed top-1/2 left-1/2 w-32 h-44 bg-green-500 rounded-xl shadow-[0_0_40px_rgba(34,197,94,0.5)] z-50 flex flex-col items-center justify-center border-4 border-green-400"
+        className="fixed top-1/2 left-1/2 w-32 h-44 bg-green-500 rounded-xl shadow-2xl z-50 flex flex-col items-center justify-center border-4 border-green-400"
         style={{ willChange: 'transform' }}
       >
         <div className="w-full h-10 bg-green-600 rounded-t-lg border-b-4 border-green-700 mb-2"></div>
@@ -177,10 +177,10 @@ export default function TestAnimationPage() {
 
       {/* Final Section */}
       <section ref={finalRef} className="h-[120vh] w-full flex flex-col items-center justify-center relative z-10">
-        <div ref={finalContentRef} className="text-center mt-96 border border-green-500/30 bg-green-900/20 p-16 rounded-[4rem] backdrop-blur-xl shadow-[0_0_80px_rgba(34,197,94,0.1)]">
+        <div ref={finalContentRef} className="text-center mt-96 border border-green-500/30 bg-green-900/20 p-16 rounded-[4rem] backdrop-blur-xl shadow-2xl">
           <h2 className="text-7xl font-black mb-6 text-white tracking-tight">Mission Accomplished</h2>
           <p className="text-3xl text-green-200/80 mb-12 font-light">The character has centered successfully.</p>
-          <button className="px-12 py-6 bg-green-500 hover:bg-green-400 text-slate-900 rounded-full font-black text-2xl transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(34,197,94,0.6)] cursor-pointer">
+          <button className="px-12 py-6 bg-green-500 hover:bg-green-400 text-slate-900 rounded-full font-black text-2xl transition-all hover:scale-105 hover:shadow-2xl cursor-pointer">
             Play Again
           </button>
         </div>

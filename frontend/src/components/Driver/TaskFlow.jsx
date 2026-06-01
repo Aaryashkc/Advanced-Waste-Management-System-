@@ -198,7 +198,7 @@ export default function TaskFlow() {
           </p>
           <button
             onClick={() => navigate("/driver-dashboard")}
-            className="px-6 py-3 rounded-2xl bg-[#213a3d] text-white font-semibold hover:opacity-90 transition"
+            className="px-6 py-3 rounded-2xl bg-brand-ink-strong text-white font-semibold hover:opacity-90 transition"
           >
             Back to Dashboard
           </button>
@@ -360,7 +360,7 @@ function UpdateStatusUI({ pickup, currentStatus, statusUpdating, onUpdateStatus,
     <>
       {/* Location Status Card */}
       <div className="bg-white rounded-3xl border border-primary/15 shadow-sm overflow-hidden mb-6 sm:mb-10">
-        <div className="px-6 py-5 border-b border-primary/15 bg-[#f5f1e8] flex justify-between items-start gap-4">
+        <div className="px-6 py-5 border-b border-primary/15 bg-accent flex justify-between items-start gap-4">
           <div>
             <p className="text-xs font-semibold text-primary/70">
               CURRENT LOCATION
@@ -617,7 +617,7 @@ function TaskExecutionUI({
 
 function CompletedDetail({ label, value }) {
   return (
-    <div className="rounded-2xl border border-primary/10 bg-[#f5f1e8] p-4">
+    <div className="rounded-2xl border border-primary/10 bg-accent p-4">
       <p className="text-xs text-primary/55 mb-1">{label}</p>
       <p className="font-semibold text-primary text-sm">{value}</p>
     </div>

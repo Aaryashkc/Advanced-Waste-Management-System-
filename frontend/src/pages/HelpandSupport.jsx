@@ -128,7 +128,7 @@ export default function HelpSupportPage() {
             </p>
             <button
               onClick={() => setSearchQuery("")}
-              className="px-8 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-[#2a3f41] active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
+              className="px-8 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-brand-primary-hover active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
             >
               Clear search
             </button>

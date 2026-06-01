@@ -5,11 +5,11 @@ const ThankYouPage = ({ driverInfo }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#f7f4ed] flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-brand-surface-soft flex items-center justify-center px-4 py-12">
       <div className="bg-white rounded-3xl shadow-lg border border-primary/8 overflow-hidden max-w-lg w-full">
 
         {/* Green header band */}
-        <div className="bg-gradient-to-br from-[#296200] to-[#3a8a00] px-8 py-10 text-center">
+        <div className="bg-gradient-to-br from-primary to-brand-primary-hover px-8 py-10 text-center">
           <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-5">
             <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -77,7 +77,7 @@ const ThankYouPage = ({ driverInfo }) => {
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => navigate("/customer-dashboard")}
-              className="flex-1 py-3 bg-[#296200] text-white font-semibold rounded-2xl hover:bg-[#245400] active:scale-[0.97] transition-all shadow-md shadow-[#296200]/20 text-sm"
+              className="flex-1 py-3 bg-primary text-white font-semibold rounded-2xl hover:bg-brand-primary-hover active:scale-[0.97] transition-all shadow-md shadow-primary/20 text-sm"
             >
               Back to Dashboard
             </button>

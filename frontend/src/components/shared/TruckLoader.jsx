@@ -8,13 +8,13 @@ export default function TruckLoader({ className = '' }) {
           viewBox="0 0 32 20"
           fill="none"
         >
-          <rect x="8" y="4" width="16" height="10" rx="2" fill="#354f52" />
-          <rect x="24" y="6" width="7" height="8" rx="1.5" fill="#354f52" />
-          <rect x="25.5" y="7.5" width="4" height="3.5" rx="0.75" fill="#f5f1e8" />
-          <circle cx="13" cy="16" r="2.5" fill="#354f52" />
-          <circle cx="13" cy="16" r="1" fill="#f5f1e8" />
-          <circle cx="27" cy="16" r="2.5" fill="#354f52" />
-          <circle cx="27" cy="16" r="1" fill="#f5f1e8" />
+          <rect x="8" y="4" width="16" height="10" rx="2" fill="var(--app-primary)" />
+          <rect x="24" y="6" width="7" height="8" rx="1.5" fill="var(--app-primary)" />
+          <rect x="25.5" y="7.5" width="4" height="3.5" rx="0.75" fill="var(--app-surface)" />
+          <circle cx="13" cy="16" r="2.5" fill="var(--app-primary)" />
+          <circle cx="13" cy="16" r="1" fill="var(--app-surface)" />
+          <circle cx="27" cy="16" r="2.5" fill="var(--app-primary)" />
+          <circle cx="27" cy="16" r="1" fill="var(--app-surface)" />
         </svg>
       </div>
     </div>

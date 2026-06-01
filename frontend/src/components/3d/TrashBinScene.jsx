@@ -2,30 +2,31 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Float, Instances, Instance, Text } from '@react-three/drei';
 import * as THREE from 'three';
+import { themeColor } from '../../utils/themeColors';
 
 function TrashBin() {
     const group = useRef();
 
     const materials = useMemo(() => ({
         plastic: new THREE.MeshPhysicalMaterial({
-            color: '#2a4d14',
+            color: themeColor('primary'),
             roughness: 0.6,
             metalness: 0.1,
             clearcoat: 0.3,
             clearcoatRoughness: 0.4
         }),
         darkPlastic: new THREE.MeshPhysicalMaterial({
-            color: '#1a330a',
+            color: themeColor('primaryDark'),
             roughness: 0.7,
             metalness: 0.1
         }),
         rubber: new THREE.MeshStandardMaterial({
-            color: '#111111',
+            color: themeColor('black'),
             roughness: 0.9,
             metalness: 0.1
         }),
         metal: new THREE.MeshStandardMaterial({
-            color: '#777777',
+            color: themeColor('muted'),
             roughness: 0.4,
             metalness: 0.8
         }),

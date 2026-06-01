@@ -181,7 +181,7 @@ const PricingConfig = () => {
           Distance & Minimum Charge
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-xl border border-primary/10 bg-[#f7f5ef] p-4">
+          <div className="rounded-xl border border-primary/10 bg-brand-surface-soft p-4">
             <label className="block text-xs uppercase tracking-wider text-primary/50 font-semibold mb-2">
               Rate per Kilometer (NPR)
             </label>
@@ -196,7 +196,7 @@ const PricingConfig = () => {
               }`}
             />
           </div>
-          <div className="rounded-xl border border-primary/10 bg-[#f7f5ef] p-4">
+          <div className="rounded-xl border border-primary/10 bg-brand-surface-soft p-4">
             <label className="block text-xs uppercase tracking-wider text-primary/50 font-semibold mb-2">
               Minimum Charge (NPR)
             </label>
@@ -215,7 +215,7 @@ const PricingConfig = () => {
       </section>
 
       {/* Formula Preview */}
-      <section className="rounded-2xl border border-primary/10 bg-[linear-gradient(120deg,#f3f9ed,#f9f5ec)] p-5 sm:p-6 shadow-sm">
+      <section className="rounded-2xl border border-primary/10 bg-linear-to-br from-brand-surface-soft to-accent p-5 sm:p-6 shadow-sm">
         <h3 className="font-['Outfit',sans-serif] text-base font-semibold text-primary mb-3">
           Pricing Formula
         </h3>
@@ -263,7 +263,7 @@ function PriceField({ label, tag, value, onChange, readOnly, color }) {
   const tagStyle = colorMap[color] || colorMap.green;
 
   return (
-    <div className="rounded-xl border border-primary/10 bg-[#f7f5ef] p-4">
+    <div className="rounded-xl border border-primary/10 bg-brand-surface-soft p-4">
       <div className="flex items-center gap-2 mb-2">
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${tagStyle}`}>
           {tag}
@@ -289,7 +289,7 @@ function PriceField({ label, tag, value, onChange, readOnly, color }) {
 
 function MultiplierField({ label, desc, value, onChange, readOnly }) {
   return (
-    <div className="rounded-xl border border-primary/10 bg-[#f7f5ef] p-4">
+    <div className="rounded-xl border border-primary/10 bg-brand-surface-soft p-4">
       <div className="mb-2">
         <span className="text-sm font-semibold text-primary">{label}</span>
         <span className="ml-2 text-xs text-primary/40">{desc}</span>

@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 const VehicleCard = ({ vehicle }) => {
   const statusTone = {
     Collected: {
-      bg: "bg-[#f2f7ee]",
+      bg: "bg-brand-surface-soft",
       border: "border-accent/25",
       text: "text-accent",
       dot: "bg-accent",
