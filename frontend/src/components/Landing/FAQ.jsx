@@ -1,23 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 
 function FAQItem({ question, answer, isOpen, onToggle }) {
   return (
     <div className="border-b border-primary/10">
       <button
         onClick={onToggle}
-        className="w-full py-6 flex items-center justify-between gap-6 text-left cursor-pointer"
+        className="w-full py-6 flex items-center justify-between gap-6 text-left cursor-pointer group"
       >
-        <span className="font-['Outfit'] font-medium text-lg text-primary">
+        <span className={`font-['Outfit'] font-medium text-lg transition-colors duration-300 ${isOpen ? 'text-primary' : 'text-primary/80 group-hover:text-primary'}`}>
           {question}
         </span>
-        {isOpen ? (
-          <Minus className="w-5 h-5 text-primary/40 shrink-0" />
-        ) : (
-          <Plus className="w-5 h-5 text-primary/40 shrink-0" />
-        )}
+        <Leaf
+          className={`w-5 h-5 shrink-0 transition-all duration-300 ${
+            isOpen ? 'text-primary rotate-45 scale-110' : 'text-primary/40 group-hover:text-primary/60'
+          }`}
+        />
       </button>
 
       {isOpen && (

@@ -1,6 +1,6 @@
 {
-  "name": "SafaBin",
-  "short_name": "SafaBin",
+  "name": "GreenShift",
+  "short_name": "GreenShift",
   "description": "Schedule waste pickups and manage recycling from your phone.",
   "start_url": "/customer-dashboard",
   "scope": "/",
@@ -10,7 +10,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/safabin-icon.svg",
+      "src": "/greenshift-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

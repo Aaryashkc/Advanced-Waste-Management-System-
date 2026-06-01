@@ -4,6 +4,7 @@ import useAuthStore from "../stores/useAuthStore";
 import { BarChart3, AlertTriangle, Truck } from "lucide-react";
 import LazyChart from "../components/charts/LazyChart";
 import { alpha, themeColor } from "../utils/themeColors";
+import TruckLoader from "../components/shared/TruckLoader";
 
 const REASON_COLORS = {
   "No trucks with assigned drivers available": themeColor("danger"),
@@ -152,10 +153,7 @@ const Reports = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 bg-white rounded-2xl border border-primary/10">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-primary/50 text-sm">Loading reports...</p>
-        </div>
+        <TruckLoader text="Analyzing and preparing reports..." />
       </div>
     );
   }

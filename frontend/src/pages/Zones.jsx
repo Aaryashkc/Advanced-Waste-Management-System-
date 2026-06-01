@@ -3,6 +3,7 @@ import useZoneStore from '../stores/useZoneStore';
 import useAuthStore from '../stores/useAuthStore';
 import LazyChart from '../components/charts/LazyChart';
 import { alpha, themeColor } from '../utils/themeColors';
+import TruckLoader from '../components/shared/TruckLoader';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -563,10 +564,7 @@ const Zones = () => {
         {/* Cards */}
         {isLoading ? (
           <div className="flex items-center justify-center h-40 bg-white/50 rounded-3xl border border-primary/10">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-              <p className="text-primary/60 text-sm">Loading zones...</p>
-            </div>
+            <TruckLoader text="Loading pickup zones..." />
           </div>
         ) : filteredZones.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 bg-white rounded-3xl border border-dashed border-primary/20 gap-2">

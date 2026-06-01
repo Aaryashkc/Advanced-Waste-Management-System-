@@ -473,7 +473,7 @@ BACKEND_URL=http://localhost:5000
 FRONTEND_URL=http://localhost:5173
 
 # Database
-MONGO_URL=mongodb://localhost:27017/safabin
+MONGO_URL=mongodb://localhost:27017/greenshift
 
 # JWT
 JWT_SECRET=change-this-secret
@@ -502,7 +502,7 @@ FROM_EMAIL=your-email@gmail.com
 # Production/Render: Brevo API is used when these values are configured
 BREVO_API_KEY=
 BREVO_SENDER_EMAIL=
-BREVO_SENDER_NAME=Safabin Nepal
+BREVO_SENDER_NAME=GreenShift Nepal
 BREVO_TIMEOUT_MS=10000
 
 # Routes
@@ -561,7 +561,7 @@ Notes:
 | `FROM_EMAIL` | No | SMTP sender address. Defaults to `SMTP_USER`. |
 | `BREVO_API_KEY` | Yes for hosted email | Brevo transactional email API key. When configured with `BREVO_SENDER_EMAIL`, Brevo is used instead of SMTP. |
 | `BREVO_SENDER_EMAIL` | Yes for hosted email | Email address verified as a sender in Brevo, including a verified Gmail address for testing. |
-| `BREVO_SENDER_NAME` | No | Sender name shown on OTP emails. Defaults to `Safabin Nepal`. |
+| `BREVO_SENDER_NAME` | No | Sender name shown on OTP emails. Defaults to `GreenShift Nepal`. |
 | `BREVO_TIMEOUT_MS` | No | Timeout for Brevo API email requests. Defaults to `10000`. |
 | `ORS_API_KEY` | Optional | OpenRouteService key for road distance routing. Without it, pickup estimate can fall back to haversine distance. |
 | `ESEWA_PRODUCT_CODE` | Yes for eSewa | eSewa merchant/product code. |

@@ -127,7 +127,7 @@ export default function OurTeam() {
           </FadeIn>
           <FadeIn delay={100}>
             <h1 className="font-bold text-white text-4xl sm:text-5xl lg:text-[3.5rem] leading-[1.1] tracking-tight mb-6 drop-shadow-md">
-              The people behind SafaBin
+              The people behind GreenShift
             </h1>
           </FadeIn>
           <FadeIn delay={200}>
@@ -161,7 +161,7 @@ export default function OurTeam() {
                 difference in their communities.
               </p>
               <a
-                href="mailto:careers@safabin.com"
+                href="mailto:careers@greenshift.com"
                 className="inline-flex items-center px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg"
               >
                 Get in Touch

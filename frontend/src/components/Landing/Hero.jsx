@@ -100,7 +100,7 @@ export function Hero() {
           </h1>
 
           <p className="text-white/80 text-lg md:text-xl leading-relaxed max-w-xl mb-10">
-            Safabin streamlines your entire waste management operation. Track routes, assign drivers, and respond to requests in real time with our powerful platform.
+            GreenShift streamlines your entire waste management operation. Track routes, assign drivers, and respond to requests in real time with our powerful platform.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-start gap-4">

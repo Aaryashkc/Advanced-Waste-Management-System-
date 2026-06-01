@@ -5,6 +5,7 @@ import useAnalyticsStore from "../stores/useAnalyticsStore";
 import useAuthStore from "../stores/useAuthStore";
 import useMLScheduleStore from "../stores/useMLScheduleStore";
 import AdminAnalyticsCharts from "../components/dashboard/AdminAnalyticsCharts";
+import TruckLoader from "../components/shared/TruckLoader";
 import useBillingStore from "../stores/useBillingStore";
 import { getSocket } from "../utils/socket";
 import { useDashboardTheme } from "../hooks/useDashboardTheme";
@@ -446,7 +447,7 @@ const Dashboard = () => {
 
         {mlLoading ? (
           <div className="flex items-center justify-center h-20">
-            <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <TruckLoader text="Loading ML insights..." size="sm" />
           </div>
         ) : !todaySchedule || !mlInsights ? (
           <p className="text-sm text-primary/50 text-center py-6">
@@ -545,7 +546,7 @@ const Dashboard = () => {
       <section>
         {isLoading ? (
           <div className="flex items-center justify-center h-64 bg-[var(--dash-card)] rounded-2xl border border-[var(--dash-border)]">
-            <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <TruckLoader text="Loading analytics & trends..." />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center p-8 bg-[var(--dash-card)] rounded-2xl border border-[var(--dash-border)]">

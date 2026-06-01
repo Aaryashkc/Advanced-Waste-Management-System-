@@ -79,7 +79,7 @@ export default function DownloadApp() {
     ready: "Your browser is ready for one-tap install.",
     prompting: "Confirm the install prompt shown by your browser.",
     installing: "Install started. Check your home screen once the browser finishes.",
-    installed: "SafaBin is already installed on this device.",
+    installed: "GreenShift is already installed on this device.",
     manual: "Your browser did not open an install prompt. Follow the steps for your phone below.",
   }[installState];
 
@@ -90,10 +90,10 @@ export default function DownloadApp() {
       active: device === "android",
       icon: Chrome,
       items: [
-        { icon: Chrome, title: "Open in Chrome", text: "Use Chrome on your Android phone and sign in to SafaBin." },
+        { icon: Chrome, title: "Open in Chrome", text: "Use Chrome on your Android phone and sign in to GreenShift." },
         { icon: MoreVertical, title: "Open the menu", text: "Tap the three-dot menu in the top-right corner." },
         { icon: Download, title: "Choose Install app", text: "Tap Install app. If you see Add to Home screen, tap that instead." },
-        { icon: Home, title: "Confirm", text: "Tap Install. SafaBin will appear with your other phone apps." },
+        { icon: Home, title: "Confirm", text: "Tap Install. GreenShift will appear with your other phone apps." },
       ],
     },
     {
@@ -105,7 +105,7 @@ export default function DownloadApp() {
         { icon: ExternalLink, title: "Open in Safari", text: "Use Safari, not Chrome, because iPhone installs web apps through Safari." },
         { icon: Share, title: "Tap Share", text: "Tap the share button at the bottom of the Safari screen." },
         { icon: Home, title: "Add to Home Screen", text: "Scroll the share sheet and tap Add to Home Screen." },
-        { icon: CheckCircle2, title: "Tap Add", text: "Keep the name SafaBin, tap Add, then launch it from your home screen." },
+        { icon: CheckCircle2, title: "Tap Add", text: "Keep the name GreenShift, tap Add, then launch it from your home screen." },
       ],
     },
   ];
@@ -125,10 +125,10 @@ export default function DownloadApp() {
           </div>
 
           <h1 className="max-w-2xl text-4xl font-black leading-tight text-white md:text-6xl">
-            Install SafaBin on your phone
+            Install GreenShift on your phone
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-white/80">
-            Get the same SafaBin website as an app on your home screen. It opens faster, feels cleaner, and keeps pickup requests one tap away.
+            Get the same GreenShift website as an app on your home screen. It opens faster, feels cleaner, and keeps pickup requests one tap away.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -137,7 +137,7 @@ export default function DownloadApp() {
               className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-bold text-primary shadow-lg shadow-black/20 transition hover:bg-accent"
             >
               <Download size={18} />
-              Install SafaBin
+              Install GreenShift
             </button>
             <a
               href="#install-steps"
@@ -176,7 +176,7 @@ export default function DownloadApp() {
             <div className="h-full overflow-hidden rounded-[1.8rem] bg-accent">
               <div className="bg-primary px-5 pb-8 pt-12 text-white">
                 <div className="flex items-center justify-between">
-                  <p className="text-lg font-black">SafaBin</p>
+                  <p className="text-lg font-black">GreenShift</p>
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
                     <Smartphone size={18} />
                   </div>

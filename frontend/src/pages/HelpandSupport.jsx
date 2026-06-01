@@ -24,12 +24,12 @@ const ICON_MAP = {
 };
 
 const helpTopics = [
-  { id: 1, category: "Getting Started", title: "How to use SafaBin?", description: "Learn the basics of our waste management system and how to track waste pickups.", icon: "Rocket" },
+  { id: 1, category: "Getting Started", title: "How to use GreenShift?", description: "Learn the basics of our waste management system and how to track waste pickups.", icon: "Rocket" },
   { id: 2, category: "Account", title: "Managing your Profile", description: "Update your personal details, change your password, and manage your preferences.", icon: "User" },
   { id: 3, category: "Billing", title: "Invoices and Payments", description: "Understand your billing cycle, view invoices, and update payment methods.", icon: "CreditCard" },
   { id: 4, category: "Settings", title: "Notification Preferences", description: "Configure how and when you receive updates about your garbage collection.", icon: "Settings" },
   { id: 5, category: "Security", title: "Data Privacy & Safety", description: "Learn how we protect your personal data and ensure your privacy.", icon: "Shield" },
-  { id: 6, category: "Developers", title: "API Documentation", description: "Integrate your applications with SafaBin using our complete API guide.", icon: "Code" },
+  { id: 6, category: "Developers", title: "API Documentation", description: "Integrate your applications with GreenShift using our complete API guide.", icon: "Code" },
 ];
 
 export default function HelpSupportPage() {
@@ -156,10 +156,10 @@ export default function HelpSupportPage() {
                 Response within 24 hours
               </p>
               <a
-                href="mailto:support@safabin.com"
+                href="mailto:support@greenshift.com"
                 className="text-primary font-bold hover:underline decoration-2 underline-offset-4"
               >
-                support@safabin.com
+                support@greenshift.com
               </a>
             </div>
 

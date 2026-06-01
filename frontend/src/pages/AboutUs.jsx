@@ -216,7 +216,7 @@ export default function AboutUs() {
           <div className="max-w-3xl mb-16 md:mb-24 mt-10">
             <Reveal>
               <span className="inline-block text-white/60 text-sm font-semibold tracking-widest uppercase mb-4">
-                About SafaBin
+                About GreenShift
               </span>
               <h1 className="font-bold text-white text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.1] tracking-tight">
                 Waste collection software that replaces spreadsheets, phone calls,
@@ -225,7 +225,7 @@ export default function AboutUs() {
             </Reveal>
             <Reveal delay={120}>
               <p className="mt-6 text-white/70 text-lg md:text-xl leading-relaxed max-w-xl">
-                SafaBin gives municipalities and private haulers a single system to
+                GreenShift gives municipalities and private haulers a single system to
                 receive pickup requests, plan routes, dispatch drivers, and track
                 every collection to completion.
               </p>
@@ -274,7 +274,7 @@ export default function AboutUs() {
               </h2>
               <p className="text-primary/70 text-lg leading-relaxed mb-4">
                 We believe waste management is critical infrastructure — not an
-                afterthought. SafaBin exists to give the teams who keep cities clean
+                afterthought. GreenShift exists to give the teams who keep cities clean
                 the tools they deserve: real-time visibility, intelligent routing,
                 and data that drives continuous improvement.
               </p>
@@ -429,7 +429,7 @@ export default function AboutUs() {
                 People who care about clean streets
               </h2>
               <p className="text-primary/70 text-lg leading-relaxed mb-4">
-                SafaBin was started by engineers and urban planners who saw firsthand
+                GreenShift was started by engineers and urban planners who saw firsthand
                 how outdated tools create operational chaos. We combine deep domain
                 knowledge with modern software practices.
               </p>
@@ -505,7 +505,7 @@ export default function AboutUs() {
           </Reveal>
           <Reveal delay={100}>
             <p className="text-white/60 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
-              SafaBin is built to handle the complexity of real-world waste
+              GreenShift is built to handle the complexity of real-world waste
               operations — so your team can focus on collection, not
               coordination.
             </p>

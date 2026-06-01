@@ -1,5 +1,5 @@
-const CACHE_NAME = 'safabin-shell-v2';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/safabin-icon.svg'];
+const CACHE_NAME = 'greenshift-shell-v2';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/greenshift-icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -8,7 +8,7 @@ function getMailConfig() {
   if (hasBrevoConfig) {
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
-    const senderName = process.env.BREVO_SENDER_NAME || 'Safabin Nepal';
+    const senderName = process.env.BREVO_SENDER_NAME || 'GreenShift Nepal';
     const timeoutMs = Number(process.env.BREVO_TIMEOUT_MS || 10000);
 
     if (!apiKey || !senderEmail) {
@@ -23,7 +23,7 @@ function getMailConfig() {
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
   const senderEmail = process.env.FROM_EMAIL || user;
-  const senderName = process.env.SMTP_SENDER_NAME || 'Safabin Nepal';
+  const senderName = process.env.SMTP_SENDER_NAME || 'GreenShift Nepal';
   const timeoutMs = Number(process.env.SMTP_TIMEOUT_MS || 10000);
   const family = Number(process.env.SMTP_FAMILY || 4);
 
@@ -94,11 +94,11 @@ async function sendWithSmtp(config, email, subject, htmlContent) {
 export const sendOTPEmail = async (email, otpCode) => {
   try {
     const config = getMailConfig();
-    const subject = 'Your OTP Code - Safabin Nepal';
+    const subject = 'Your OTP Code - GreenShift Nepal';
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #354f52; padding: 20px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Safabin Nepal</h1>
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">GreenShift Nepal</h1>
           </div>
           <div style="padding: 30px;">
             <h2 style="color: #354f52; text-align: center;">Your OTP Code</h2>
@@ -115,7 +115,7 @@ export const sendOTPEmail = async (email, otpCode) => {
             </p>
           </div>
           <div style="background-color: #354f52; padding: 15px; text-align: center;">
-            <p style="color: #ffffff; margin: 0; font-size: 12px;">&copy; Safabin Nepal. All rights reserved.</p>
+            <p style="color: #ffffff; margin: 0; font-size: 12px;">&copy; GreenShift Nepal. All rights reserved.</p>
           </div>
         </div>
       `;

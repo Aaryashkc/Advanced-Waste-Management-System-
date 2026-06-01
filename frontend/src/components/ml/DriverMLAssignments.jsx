@@ -5,6 +5,7 @@ import {
   CheckCircle, Clock, AlertTriangle, Loader2, Route, CheckCheck,
 } from "lucide-react";
 import useMLScheduleStore from "../../stores/useMLScheduleStore";
+import TruckLoader from "../shared/TruckLoader";
 
 const WASTE_COLORS = {
   low:      { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
@@ -136,8 +137,7 @@ const DriverMLAssignments = () => {
         {/* Loading */}
         {loading && !completing && (
           <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-sm">
-            <Loader2 size={28} className="animate-spin text-primary/40" />
-            <p className="text-sm text-primary/50 mt-3">Loading schedule...</p>
+            <TruckLoader text="Syncing your assignments..." />
           </div>
         )}
 

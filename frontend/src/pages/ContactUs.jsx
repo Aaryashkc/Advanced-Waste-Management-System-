@@ -76,7 +76,7 @@ export default function ContactUs() {
               <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
                 <Recycle className="w-6 h-6 text-white" />
               </div>
-              <span className="font-bold text-2xl text-white tracking-tight">SafaBin</span>
+              <span className="font-bold text-2xl text-white tracking-tight">GreenShift</span>
             </div>
             <h1 className="font-bold text-4xl md:text-5xl text-white leading-tight mb-5">
               Get in Touch
@@ -86,7 +86,7 @@ export default function ContactUs() {
             </p>
             <div className="space-y-4">
               {[
-                { icon: <Mail className="w-5 h-5 text-white/90" />, text: 'support@safabin.com' },
+                { icon: <Mail className="w-5 h-5 text-white/90" />, text: 'support@greenshift.com' },
                 { icon: <Phone className="w-5 h-5 text-white/90" />, text: '+977 01-1234567' },
                 { icon: <MapPin className="w-5 h-5 text-white/90" />, text: 'Kathmandu, Nepal' },
                 { icon: <Clock className="w-5 h-5 text-white/90" />, text: 'Sun - Fri, 9 AM - 6 PM' },

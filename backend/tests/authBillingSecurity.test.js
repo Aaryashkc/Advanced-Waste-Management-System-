@@ -147,7 +147,7 @@ test("OTP email is sent through the Brevo transactional email API", async () => 
 
   process.env.BREVO_API_KEY = "test-brevo-key";
   process.env.BREVO_SENDER_EMAIL = "verified-sender@gmail.com";
-  process.env.BREVO_SENDER_NAME = "Safabin Test";
+  process.env.BREVO_SENDER_NAME = "GreenShift Test";
   globalThis.fetch = async (url, options) => {
     request = { url, options };
     return {
@@ -175,7 +175,7 @@ test("OTP email is sent through the Brevo transactional email API", async () => 
   assert.equal(request.options.headers["api-key"], "test-brevo-key");
   const payload = JSON.parse(request.options.body);
   assert.deepEqual(payload.sender, {
-    name: "Safabin Test",
+    name: "GreenShift Test",
     email: "verified-sender@gmail.com",
   });
   assert.deepEqual(payload.to, [{ email: "customer@example.com" }]);

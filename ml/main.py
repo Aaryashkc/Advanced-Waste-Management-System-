@@ -1,5 +1,5 @@
 """
-SafaBin ML Service — FastAPI REST API
+GreenShift ML Service — FastAPI REST API
 Waste volume prediction + smart truck scheduling for Kathmandu Valley.
 
 Endpoints:
@@ -29,7 +29,7 @@ from scheduler import generate_schedule
 
 # ── FastAPI app ──────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="SafaBin ML Service",
+    title="GreenShift ML Service",
     description="Smart waste collection scheduling for Kathmandu Valley",
     version="1.0.0",
 )
@@ -96,7 +96,7 @@ async def health_check():
     info = get_model_info()
     return {
         "status": "ok",
-        "service": "SafaBin ML Service",
+        "service": "GreenShift ML Service",
         "model": info["model"],
         "r2_score": info["r2_score"],
         "metrics": info["metrics"],

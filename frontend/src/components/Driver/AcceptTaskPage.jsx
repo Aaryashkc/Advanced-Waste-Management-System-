@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { getSocket } from "../../utils/socket";
 import api from "../../utils/api";
+import TruckLoader from "../shared/TruckLoader";
 
 export default function AcceptTaskPage() {
   const navigate = useNavigate();
@@ -130,10 +131,7 @@ export default function AcceptTaskPage() {
   if (isFetching) {
     return (
       <div className="min-h-screen bg-brand-surface-warm flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3 text-primary">
-          <Loader2 size={28} className="animate-spin" />
-          <p className="text-sm font-bold">Loading request...</p>
-        </div>
+        <TruckLoader text="Retrieving pickup details..." />
       </div>
     );
   }

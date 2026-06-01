@@ -86,7 +86,7 @@ export function Footer() {
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-accent text-sm">
-            <p>© {new Date().getFullYear()} Safabin Dashboard. All rights reserved.</p>
+             <p>© {new Date().getFullYear()} GreenShift Dashboard. All rights reserved.</p>
             <a href="#" className="underline hover:opacity-70 transition-opacity">Privacy Policy</a>
             <a href="#" className="underline hover:opacity-70 transition-opacity">Terms of Service</a>
             <a href="#" className="underline hover:opacity-70 transition-opacity">Cookie Settings</a>

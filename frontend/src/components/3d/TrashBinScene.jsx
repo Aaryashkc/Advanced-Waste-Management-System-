@@ -49,7 +49,7 @@ function TrashBin() {
                 <cylinderGeometry args={[1.1, 0.8, 3, 32]} />
             </mesh>
 
-            {/* Text "safabin" */}
+            {/* Text "greenshift" */}
             <Text
                 position={[0, 1.5, 0.96]}
                 rotation={[-Math.atan(0.1), 0, 0]}
@@ -59,7 +59,7 @@ function TrashBin() {
                 anchorY="middle"
                 fontWeight="bold"
             >
-                safabin
+                greenshift
             </Text>
 
             {/* Rim */}

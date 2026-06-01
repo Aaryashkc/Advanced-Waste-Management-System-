@@ -30,7 +30,7 @@ function FadeIn({ children, delay = 0, className = '' }) {
 }
 
 const contactDetails = [
-  { label: 'Email', value: 'support@safabin.com' },
+  { label: 'Email', value: 'support@greenshift.com' },
   { label: 'Phone', value: '+977 01-1234567' },
   { label: 'Address', value: 'Kathmandu, Nepal' },
 ];

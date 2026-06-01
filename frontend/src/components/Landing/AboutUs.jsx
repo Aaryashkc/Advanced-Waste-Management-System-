@@ -13,7 +13,7 @@ export function AboutSection() {
           </div>
           <div>
             <p className="text-black text-lg md:text-xl font-['Outfit'] leading-relaxed">
-              Safabin is unique —our recycling and waste services should be, too. Through advanced data and technology, we analyze your waste streams to develop custom programs that bring real economic, environmental, and societal impact.
+              GreenShift is unique —our recycling and waste services should be, too. Through advanced data and technology, we analyze your waste streams to develop custom programs that bring real economic, environmental, and societal impact.
             </p>
           </div>
         </div>

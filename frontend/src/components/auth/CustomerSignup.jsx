@@ -152,10 +152,10 @@ function CustomerSignUpPage() {
               <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
                 <Recycle className="w-6 h-6 text-white" />
               </div>
-              <span className="font-bold text-2xl text-white tracking-tight">SafaBin</span>
+              <span className="font-bold text-2xl text-white tracking-tight">GreenShift</span>
             </div>
             <h1 className="font-bold text-4xl md:text-5xl text-white leading-tight mb-5">
-              Join SafaBin
+              Join GreenShift
             </h1>
             <p className="text-white/70 text-base md:text-lg leading-relaxed mb-10">
               Create your account and start managing waste pickups the smart way.

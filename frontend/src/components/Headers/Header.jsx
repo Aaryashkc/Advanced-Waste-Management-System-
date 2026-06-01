@@ -70,9 +70,9 @@ export function Header() {
             <Link
               to="/"
               className="text-white font-extrabold text-2xl tracking-tight "
-              aria-label="SafaBin home"
+              aria-label="GreenShift home"
             >
-              SafaBin
+              GreenShift
             </Link>
 
             {/* Desktop nav — center links */}
@@ -205,9 +205,9 @@ export function Header() {
           <Link
             to="/"
             className="text-white font-extrabold text-2xl tracking-tight "
-            aria-label="SafaBin home"
+            aria-label="GreenShift home"
           >
-            SafaBin
+            GreenShift
           </Link>
 
           {/* Desktop nav links */}
